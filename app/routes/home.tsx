@@ -1,5 +1,6 @@
-import Hero from "~/components/homepage/hero";
+import Integrations from "~/components/homepage/integrations";
 import type { Route } from "./+types/home";
+import ContentSection from "~/components/homepage/content";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -10,6 +11,9 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   return (
-    <Hero />
+    <>
+    <Integrations />
+    <ContentSection />
+    </>
   )
 }
