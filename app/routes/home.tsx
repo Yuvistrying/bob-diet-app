@@ -1,6 +1,9 @@
 import Integrations from "~/components/homepage/integrations";
 import type { Route } from "./+types/home";
 import ContentSection from "~/components/homepage/content";
+import Pricing from "~/components/homepage/pricing";
+import Footer from "~/components/homepage/footer";
+import Team from "~/components/homepage/team";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,6 +17,9 @@ export default function Home() {
     <>
     <Integrations />
     <ContentSection />
+    <Team />
+    <Pricing />
+    <Footer />
     </>
   )
 }
