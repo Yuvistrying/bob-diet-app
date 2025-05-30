@@ -4,8 +4,14 @@ import { cn } from '~/lib/utils'
 import { Button } from '~/components/ui/button'
 import { Link } from 'react-router'
 import { Navbar } from './navbar'
+import { useAuth } from '@clerk/react-router'
+import { useQuery } from "convex/react"
+import { api } from "../../../convex/_generated/api"
 
 export default function IntegrationsSection() {
+    const { isSignedIn } = useAuth()
+    const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus)
+    
     return (
         <section>
             <Navbar />
@@ -54,7 +60,9 @@ export default function IntegrationsSection() {
                                 variant="outline"
                                 size="sm"
                                 asChild>
-                                <Link to="#">Get Started</Link>
+                                <Link to={isSignedIn ? (subscriptionStatus?.hasActiveSubscription ? "/dashboard" : "/pricing") : "/sign-up"}>
+                                    {isSignedIn ? (subscriptionStatus?.hasActiveSubscription ? "Go to Dashboard" : "Subscribe Now") : "Get Started"}
+                                </Link>
                             </Button>
                         </div>
                     </div>
