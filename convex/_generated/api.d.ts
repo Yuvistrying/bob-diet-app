@@ -9,6 +9,8 @@
  */
 
 import type * as payments from "../payments.js";
+import type * as subscriptions from "../subscriptions.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +28,8 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   payments: typeof payments;
+  subscriptions: typeof subscriptions;
+  users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
