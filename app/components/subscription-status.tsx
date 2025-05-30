@@ -17,18 +17,22 @@ import { useState } from "react";
 export default function SubscriptionStatus() {
   const { isSignedIn } = useAuth();
   const [loadingDashboard, setLoadingDashboard] = useState(false);
-  
+
   const subscription = useQuery(api.subscriptions.fetchUserSubscription);
-  const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus);
+  const subscriptionStatus = useQuery(
+    api.subscriptions.checkUserSubscriptionStatus
+  );
   const createPortalUrl = useAction(api.subscriptions.createCustomerPortalUrl);
 
   const handleManageSubscription = async () => {
     if (!subscription?.customerId) return;
-    
+
     setLoadingDashboard(true);
     try {
-      const result = await createPortalUrl({ customerId: subscription.customerId });
-      window.open(result.url, '_blank');
+      const result = await createPortalUrl({
+        customerId: subscription.customerId,
+      });
+      window.open(result.url, "_blank");
     } catch (error) {
       console.error("Failed to open customer portal:", error);
     } finally {
@@ -41,7 +45,9 @@ export default function SubscriptionStatus() {
       <Card>
         <CardHeader>
           <CardTitle>Subscription Status</CardTitle>
-          <CardDescription>Please sign in to view your subscription details</CardDescription>
+          <CardDescription>
+            Please sign in to view your subscription details
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -68,7 +74,9 @@ export default function SubscriptionStatus() {
       <Card>
         <CardHeader>
           <CardTitle>Subscription Status</CardTitle>
-          <CardDescription>You don't have an active subscription</CardDescription>
+          <CardDescription>
+            You don't have an active subscription
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild className="w-full">
@@ -81,14 +89,14 @@ export default function SubscriptionStatus() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'canceled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'past_due':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case "active":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "canceled":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "past_due":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
@@ -99,11 +107,16 @@ export default function SubscriptionStatus() {
           <div>
             <CardTitle className="flex items-center gap-2">
               Subscription Status
-              <Badge variant="outline" className={getStatusColor(subscription.status || 'unknown')}>
-                {subscription.status || 'unknown'}
+              <Badge
+                variant="outline"
+                className={getStatusColor(subscription.status || "unknown")}
+              >
+                {subscription.status || "unknown"}
               </Badge>
             </CardTitle>
-            <CardDescription>Manage your subscription and billing</CardDescription>
+            <CardDescription>
+              Manage your subscription and billing
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -114,7 +127,13 @@ export default function SubscriptionStatus() {
             <div>
               <p className="text-sm font-medium">Amount</p>
               <p className="text-sm text-muted-foreground">
-                ${subscription.amount ? (subscription.amount / 100).toFixed(2) : '0.00'} {subscription.currency ? subscription.currency.toUpperCase() : 'USD'}
+                $
+                {subscription.amount
+                  ? (subscription.amount / 100).toFixed(2)
+                  : "0.00"}{" "}
+                {subscription.currency
+                  ? subscription.currency.toUpperCase()
+                  : "USD"}
               </p>
             </div>
           </div>
@@ -123,20 +142,21 @@ export default function SubscriptionStatus() {
             <div>
               <p className="text-sm font-medium">Next Billing</p>
               <p className="text-sm text-muted-foreground">
-                {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}
+                {subscription.currentPeriodEnd
+                  ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                  : "N/A"}
               </p>
             </div>
           </div>
         </div>
-        
         {subscription.cancelAtPeriodEnd && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-sm text-yellow-800">
-              Your subscription will be canceled at the end of the current billing period.
+              Your subscription will be canceled at the end of the current
+              billing period.
             </p>
           </div>
         )}
-
         <div className="flex gap-2">
           <Button
             variant="outline"
