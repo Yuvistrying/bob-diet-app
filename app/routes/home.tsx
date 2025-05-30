@@ -1,9 +1,9 @@
-import Integrations from "~/components/homepage/integrations";
-import type { Route } from "./+types/home";
 import ContentSection from "~/components/homepage/content";
-import Pricing from "~/components/homepage/pricing";
 import Footer from "~/components/homepage/footer";
+import Integrations from "~/components/homepage/integrations";
+import Pricing from "~/components/homepage/pricing";
 import Team from "~/components/homepage/team";
+import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -12,14 +12,14 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
+export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <>
-    <Integrations />
-    <ContentSection />
-    <Team />
-    <Pricing />
-    <Footer />
+      <Integrations />
+      <ContentSection />
+      <Team />
+      <Pricing />
+      <Footer />
     </>
-  )
+  );
 }

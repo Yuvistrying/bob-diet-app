@@ -5,6 +5,9 @@ import { Menu, X } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import React from 'react'
 import { cn } from '~/lib/utils'
+import { useAuth, UserButton } from '@clerk/react-router'
+import { useQuery } from "convex/react"
+import { api } from "../../../convex/_generated/api"
 
 const menuItems = [
     { name: 'Features', href: '#link' },
@@ -14,6 +17,8 @@ const menuItems = [
 ]
 
 export const Navbar = () => {
+    const { isSignedIn } = useAuth()
+    const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus)
     const [menuState, setMenuState] = React.useState(false)
     const [isScrolled, setIsScrolled] = React.useState(false)
 
@@ -77,31 +82,46 @@ export const Navbar = () => {
                                 </ul>
                             </div>
                             <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                                <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(isScrolled && 'lg:hidden')}>
-                                    <Link to="#">
-                                        <span>Login</span>
-                                    </Link>
-                                </Button>
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className={cn(isScrolled && 'lg:hidden')}>
-                                    <Link to="#">
-                                        <span>Sign Up</span>
-                                    </Link>
-                                </Button>
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className={cn(isScrolled ? 'lg:inline-flex' : 'hidden')}>
-                                    <Link to="#">
-                                        <span>Get Started</span>
-                                    </Link>
-                                </Button>
+                                {isSignedIn ? (
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            asChild
+                                            size="sm">
+                                            <Link to={subscriptionStatus?.hasActiveSubscription ? "/dashboard" : "/pricing"}>
+                                                <span>{subscriptionStatus?.hasActiveSubscription ? "Dashboard" : "Subscribe"}</span>
+                                            </Link>
+                                        </Button>
+                                        <UserButton />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                            className={cn(isScrolled && 'lg:hidden')}>
+                                            <Link to="/sign-in">
+                                                <span>Login</span>
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className={cn(isScrolled && 'lg:hidden')}>
+                                            <Link to="/sign-up">
+                                                <span>Sign Up</span>
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className={cn(isScrolled ? 'lg:inline-flex' : 'hidden')}>
+                                            <Link to="/sign-up">
+                                                <span>Get Started</span>
+                                            </Link>
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
