@@ -13,7 +13,7 @@ export default function IntegrationsSection() {
     const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus)
     
     return (
-        <section>
+        <section id="hero">
             <Navbar />
             <div className="bg-muted dark:bg-background py-24 md:py-32">
                 <div className="mx-auto max-w-5xl px-6 mt-[2rem]">

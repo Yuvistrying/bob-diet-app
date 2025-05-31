@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Loader2, User, Database, RefreshCw } from "lucide-react";
+import { Loader2, User, Database, RefreshCw, CreditCard } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 
@@ -22,6 +22,8 @@ export default function UserDebug() {
   const dbUser = useQuery(api.users.findUserByToken, 
     isSignedIn && userId ? { tokenIdentifier: userId } : "skip"
   );
+  const userSubscription = useQuery(api.subscriptions.fetchUserSubscription);
+  const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus);
   const upsertUser = useMutation(api.users.upsertUser);
 
   const handleSync = async () => {
@@ -107,6 +109,26 @@ export default function UserDebug() {
               <div><strong>DB Name:</strong> {dbUser.name}</div>
             </div>
           )}
+        </div>
+
+        <div className="pt-2 border-t space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <CreditCard className="h-4 w-4" />
+            <span className="font-medium text-sm">Subscription Debug</span>
+          </div>
+          
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div><strong>Has Active Sub:</strong> {subscriptionStatus?.hasActiveSubscription ? 'Yes' : 'No'}</div>
+            {userSubscription && (
+              <>
+                <div><strong>Polar Price ID:</strong> {userSubscription.polarPriceId}</div>
+                <div><strong>Status:</strong> {userSubscription.status}</div>
+                <div><strong>Amount:</strong> ${userSubscription.amount ? (userSubscription.amount / 100).toFixed(2) : 'N/A'}</div>
+                <div><strong>Currency:</strong> {userSubscription.currency || 'N/A'}</div>
+                <div><strong>Interval:</strong> {userSubscription.interval || 'N/A'}</div>
+              </>
+            )}
+          </div>
         </div>
 
         <Button
