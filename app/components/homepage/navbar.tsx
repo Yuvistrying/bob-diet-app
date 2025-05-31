@@ -1,12 +1,10 @@
 "use client";
 import { useAuth, UserButton } from "@clerk/react-router";
-import { useQuery } from "convex/react";
 import { Menu, X } from "lucide-react";
 import React from "react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-import { api } from "../../../convex/_generated/api";
 
 const menuItems = [
   { name: "Home", href: "#hero" },
@@ -15,11 +13,15 @@ const menuItems = [
   { name: "Pricing", href: "#pricing" },
 ];
 
-export const Navbar = () => {
+export const Navbar = ({
+  loaderData,
+}: {
+  loaderData?: { isSignedIn: boolean; hasActiveSubscription: boolean };
+}) => {
+  console.log("Navbar loaderData:", loaderData);
   const { isSignedIn } = useAuth();
-  const subscriptionStatus = useQuery(
-    api.subscriptions.checkUserSubscriptionStatus
-  );
+
+  console.log("loaderData", loaderData);
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
 
@@ -62,6 +64,7 @@ export const Navbar = () => {
                 to="/"
                 aria-label="home"
                 className="flex items-center space-x-2 font-semibold text-xl"
+                prefetch="viewport"
               >
                 <img src="/rsk.png" alt="RSK Logo" className="h-12 w-12" />
               </Link>
@@ -112,13 +115,14 @@ export const Navbar = () => {
                     <Button asChild size="sm">
                       <Link
                         to={
-                          subscriptionStatus?.hasActiveSubscription
+                          loaderData?.hasActiveSubscription
                             ? "/dashboard"
                             : "/pricing"
                         }
+                        prefetch="viewport"
                       >
                         <span>
-                          {subscriptionStatus?.hasActiveSubscription
+                          {loaderData?.hasActiveSubscription
                             ? "Dashboard"
                             : "Subscribe"}
                         </span>
@@ -134,7 +138,7 @@ export const Navbar = () => {
                       size="sm"
                       className={cn(isScrolled && "lg:hidden")}
                     >
-                      <Link to="/sign-in">
+                      <Link to="/sign-in" prefetch="viewport">
                         <span>Login</span>
                       </Link>
                     </Button>
@@ -143,7 +147,7 @@ export const Navbar = () => {
                       size="sm"
                       className={cn(isScrolled && "lg:hidden")}
                     >
-                      <Link to="/sign-up">
+                      <Link to="/sign-up" prefetch="viewport">
                         <span>Sign Up</span>
                       </Link>
                     </Button>
@@ -152,7 +156,7 @@ export const Navbar = () => {
                       size="sm"
                       className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                     >
-                      <Link to="/sign-up">
+                      <Link to="/sign-up" prefetch="viewport">
                         <span>Get Started</span>
                       </Link>
                     </Button>
