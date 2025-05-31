@@ -12,6 +12,13 @@ import {
   SidebarMenuItem,
 } from "~/components/ui/sidebar"
 
+/**
+ * Renders a sidebar navigation group with menu items, highlighting the active item based on the current route.
+ *
+ * Each menu item displays an icon and title. Items with a URL of "#" are shown as disabled and are not clickable.
+ *
+ * @param items - The navigation items to display, each with a title, URL, and icon.
+ */
 export function NavSecondary({
   items,
   ...props

@@ -55,6 +55,11 @@ const data = {
   ],
 };
 
+/**
+ * Renders the main application sidebar with navigation and user information.
+ *
+ * Displays a collapsible sidebar containing a header with the app name, main and secondary navigation sections, and a footer with user details.
+ */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>

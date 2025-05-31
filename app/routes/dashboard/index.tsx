@@ -5,6 +5,11 @@ import { SectionCards } from "~/components/section-cards";
 
 import data from "./data.json";
 
+/**
+ * Renders the dashboard page with section cards, an interactive chart area, and a data table.
+ *
+ * @returns The dashboard page layout as a React element.
+ */
 export default function Page() {
   return (
     <div className="flex flex-1 flex-col">

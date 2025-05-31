@@ -2,6 +2,11 @@ import { Button } from "~/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 
+/**
+ * Renders a promotional section highlighting the features and ecosystem of Lyra and RSK.
+ *
+ * Displays a heading, descriptive paragraphs, and a call-to-action button linking to additional information.
+ */
 export default function ContentSection() {
   return (
     <section id="features" className="py-16 md:py-32">
