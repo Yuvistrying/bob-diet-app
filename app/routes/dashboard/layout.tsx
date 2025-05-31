@@ -9,6 +9,15 @@ import type { Route } from "./+types/layout";
 
 import { Outlet } from "react-router";
 
+/**
+ * Authenticates the user and verifies their subscription status before granting access to the dashboard.
+ *
+ * Redirects unauthenticated users to the sign-in page and users without an active subscription to the subscription-required page.
+ *
+ * @returns An object containing the authenticated user's ID.
+ *
+ * @throws {Response} If the user is not authenticated or does not have an active subscription, a redirect response is thrown.
+ */
 export async function loader(args: Route.LoaderArgs) {
   const { userId } = await getAuth(args);
 
@@ -32,6 +41,11 @@ export async function loader(args: Route.LoaderArgs) {
   return { userId };
 }
 
+/**
+ * Renders the dashboard layout with a sidebar, header, and nested route content.
+ *
+ * Provides a sidebar context with custom dimensions, displays the application sidebar, and wraps the main content area with a header and outlet for nested routes.
+ */
 export default function DashboardLayout() {
   return (
     <SidebarProvider

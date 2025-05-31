@@ -8,6 +8,11 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 
+/**
+ * Displays a full-page card informing the user that an active subscription is required to access the dashboard.
+ *
+ * Provides options to view pricing plans or return to the home page, along with guidance for users who have recently subscribed.
+ */
 export default function SubscriptionRequired() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

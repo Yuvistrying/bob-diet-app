@@ -9,6 +9,13 @@ import {
   SidebarMenuItem,
 } from "~/components/ui/sidebar";
 
+/**
+ * Renders a sidebar navigation menu with items linking to different routes.
+ *
+ * Each menu item displays an optional icon and highlights as active when its URL matches the current route.
+ *
+ * @param items - Array of navigation items, each with a title, URL, and optional icon component.
+ */
 export function NavMain({
   items,
 }: {

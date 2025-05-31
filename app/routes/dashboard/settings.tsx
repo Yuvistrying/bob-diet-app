@@ -1,6 +1,11 @@
 "use client";
 import SubscriptionStatus from "~/components/subscription-status";
 
+/**
+ * Renders the dashboard settings page layout with the subscription status section.
+ *
+ * Displays the {@link SubscriptionStatus} component within a styled container using responsive layout classes.
+ */
 export default function Page() {
   return (
     <div className="flex flex-1 flex-col">

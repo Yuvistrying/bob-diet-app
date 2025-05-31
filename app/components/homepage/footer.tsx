@@ -28,6 +28,11 @@ const links = [
   },
 ];
 
+/**
+ * Renders the website footer with navigation links, social media icons, and branding.
+ *
+ * Includes a logo linking to the homepage, a set of navigation links, social media links with icons, and a dynamic copyright.
+ */
 export default function FooterSection() {
   return (
     <footer className="py-16 md:py-32">
