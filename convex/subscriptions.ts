@@ -151,16 +151,64 @@ export const createCheckoutSession = action({
 });
 
 export const checkUserSubscriptionStatus = query({
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return { hasActiveSubscription: false };
+  args: {
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let tokenIdentifier: string;
+
+    if (args.userId) {
+      // Use provided userId directly as tokenIdentifier (they are the same)
+      tokenIdentifier = args.userId;
+    } else {
+      // Fall back to auth context
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return { hasActiveSubscription: false };
+      }
+      tokenIdentifier = identity.subject;
     }
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
       .unique();
+
+    if (!user) {
+      return { hasActiveSubscription: false };
+    }
+
+    const subscription = await ctx.db
+      .query("subscriptions")
+      .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
+      .first();
+
+    const hasActiveSubscription = subscription?.status === "active";
+    return { hasActiveSubscription };
+  },
+});
+
+export const checkUserSubscriptionStatusByClerkId = query({
+  args: {
+    clerkUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find user by Clerk user ID (this assumes the tokenIdentifier contains the Clerk user ID)
+    // In Clerk, the subject is typically in the format "user_xxxxx" where xxxxx is the Clerk user ID
+    const tokenIdentifier = `user_${args.clerkUserId}`;
+    
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
+      .unique();
+
+    // If not found with user_ prefix, try the raw userId
+    if (!user) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.clerkUserId))
+        .unique();
+    }
 
     if (!user) {
       return { hasActiveSubscription: false };
