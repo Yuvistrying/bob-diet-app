@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 
 export default function ContentSection() {
     return (
-        <section className="py-16 md:py-32">
+        <section id="features" className="py-16 md:py-32">
             <div className="mx-auto max-w-5xl px-6">
                 <div className="grid gap-6 md:grid-cols-2 md:gap-12">
                     <h2 className="text-4xl font-medium">The Starter Kit you need to start your SaaS application.</h2>

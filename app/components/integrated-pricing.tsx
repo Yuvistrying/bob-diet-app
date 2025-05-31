@@ -27,6 +27,7 @@ export default function IntegratedPricing() {
   );
   const userSubscription = useQuery(api.subscriptions.fetchUserSubscription);
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
+  const createPortalUrl = useAction(api.subscriptions.createCustomerPortalUrl);
   const upsertUser = useMutation(api.users.upsertUser);
 
   // Sync user when signed in
@@ -59,23 +60,30 @@ export default function IntegratedPricing() {
 
     setLoadingPriceId(priceId);
     setError(null);
-
+    
     try {
-      // Ensure user exists in database before checkout
+      // Ensure user exists in database before action
       console.log("Syncing user data...");
       await upsertUser();
-
+      
+      // If user has active subscription, redirect to customer portal for plan changes
+      if (userSubscription?.status === "active" && userSubscription?.customerId) {
+        console.log("Redirecting to customer portal for plan management...");
+        const portalResult = await createPortalUrl({ customerId: userSubscription.customerId });
+        window.open(portalResult.url, '_blank');
+        setLoadingPriceId(null);
+        return;
+      }
+      
+      // Otherwise, create new checkout for first-time subscription
       console.log("Creating checkout session...");
       const checkoutUrl = await createCheckout({ priceId });
-
+      
       console.log("Redirecting to checkout...");
       window.location.href = checkoutUrl;
     } catch (error) {
-      console.error("Failed to create checkout session:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to start checkout. Please try again.";
+      console.error("Failed to process subscription action:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to process request. Please try again.";
       setError(errorMessage);
       setLoadingPriceId(null);
     }
@@ -127,9 +135,20 @@ export default function IntegratedPricing() {
                 ? index === 1
                 : index === Math.floor(plans.items.length / 2); // Mark middle/higher priced plan as popular
             const price = plan.prices[0]; // Use first price for display
-            const isCurrentPlan =
-              userSubscription?.polarPriceId === price.id &&
-              userSubscription?.status === "active";
+            // More robust current plan detection - prioritize amount matching due to price ID inconsistencies
+            const isCurrentPlan = userSubscription?.status === "active" && 
+              userSubscription?.amount === price.amount;
+            
+            // Debug logging
+            console.log('Plan:', plan.name, 'Price ID:', price.id, 'Amount:', price.amount);
+            console.log('User subscription:', {
+              polarPriceId: userSubscription?.polarPriceId,
+              status: userSubscription?.status,
+              amount: userSubscription?.amount
+            });
+            console.log('Is current plan?', isCurrentPlan);
+            console.log('Price ID match:', userSubscription?.polarPriceId === price.id);
+            console.log('Amount match:', userSubscription?.amount === price.amount);
 
             return (
               <Card
@@ -191,10 +210,8 @@ export default function IntegratedPricing() {
                   <Button
                     className="w-full"
                     onClick={() => handleSubscribe(price.id)}
-                    disabled={
-                      loadingPriceId === price.id ||
-                      (isCurrentPlan && userSubscription?.status === "active")
-                    }
+                    disabled={loadingPriceId === price.id}
+                    variant={isCurrentPlan ? "secondary" : "default"}
                   >
                     {loadingPriceId === price.id ? (
                       <>
@@ -203,6 +220,19 @@ export default function IntegratedPricing() {
                       </>
                     ) : isCurrentPlan ? (
                       "✓ Current Plan"
+                    ) : userSubscription?.status === "active" ? (
+                      (() => {
+                        const currentAmount = userSubscription.amount || 0;
+                        const newAmount = price.amount;
+                        
+                        if (newAmount > currentAmount) {
+                          return `Upgrade (+$${((newAmount - currentAmount) / 100).toFixed(0)}/mo)`;
+                        } else if (newAmount < currentAmount) {
+                          return `Downgrade (-$${((currentAmount - newAmount) / 100).toFixed(0)}/mo)`;
+                        } else {
+                          return "Manage Plan";
+                        }
+                      })()
                     ) : (
                       "Get Started"
                     )}
