@@ -63,7 +63,7 @@ export const Navbar = () => {
                 aria-label="home"
                 className="flex items-center space-x-2 font-semibold text-xl"
               >
-                RSK
+                <img src="/rsk.png" alt="RSK Logo" className="h-12 w-12" />
               </Link>
 
               <button
