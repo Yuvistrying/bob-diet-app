@@ -61,7 +61,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link to="/">
+            <Link to="/" prefetch="viewport">
               <span className="text-base font-semibold">Ras Mic Inc.</span>
             </Link>
           </SidebarMenuItem>

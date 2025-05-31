@@ -1,4 +1,3 @@
-import { Logo } from "~/components/logo";
 import { Link } from "react-router";
 
 const links = [
@@ -35,18 +34,6 @@ export default function FooterSection() {
         <Link to="/" aria-label="go home" className="mx-auto block size-fit">
           <img src="/rsk.png" alt="RSK Logo" className="h-12 w-12" />
         </Link>
-
-        <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
-          {links.map((link, index) => (
-            <Link
-              key={index}
-              to={link.href}
-              className="text-muted-foreground hover:text-primary block duration-150"
-            >
-              <span>{link.title}</span>
-            </Link>
-          ))}
-        </div>
         <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
           <Link
             to="#"

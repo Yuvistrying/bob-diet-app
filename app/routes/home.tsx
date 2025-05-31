@@ -1,12 +1,12 @@
+import { getAuth } from "@clerk/react-router/ssr.server";
+import { fetchAction, fetchQuery } from "convex/nextjs";
 import ContentSection from "~/components/homepage/content";
 import Footer from "~/components/homepage/footer";
 import Integrations from "~/components/homepage/integrations";
 import Pricing from "~/components/homepage/pricing";
 import Team from "~/components/homepage/team";
-import type { Route } from "./+types/home";
-import { getAuth } from "@clerk/react-router/ssr.server";
-import { fetchQuery } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
+import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -35,9 +35,11 @@ export async function loader(args: Route.LoaderArgs) {
     }
   }
 
+  const plans = await fetchAction(api.subscriptions.getAvailablePlans);
   return {
     isSignedIn: !!userId,
     hasActiveSubscription: subscriptionData?.hasActiveSubscription || false,
+    plans,
   };
 }
 
@@ -47,7 +49,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <Integrations loaderData={loaderData} />
       <ContentSection />
       <Team />
-      <Pricing />
+      <Pricing loaderData={loaderData} />
       <Footer />
     </>
   );

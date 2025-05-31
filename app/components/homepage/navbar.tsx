@@ -18,10 +18,8 @@ export const Navbar = ({
 }: {
   loaderData?: { isSignedIn: boolean; hasActiveSubscription: boolean };
 }) => {
-  console.log("Navbar loaderData:", loaderData);
   const { isSignedIn } = useAuth();
 
-  console.log("loaderData", loaderData);
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
 

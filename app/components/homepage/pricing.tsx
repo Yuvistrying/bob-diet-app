@@ -13,77 +13,66 @@ import {
 } from "~/components/ui/card";
 import { api } from "../../../convex/_generated/api";
 
-export default function Pricing() {
+export default function Pricing({
+  loaderData,
+}: {
+  loaderData: Route.ComponentProps;
+}) {
+  console.log("loaderData={loaderData}", loaderData);
   const { isSignedIn } = useAuth();
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
-  const [plans, setPlans] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const getPlans = useAction(api.subscriptions.getAvailablePlans);
-  const subscriptionStatus = useQuery(
-    api.subscriptions.checkUserSubscriptionStatus
-  );
   const userSubscription = useQuery(api.subscriptions.fetchUserSubscription);
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
   const createPortalUrl = useAction(api.subscriptions.createCustomerPortalUrl);
   const upsertUser = useMutation(api.users.upsertUser);
 
-  // Sync user when signed in
-  useEffect(() => {
-    if (isSignedIn) {
-      upsertUser().catch(console.error);
-    }
-  }, [isSignedIn, upsertUser]);
 
-  // Load plans on component mount
-  useEffect(() => {
-    const loadPlans = async () => {
-      try {
-        const result = await getPlans();
-        setPlans(result);
-      } catch (error) {
-        console.error("Failed to load plans:", error);
-        setError("Failed to load pricing plans. Please try again.");
-      }
-    };
-    loadPlans();
-  }, [getPlans]);
 
   const handleSubscribe = async (priceId: string) => {
-      if (!isSignedIn) {
-          window.location.href = "/sign-in";
-          return;
+    if (!isSignedIn) {
+      window.location.href = "/sign-in";
+      return;
+    }
+
+    setLoadingPriceId(priceId);
+    setError(null);
+
+    try {
+      // Ensure user exists in database before action
+      console.log("Syncing user data...");
+      await upsertUser();
+
+      // If user has active subscription, redirect to customer portal for plan changes
+      if (
+        userSubscription?.status === "active" &&
+        userSubscription?.customerId
+      ) {
+        console.log("Redirecting to customer portal for plan management...");
+        const portalResult = await createPortalUrl({
+          customerId: userSubscription.customerId,
+        });
+        window.open(portalResult.url, "_blank");
+        setLoadingPriceId(null);
+        return;
       }
 
-      setLoadingPriceId(priceId);
-      setError(null);
-        
-      try {
-          // Ensure user exists in database before action
-          console.log("Syncing user data...");
-          await upsertUser();
-            
-          // If user has active subscription, redirect to customer portal for plan changes
-          if (userSubscription?.status === "active" && userSubscription?.customerId) {
-              console.log("Redirecting to customer portal for plan management...");
-              const portalResult = await createPortalUrl({ customerId: userSubscription.customerId });
-              window.open(portalResult.url, '_blank');
-              setLoadingPriceId(null);
-              return;
-          }
-            
-          // Otherwise, create new checkout for first-time subscription
-          console.log("Creating checkout session...");
-          const checkoutUrl = await createCheckout({ priceId });
-            
-          console.log("Redirecting to checkout...");
-          window.location.href = checkoutUrl;
-      } catch (error) {
-          console.error("Failed to process subscription action:", error);
-          const errorMessage = error instanceof Error ? error.message : "Failed to process request. Please try again.";
-          setError(errorMessage);
-          setLoadingPriceId(null);
-      }
+      // Otherwise, create new checkout for first-time subscription
+      console.log("Creating checkout session...");
+      const checkoutUrl = await createCheckout({ priceId });
+
+      console.log("Redirecting to checkout...");
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      console.error("Failed to process subscription action:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to process request. Please try again.";
+      setError(errorMessage);
+      setLoadingPriceId(null);
+    }
   };
 
   return (
@@ -99,7 +88,7 @@ export default function Pricing() {
           </p>
         </div>
 
-        {!plans ? (
+        {!loaderData?.plans ? (
           <div className="mt-8 flex items-center justify-center">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -109,7 +98,7 @@ export default function Pricing() {
           </div>
         ) : (
           <div className="mt-8 grid gap-6 md:mt-20 md:grid-cols-3">
-            {plans.items
+            {loaderData.plans.items
               .sort((a: any, b: any) => {
                 const priceComparison = a.prices[0].amount - b.prices[0].amount;
                 return priceComparison !== 0
@@ -118,11 +107,12 @@ export default function Pricing() {
               })
               .map((plan: any, index: number) => {
                 const isPopular =
-                  plans.items.length === 2
+                  loaderData.plans.items.length === 2
                     ? index === 1
-                    : index === Math.floor(plans.items.length / 2); // Mark middle/higher priced plan as popular
+                    : index === Math.floor(loaderData.plans.items.length / 2); // Mark middle/higher priced plan as popular
                 const price = plan.prices[0];
-                const isCurrentPlan = userSubscription?.status === "active" && 
+                const isCurrentPlan =
+                  userSubscription?.status === "active" &&
                   userSubscription?.amount === price.amount;
 
                 return (
@@ -157,7 +147,13 @@ export default function Pricing() {
 
                       <Button
                         className="mt-4 w-full"
-                        variant={isCurrentPlan ? "secondary" : (isPopular ? "default" : "outline")}
+                        variant={
+                          isCurrentPlan
+                            ? "secondary"
+                            : isPopular
+                            ? "default"
+                            : "outline"
+                        }
                         onClick={() => handleSubscribe(price.id)}
                         disabled={loadingPriceId === price.id}
                       >
@@ -172,11 +168,17 @@ export default function Pricing() {
                           (() => {
                             const currentAmount = userSubscription.amount || 0;
                             const newAmount = price.amount;
-                            
+
                             if (newAmount > currentAmount) {
-                              return `Upgrade (+$${((newAmount - currentAmount) / 100).toFixed(0)}/mo)`;
+                              return `Upgrade (+$${(
+                                (newAmount - currentAmount) /
+                                100
+                              ).toFixed(0)}/mo)`;
                             } else if (newAmount < currentAmount) {
-                              return `Downgrade (-$${((currentAmount - newAmount) / 100).toFixed(0)}/mo)`;
+                              return `Downgrade (-$${(
+                                (currentAmount - newAmount) /
+                                100
+                              ).toFixed(0)}/mo)`;
                             } else {
                               return "Manage Plan";
                             }
@@ -224,7 +226,7 @@ export default function Pricing() {
         )}
 
         {userSubscription &&
-          !plans?.items.some(
+          !loaderData.plans?.items.some(
             (plan: any) => plan.prices[0].id === userSubscription.polarPriceId
           ) && (
             <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
