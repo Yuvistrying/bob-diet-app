@@ -180,7 +180,6 @@ export const fetchUserSubscription = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
 
-    console.log("fetchUserSubscription", identity);
     if (!identity) {
       return null;
     }

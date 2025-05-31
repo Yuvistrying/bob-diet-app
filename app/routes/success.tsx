@@ -1,19 +1,13 @@
 "use client";
-import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/react-router";
-import { Link } from "react-router";
-import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
-import { api } from "../../convex/_generated/api";
+import { useMutation, useQuery } from "convex/react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import { useEffect } from "react";
-
+import { Link } from "react-router";
+import Footer from "~/components/homepage/footer";
+import { Navbar } from "~/components/homepage/navbar";
+import { Button } from "~/components/ui/button";
+import { api } from "../../convex/_generated/api";
 export default function Success() {
   const { isSignedIn } = useAuth();
   const subscription = useQuery(api.subscriptions.fetchUserSubscription);
@@ -28,111 +22,141 @@ export default function Success() {
 
   if (!isSignedIn) {
     return (
-      <section className="flex flex-col items-center justify-center min-h-screen px-4">
-        <Card className="max-w-md w-full text-center">
-          <CardHeader>
-            <CardTitle className="text-2xl">Access Denied</CardTitle>
-            <CardDescription>
+      <>
+        <Navbar />
+        <section className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 pt-20">
+          <div className="mx-auto max-w-5xl px-6 text-center">
+            <div className="mx-auto mb-8">
+              <CheckCircle className="h-16 w-16 text-red-500 mx-auto" />
+            </div>
+            <h2 className="text-balance text-4xl font-semibold lg:text-5xl mb-4">
+              Access Denied
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8">
               Please sign in to view your subscription details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild className="w-full">
+            </p>
+            <Button asChild size="lg">
               <Link to="/sign-in">Sign In</Link>
             </Button>
-          </CardContent>
-        </Card>
-      </section>
+          </div>
+        </section>
+        <Footer />
+      </>
     );
   }
 
   if (!subscription) {
     return (
-      <section className="flex flex-col items-center justify-center min-h-screen px-4">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading your subscription details...</span>
-        </div>
-      </section>
+      <>
+        <section className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 pt-20">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="text-lg">
+              Loading your subscription details...
+            </span>
+          </div>
+        </section>
+      </>
     );
   }
 
   return (
-    <section className="flex flex-col items-center justify-center min-h-screen px-4">
-      <Card className="max-w-2xl w-full text-center">
-        <CardHeader className="pb-6">
-          <div className="mx-auto mb-4">
-            <CheckCircle className="h-16 w-16 text-green-500" />
-          </div>
-          <CardTitle className="text-3xl font-bold">
-            Welcome to your subscription!
-          </CardTitle>
-          <CardDescription className="text-lg">
-            Your payment was successful and your subscription is now active.
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          <div className="bg-muted rounded-lg p-6 text-left">
-            <h3 className="font-semibold text-lg mb-4">Subscription Details</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status:</span>
-                <span className="font-medium capitalize">{subscription.status}</span>
+    <>
+      {/* Subscription Details Section */}
+      <section className="flex flex-col items-center justify-center py-16 md:py-32 h-screen">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="grid gap-6 md:grid-cols-2 md:gap-12">
+            <div>
+              <h2 className="text-4xl font-medium mb-6">
+                Your Subscription Details
+              </h2>
+              <div className="space-y-6">
+                <p className="text-muted-foreground">
+                  Thank you for choosing React Starter Kit! Your subscription is
+                  now active and you have full access to all features.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className="font-medium capitalize bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">
+                      {subscription.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-medium text-lg">
+                      $
+                      {subscription.amount
+                        ? (subscription.amount / 100).toFixed(2)
+                        : "0.00"}{" "}
+                      {subscription.currency
+                        ? subscription.currency.toUpperCase()
+                        : "USD"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">
+                      Billing Cycle:
+                    </span>
+                    <span className="font-medium capitalize">
+                      {subscription.interval}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-muted-foreground">Next Billing:</span>
+                    <span className="font-medium">
+                      {subscription.currentPeriodEnd
+                        ? new Date(
+                            subscription.currentPeriodEnd
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount:</span>
-                <span className="font-medium">
-                  ${subscription.amount ? (subscription.amount / 100).toFixed(2) : '0.00'} {subscription.currency ? subscription.currency.toUpperCase() : 'USD'}
-                </span>
+            </div>
+
+            <div className="space-y-6">
+              <h3 className="text-2xl font-medium">What's included:</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span>Full access to your dashboard</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span>All premium features unlocked</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span>Priority customer support</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span>Cancel anytime</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span>Regular updates and new features</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Billing Cycle:</span>
-                <span className="font-medium capitalize">{subscription.interval}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Next Billing:</span>
-                <span className="font-medium">
-                  {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}
-                </span>
+
+              <div className="bg-muted rounded-lg p-6 mt-6">
+                <p className="text-sm text-muted-foreground">
+                  {subscription?.status === "active"
+                    ? "You'll receive a confirmation email shortly. If you have any questions, feel free to contact our support team."
+                    : "Your payment is processing. It may take a few minutes for your subscription to activate. Please refresh the page or try again shortly."}
+                </p>
               </div>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">What's Next?</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Button asChild className="w-full">
-                <Link to={subscription?.status === 'active' ? "/dashboard" : "/pricing"}>
-                  {subscription?.status === 'active' ? (
-                    <>
-                      Go to Dashboard
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  ) : (
-                    "View Pricing"
-                  )}
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/">
-                  Back to Home
-                </Link>
-              </Button>
-            </div>
+          <div className="flex justify-center mt-[5rem]">
+            <Link to="/dashboard">
+              <Button>Go to Dashboard</Button>
+            </Link>
           </div>
-
-          <div className="pt-6 border-t">
-            <p className="text-sm text-muted-foreground">
-              {subscription?.status === 'active' ? (
-                "You'll receive a confirmation email shortly. If you have any questions, feel free to contact our support team."
-              ) : (
-                "Your payment is processing. It may take a few minutes for your subscription to activate. Please refresh the page or try again shortly."
-              )}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </section>
+        </div>
+      </section>
+    </>
   );
 }
