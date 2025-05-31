@@ -159,7 +159,7 @@ export const checkUserSubscriptionStatus = query({
 
     const user = await ctx.db
       .query("users")
-      // .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
       .unique();
 
     if (!user) {
@@ -168,7 +168,7 @@ export const checkUserSubscriptionStatus = query({
 
     const subscription = await ctx.db
       .query("subscriptions")
-      // .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
+      .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
       .first();
 
     const hasActiveSubscription = subscription?.status === "active";
@@ -179,13 +179,15 @@ export const checkUserSubscriptionStatus = query({
 export const fetchUserSubscription = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
+
+    console.log("fetchUserSubscription", identity);
     if (!identity) {
       return null;
     }
 
     const user = await ctx.db
       .query("users")
-      // .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
       .unique();
 
     if (!user) {
@@ -194,7 +196,7 @@ export const fetchUserSubscription = query({
 
     const subscription = await ctx.db
       .query("subscriptions")
-      // .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
+      .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
       .first();
 
     return subscription;
@@ -261,7 +263,7 @@ export const handleWebhookEvent = mutation({
         // Find existing subscription
         const existingSub = await ctx.db
           .query("subscriptions")
-          // .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
+          .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
           .first();
 
         if (existingSub) {
@@ -287,7 +289,7 @@ export const handleWebhookEvent = mutation({
         // Find and update subscription
         const activeSub = await ctx.db
           .query("subscriptions")
-          // .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
+          .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
           .first();
 
         if (activeSub) {
@@ -304,7 +306,7 @@ export const handleWebhookEvent = mutation({
         // Find and update subscription
         const canceledSub = await ctx.db
           .query("subscriptions")
-          // .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
+          .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
           .first();
 
         if (canceledSub) {
@@ -327,7 +329,7 @@ export const handleWebhookEvent = mutation({
         // Find and update subscription
         const uncanceledSub = await ctx.db
           .query("subscriptions")
-          // .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
+          .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
           .first();
 
         if (uncanceledSub) {
@@ -347,7 +349,7 @@ export const handleWebhookEvent = mutation({
         // Find and update subscription
         const revokedSub = await ctx.db
           .query("subscriptions")
-          // .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
+          .withIndex("polarId", (q) => q.eq("polarId", args.body.data.id))
           .first();
 
         if (revokedSub) {
