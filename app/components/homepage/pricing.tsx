@@ -14,7 +14,6 @@ import {
 import { api } from "../../../convex/_generated/api";
 
 export default function Pricing({ loaderData }: { loaderData: any }) {
-  console.log("loaderData={loaderData}", loaderData);
   const { isSignedIn } = useAuth();
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

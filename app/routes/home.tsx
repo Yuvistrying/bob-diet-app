@@ -14,6 +14,8 @@ export function meta({}: Route.MetaArgs) {
     "This powerful starter kit is designed to help you launch your SAAS application quickly and efficiently.";
   const keywords = "React, Starter Kit, SAAS, Launch, Quickly, Efficiently";
   const siteUrl = "https://reactstarterkit.com";
+  const imageUrl =
+    "https://jdj14ctwppwprnqu.public.blob.vercel-storage.com/lockscreen_opengraph-XZlGCb1IL4X735kYqgdRIo2XDjSIBk";
 
   return [
     { title },
@@ -26,12 +28,12 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:type", content: "website" },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    { property: "og:image", content: "/rsk.png" },
+    { property: "og:image", content: imageUrl },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:url", content: siteUrl },
     { property: "og:site_name", content: "React Starter Kit" },
-    { property: "og:image", content: "/rsk.png" },
+    { property: "og:image", content: imageUrl },
 
     // Twitter Card
     { name: "twitter:card", content: "summary_large_image" },
@@ -40,13 +42,13 @@ export function meta({}: Route.MetaArgs) {
       name: "twitter:description",
       content: description,
     },
-    { name: "twitter:image", content: "/rsk.png" },
+    { name: "twitter:image", content: imageUrl },
     {
       name: "keywords",
       content: keywords,
     },
     { name: "author", content: "Ras Mic" },
-    { name: "favicon", content: "/rsk.png" },
+    { name: "favicon", content: imageUrl },
   ];
 }
 
