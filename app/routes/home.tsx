@@ -15,7 +15,7 @@ export function meta({}: Route.MetaArgs) {
   const keywords = "React, Starter Kit, SAAS, Launch, Quickly, Efficiently";
   const siteUrl = "https://www.reactstarter.xyz/";
   const imageUrl =
-    "https://jdj14ctwppwprnqu.public.blob.vercel-storage.com/lockscreen_opengraph-XZlGCb1IL4X735kYqgdRIo2XDjSIBk";
+    "https://jdj14ctwppwprnqu.public.blob.vercel-storage.com/rsk-image-FcUcfBMBgsjNLo99j3NhKV64GT2bQl.png";
 
   return [
     { title },
