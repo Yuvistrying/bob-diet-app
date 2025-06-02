@@ -21,6 +21,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
+import { useClerk } from "@clerk/react-router";
 
 export function NavUser({ user }: any) {
   const { isMobile } = useSidebar();
@@ -30,6 +31,7 @@ export function NavUser({ user }: any) {
     user.firstName.charAt(0).toUpperCase() +
     user.lastName.charAt(0).toUpperCase();
   const userProfile = user.imageUrl;
+  const { signOut } = useClerk();
 
   return (
     <SidebarMenu>
@@ -89,9 +91,9 @@ export function NavUser({ user }: any) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => signOut({ redirectUrl: "/" })}>
               <IconLogout />
-              <SignOutButton />
+              Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
