@@ -24,19 +24,6 @@ const createCheckout = async ({
     accessToken: process.env.POLAR_ACCESS_TOKEN,
   });
 
-  console.log(
-    "Initialized Polar SDK with token:",
-    process.env.POLAR_ACCESS_TOKEN?.substring(0, 8) + "..."
-  );
-
-  console.log("Environment check:");
-  console.log(
-    "- POLAR_ACCESS_TOKEN:",
-    process.env.POLAR_ACCESS_TOKEN ? "Set" : "Missing"
-  );
-  console.log("- Success URL being used:", successUrl);
-  console.log("- Price ID being used:", productPriceId);
-
   // Get product ID from price ID
   const { result: productsResult } = await polar.products.list({
     organizationId: process.env.POLAR_ORGANIZATION_ID,
@@ -57,8 +44,6 @@ const createCheckout = async ({
   if (!productId) {
     throw new Error(`Product not found for price ID: ${productPriceId}`);
   }
-
-  console.log("- Found product ID:", productId);
 
   const checkoutData = {
     products: [productId],
@@ -162,7 +147,6 @@ export const createCheckoutSession = action({
 
     // If user doesn't exist, create them
     if (!user) {
-      console.log("User not found in database, creating user...");
       user = await ctx.runMutation(api.users.upsertUser);
 
       if (!user) {
@@ -261,7 +245,6 @@ export const fetchUserSubscription = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
 
-    console.log("fetchUserSubscription", identity);
     if (!identity) {
       return null;
     }
@@ -303,8 +286,6 @@ export const handleWebhookEvent = mutation({
 
     switch (eventType) {
       case "subscription.created":
-        console.log("subscription.created:", args.body);
-
         // Insert new subscription
         await ctx.db.insert("subscriptions", {
           polarId: args.body.data.id,
@@ -339,8 +320,6 @@ export const handleWebhookEvent = mutation({
         break;
 
       case "subscription.updated":
-        console.log("subscription.updated:", args.body);
-
         // Find existing subscription
         const existingSub = await ctx.db
           .query("subscriptions")
@@ -365,8 +344,6 @@ export const handleWebhookEvent = mutation({
         break;
 
       case "subscription.active":
-        console.log("subscription.active:", args.body);
-
         // Find and update subscription
         const activeSub = await ctx.db
           .query("subscriptions")
@@ -382,8 +359,6 @@ export const handleWebhookEvent = mutation({
         break;
 
       case "subscription.canceled":
-        console.log("subscription.canceled:", args.body);
-
         // Find and update subscription
         const canceledSub = await ctx.db
           .query("subscriptions")
@@ -405,8 +380,6 @@ export const handleWebhookEvent = mutation({
         break;
 
       case "subscription.uncanceled":
-        console.log("subscription.uncanceled:", args.body);
-
         // Find and update subscription
         const uncanceledSub = await ctx.db
           .query("subscriptions")
@@ -425,8 +398,6 @@ export const handleWebhookEvent = mutation({
         break;
 
       case "subscription.revoked":
-        console.log("subscription.revoked:", args.body);
-
         // Find and update subscription
         const revokedSub = await ctx.db
           .query("subscriptions")
@@ -444,7 +415,6 @@ export const handleWebhookEvent = mutation({
         break;
 
       case "order.created":
-        console.log("order.created:", args.body);
         // Orders are handled through the subscription events
         break;
 
@@ -508,7 +478,6 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
       );
     }
 
-    console.log("Webhook failed", error);
     return new Response(JSON.stringify({ message: "Webhook failed" }), {
       status: 400,
       headers: {

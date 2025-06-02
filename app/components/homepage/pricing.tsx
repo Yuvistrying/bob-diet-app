@@ -34,7 +34,6 @@ export default function Pricing({ loaderData }: { loaderData: any }) {
 
     try {
       // Ensure user exists in database before action
-      console.log("Syncing user data...");
       await upsertUser();
 
       // If user has active subscription, redirect to customer portal for plan changes
@@ -42,7 +41,6 @@ export default function Pricing({ loaderData }: { loaderData: any }) {
         userSubscription?.status === "active" &&
         userSubscription?.customerId
       ) {
-        console.log("Redirecting to customer portal for plan management...");
         const portalResult = await createPortalUrl({
           customerId: userSubscription.customerId,
         });
@@ -52,10 +50,8 @@ export default function Pricing({ loaderData }: { loaderData: any }) {
       }
 
       // Otherwise, create new checkout for first-time subscription
-      console.log("Creating checkout session...");
       const checkoutUrl = await createCheckout({ priceId });
 
-      console.log("Redirecting to checkout...");
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error("Failed to process subscription action:", error);
