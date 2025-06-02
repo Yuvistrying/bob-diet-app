@@ -13,7 +13,7 @@ export function meta({}: Route.MetaArgs) {
   const description =
     "This powerful starter kit is designed to help you launch your SAAS application quickly and efficiently.";
   const keywords = "React, Starter Kit, SAAS, Launch, Quickly, Efficiently";
-  const siteUrl = "https://reactstarterkit.com";
+  const siteUrl = "https://reactstarterkit.xyz";
   const imageUrl =
     "https://jdj14ctwppwprnqu.public.blob.vercel-storage.com/lockscreen_opengraph-XZlGCb1IL4X735kYqgdRIo2XDjSIBk";
 
