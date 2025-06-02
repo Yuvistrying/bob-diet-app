@@ -12,16 +12,17 @@ export default function ContentSection() {
           </h2>
           <div className="space-y-6">
             <p>
-              Lyra is evolving to be more than just the models. It supports an
-              entire ecosystem — from products to the APIs and platforms helping
-              developers and businesses innovate.
+              Stop rebuilding the same foundation over and over. RSK eliminates
+              months of integration work by providing a complete,
+              production-ready SaaS template with authentication, payments, and
+              real-time data working seamlessly out of the box.{" "}
             </p>
             <p>
-              RSK.{" "}
-              <span className="font-bold">It supports an entire ecosystem</span>{" "}
-              — from products innovate. Sit minus, quod debitis autem quia
-              aspernatur delectus impedit modi, neque non id ad dignissimos?
-              Saepe deleniti perferendis beatae.
+              <span className="font-bold">From idea to launch in weeks,</span>{" "}
+              not months. With TypeScript safety, modern UI components, and
+              scalable architecture built-in, you can validate your business
+              concept and start generating revenue while your competitors are
+              still setting up their development environment.{" "}
             </p>
             <Button
               asChild

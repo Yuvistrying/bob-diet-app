@@ -9,19 +9,19 @@ const members = [
     name: "Ras Mic",
     role: "Co-Founder & CTO",
     avatar:
-      "https://pbs.twimg.com/profile_images/1927552295291564033/U8DD7JlB_400x400.jpg",
+      "https://pbs.twimg.com/media/GsOcrswWMAALjCG?format=jpg&name=medium",
   },
   {
     name: "Micky",
     role: "Co-Founder & CMO",
     avatar:
-      "https://pbs.twimg.com/profile_images/1927552295291564033/U8DD7JlB_400x400.jpg",
+      "https://pbs.twimg.com/media/GrQYfZ7WAAAMy7i?format=jpg&name=medium",
   },
   {
     name: "Mike",
     role: "Co-Founder & COO",
     avatar:
-      "https://pbs.twimg.com/profile_images/1927552295291564033/U8DD7JlB_400x400.jpg",
+      "https://pbs.twimg.com/media/GoRePdpXEAAb06Q?format=jpg&name=4096x4096",
   },
 ];
 
