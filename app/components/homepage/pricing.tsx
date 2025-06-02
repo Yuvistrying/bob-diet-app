@@ -2,7 +2,7 @@
 import { useAuth } from "@clerk/react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { Check, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -13,11 +13,7 @@ import {
 } from "~/components/ui/card";
 import { api } from "../../../convex/_generated/api";
 
-export default function Pricing({
-  loaderData,
-}: {
-  loaderData: Route.ComponentProps;
-}) {
+export default function Pricing({ loaderData }: { loaderData: any }) {
   console.log("loaderData={loaderData}", loaderData);
   const { isSignedIn } = useAuth();
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
@@ -27,8 +23,6 @@ export default function Pricing({
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
   const createPortalUrl = useAction(api.subscriptions.createCustomerPortalUrl);
   const upsertUser = useMutation(api.users.upsertUser);
-
-
 
   const handleSubscribe = async (priceId: string) => {
     if (!isSignedIn) {

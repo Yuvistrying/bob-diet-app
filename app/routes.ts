@@ -14,6 +14,7 @@ export default [
   route("subscription-required", "routes/subscription-required.tsx"),
   layout("routes/dashboard/layout.tsx", [
     route("dashboard", "routes/dashboard/index.tsx"),
+    route("dashboard/chat", "routes/dashboard/chat.tsx"),
     route("dashboard/settings", "routes/dashboard/settings.tsx"),
   ]),
 ] satisfies RouteConfig;

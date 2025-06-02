@@ -1,13 +1,5 @@
-import {
-  IconChartBar,
-  IconDashboard,
-  IconFolder,
-  IconHelp,
-  IconListDetails,
-  IconSearch,
-  IconSettings,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconDashboard, IconSettings, IconUsers } from "@tabler/icons-react";
+import { MessageCircle } from "lucide-react";
 import * as React from "react";
 
 import { Link } from "react-router";
@@ -36,9 +28,9 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
+      title: "Chat",
+      url: "/dashboard/chat",
+      icon: MessageCircle,
     },
     {
       title: "Team",
