@@ -4,7 +4,7 @@ import {
   Convex,
   ReactIcon,
   ReactRouter,
-  Stripe,
+  Polar,
   TailwindIcon,
   Typescript,
 } from "~/components/logos";
@@ -54,7 +54,7 @@ export default function IntegrationsSection({
                 </IntegrationCard>
 
                 <IntegrationCard>
-                  <Stripe />
+                  <Polar />
                 </IntegrationCard>
               </div>
             </div>
