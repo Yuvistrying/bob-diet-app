@@ -9,13 +9,44 @@ import { api } from "../../convex/_generated/api";
 import type { Route } from "./+types/home";
 
 export function meta({}: Route.MetaArgs) {
+  const title = "React Starter Kit - Launch Your SAAS Quickly";
+  const description =
+    "This powerful starter kit is designed to help you launch your SAAS application quickly and efficiently.";
+  const keywords = "React, Starter Kit, SAAS, Launch, Quickly, Efficiently";
+  const siteUrl = "https://reactstarterkit.com";
+
   return [
-    { title: "React Starter Kit" },
+    { title },
     {
       name: "description",
-      content:
-        "This powerful starter kit is designed to help you launch your SAAS application quickly and efficiently.",
+      content: description,
     },
+
+    // Open Graph / Facebook
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:image", content: "/rsk.png" },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { property: "og:url", content: siteUrl },
+    { property: "og:site_name", content: "React Starter Kit" },
+    { property: "og:image", content: "/rsk.png" },
+
+    // Twitter Card
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    {
+      name: "twitter:description",
+      content: description,
+    },
+    { name: "twitter:image", content: "/rsk.png" },
+    {
+      name: "keywords",
+      content: keywords,
+    },
+    { name: "author", content: "Ras Mic" },
+    { name: "favicon", content: "/rsk.png" },
   ];
 }
 
