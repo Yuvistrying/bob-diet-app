@@ -157,7 +157,7 @@ export const createCheckoutSession = action({
     const checkout = await createCheckout({
       customerEmail: user.email!,
       productPriceId: args.priceId,
-      successUrl: `http://localhost:5173/success`,
+      successUrl: `${process.env.FRONTEND_URL}/success`,
       metadata: {
         userId: user.tokenIdentifier,
       },
