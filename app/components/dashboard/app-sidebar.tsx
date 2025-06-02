@@ -1,9 +1,9 @@
 import { IconDashboard, IconSettings } from "@tabler/icons-react";
 import { MessageCircle } from "lucide-react";
 import { Link } from "react-router";
-import { NavMain } from "~/components/nav-main";
-import { NavSecondary } from "~/components/nav-secondary";
-import { NavUser } from "~/components/nav-user";
+import { NavMain } from "./nav-main";
+import { NavSecondary } from "./nav-secondary";
+import { NavUser } from "./nav-user";
 import {
   Sidebar,
   SidebarContent,

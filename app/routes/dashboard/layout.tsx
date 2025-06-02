@@ -1,8 +1,8 @@
 import { getAuth } from "@clerk/react-router/ssr.server";
 import { fetchQuery } from "convex/nextjs";
 import { redirect, useLoaderData } from "react-router";
-import { AppSidebar } from "~/components/app-sidebar";
-import { SiteHeader } from "~/components/site-header";
+import { AppSidebar } from "~/components/dashboard/app-sidebar";
+import { SiteHeader } from "~/components/dashboard/site-header";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { api } from "../../../convex/_generated/api";
 import type { Route } from "./+types/layout";
