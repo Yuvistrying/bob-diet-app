@@ -1,12 +1,12 @@
 import { getAuth } from "@clerk/react-router/ssr.server";
 import { fetchQuery } from "convex/nextjs";
-import { redirect } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import { AppSidebar } from "~/components/app-sidebar";
 import { SiteHeader } from "~/components/site-header";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { api } from "../../../convex/_generated/api";
 import type { Route } from "./+types/layout";
-
+import { createClerkClient } from "@clerk/react-router/api.server";
 import { Outlet } from "react-router";
 
 export async function loader(args: Route.LoaderArgs) {
@@ -28,11 +28,17 @@ export async function loader(args: Route.LoaderArgs) {
     throw redirect("/subscription-required");
   }
 
+  const user = await createClerkClient({
+    secretKey: process.env.CLERK_SECRET_KEY,
+  }).users.getUser(userId);
+
   // Return userId for client-side use
-  return { userId };
+  return { user };
 }
 
 export default function DashboardLayout() {
+  const { user } = useLoaderData();
+
   return (
     <SidebarProvider
       style={
@@ -42,7 +48,7 @@ export default function DashboardLayout() {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar variant="inset" user={user} />
       <SidebarInset>
         <SiteHeader />
         <Outlet />

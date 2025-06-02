@@ -1,7 +1,5 @@
-import { IconDashboard, IconSettings, IconUsers } from "@tabler/icons-react";
+import { IconDashboard, IconSettings } from "@tabler/icons-react";
 import { MessageCircle } from "lucide-react";
-import * as React from "react";
-
 import { Link } from "react-router";
 import { NavMain } from "~/components/nav-main";
 import { NavSecondary } from "~/components/nav-secondary";
@@ -16,11 +14,6 @@ import {
 } from "~/components/ui/sidebar";
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/fabrika.png",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -32,11 +25,6 @@ const data = {
       url: "/dashboard/chat",
       icon: MessageCircle,
     },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
   ],
   navSecondary: [
     {
@@ -47,9 +35,15 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  variant,
+  user,
+}: {
+  variant: "sidebar" | "floating" | "inset";
+  user: any;
+}) {
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="offcanvas" variant={variant}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -63,9 +57,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
+      <SidebarFooter>{user && <NavUser user={user} />}</SidebarFooter>
     </Sidebar>
   );
 }

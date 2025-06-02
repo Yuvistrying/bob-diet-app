@@ -16,14 +16,17 @@ import { useState } from "react";
 import * as React from "react";
 
 export default function IntegratedPricing() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   const [plans, setPlans] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const getPlans = useAction(api.subscriptions.getAvailablePlans);
   const subscriptionStatus = useQuery(
-    api.subscriptions.checkUserSubscriptionStatus
+    api.subscriptions.checkUserSubscriptionStatus,
+    {
+      userId: isSignedIn ? userId : undefined,
+    }
   );
   const userSubscription = useQuery(api.subscriptions.fetchUserSubscription);
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
