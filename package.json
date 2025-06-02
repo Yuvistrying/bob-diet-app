@@ -35,6 +35,7 @@
     "@tabler/icons-react": "^3.33.0",
     "@tanstack/react-table": "^8.21.3",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/react-router": "^1.1.2",
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
