@@ -21,16 +21,41 @@ export async function loader(args: Route.LoaderArgs) {
   return rootAuthLoader(args);
 }
 export const links: Route.LinksFunction = () => [
+  // DNS prefetch for external services
+  { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
+  { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
+  { rel: "dns-prefetch", href: "https://api.convex.dev" },
+  { rel: "dns-prefetch", href: "https://clerk.dev" },
+  
+  // Preconnect to font services
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
     href: "https://fonts.gstatic.com",
     crossOrigin: "anonymous",
   },
+  
+  // Font with display=swap for performance
   {
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
+  
+  // Preload critical assets
+  {
+    rel: "preload",
+    href: "/rsk.png",
+    as: "image",
+    type: "image/png",
+  },
+  {
+    rel: "preload",
+    href: "/favicon.png", 
+    as: "image",
+    type: "image/png",
+  },
+  
+  // Icon
   {
     rel: "icon",
     type: "image/png",

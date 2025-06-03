@@ -17,22 +17,19 @@ export async function loader(args: Route.LoaderArgs) {
     throw redirect("/sign-in");
   }
 
-  // Check subscription status
-  const subscriptionStatus = await fetchQuery(
-    api.subscriptions.checkUserSubscriptionStatus,
-    { userId }
-  );
+  // Parallel data fetching to reduce waterfall
+  const [subscriptionStatus, user] = await Promise.all([
+    fetchQuery(api.subscriptions.checkUserSubscriptionStatus, { userId }),
+    createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY,
+    }).users.getUser(userId)
+  ]);
 
   // Redirect to subscription-required if no active subscription
   if (!subscriptionStatus?.hasActiveSubscription) {
     throw redirect("/subscription-required");
   }
 
-  const user = await createClerkClient({
-    secretKey: process.env.CLERK_SECRET_KEY,
-  }).users.getUser(userId);
-
-  // Return userId for client-side use
   return { user };
 }
 

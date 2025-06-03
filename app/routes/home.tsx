@@ -55,20 +55,18 @@ export function meta({}: Route.MetaArgs) {
 export async function loader(args: Route.LoaderArgs) {
   const { userId } = await getAuth(args);
 
-  let subscriptionData = null;
+  // Parallel data fetching to reduce waterfall
+  const [subscriptionData, plans] = await Promise.all([
+    userId 
+      ? fetchQuery(api.subscriptions.checkUserSubscriptionStatus, { userId })
+        .catch((error) => {
+          console.error("Failed to fetch subscription data:", error);
+          return null;
+        })
+      : Promise.resolve(null),
+    fetchAction(api.subscriptions.getAvailablePlans)
+  ]);
 
-  if (userId) {
-    try {
-      subscriptionData = await fetchQuery(
-        api.subscriptions.checkUserSubscriptionStatus,
-        { userId }
-      );
-    } catch (error) {
-      console.error("Failed to fetch subscription data:", error);
-    }
-  }
-
-  const plans = await fetchAction(api.subscriptions.getAvailablePlans);
   return {
     isSignedIn: !!userId,
     hasActiveSubscription: subscriptionData?.hasActiveSubscription || false,

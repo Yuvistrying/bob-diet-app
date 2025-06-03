@@ -1,7 +1,7 @@
 "use client";
 import { useAuth, UserButton } from "@clerk/react-router";
 import { Github, Menu, X } from "lucide-react";
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -31,7 +31,7 @@ export const Navbar = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = useCallback((href: string) => {
     if (href.startsWith("#")) {
       const element = document.querySelector(href);
       if (element) {
@@ -42,7 +42,17 @@ export const Navbar = ({
       }
     }
     setMenuState(false); // Close mobile menu
-  };
+  }, []);
+
+  const dashboardLink = useMemo(() => {
+    if (!loaderData?.isSignedIn) return "/sign-up";
+    return loaderData.hasActiveSubscription ? "/dashboard" : "/pricing";
+  }, [loaderData?.isSignedIn, loaderData?.hasActiveSubscription]);
+
+  const dashboardText = useMemo(() => {
+    if (!loaderData?.isSignedIn) return "Get Started (Demo)";
+    return loaderData.hasActiveSubscription ? "Dashboard" : "Subscribe";
+  }, [loaderData?.isSignedIn, loaderData?.hasActiveSubscription]);
   return (
     <header>
       <nav
@@ -111,6 +121,7 @@ export const Navbar = ({
                 <Link
                   to="https://github.com/michaelshimeles/react-starter-kit"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center justify-center"
                 >
                   <Github className="w-5 h-5" />
@@ -118,19 +129,8 @@ export const Navbar = ({
                 {isSignedIn ? (
                   <div className="flex items-center gap-3">
                     <Button asChild size="sm">
-                      <Link
-                        to={
-                          loaderData?.hasActiveSubscription
-                            ? "/dashboard"
-                            : "/pricing"
-                        }
-                        prefetch="viewport"
-                      >
-                        <span>
-                          {loaderData?.hasActiveSubscription
-                            ? "Dashboard"
-                            : "Subscribe"}
-                        </span>
+                      <Link to={dashboardLink} prefetch="viewport">
+                        <span>{dashboardText}</span>
                       </Link>
                     </Button>
                     <UserButton />
@@ -162,7 +162,7 @@ export const Navbar = ({
                       className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                     >
                       <Link to="/sign-up" prefetch="viewport">
-                        <span>Get Started (Demo)</span>
+                        <span>{dashboardText}</span>
                       </Link>
                     </Button>
                   </>

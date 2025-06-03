@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router";
 import { LogoIcon } from "~/components/logo";
 import {
@@ -104,7 +105,7 @@ export default function IntegrationsSection({
   );
 }
 
-const IntegrationCard = ({
+const IntegrationCard = memo(({
   children,
   className,
   borderClassName,
@@ -130,4 +131,4 @@ const IntegrationCard = ({
       <div className="relative z-20 m-auto size-fit *:size-8">{children}</div>
     </div>
   );
-};
+});

@@ -21,10 +21,10 @@ export const chat = httpAction(async (ctx, req) => {
   // Respond with the stream
   return result.toDataStreamResponse({
     headers: {
-      // e.g. https://mywebsite.com, configured on your Convex dashboard
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
+      "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5173",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
       Vary: "origin",
     },
   });
@@ -52,9 +52,10 @@ http.route({
     ) {
       return new Response(null, {
         headers: new Headers({
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5173",
           "Access-Control-Allow-Methods": "POST",
-          "Access-Control-Allow-Headers": "Content-Type, Digest",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Credentials": "true",
           "Access-Control-Max-Age": "86400",
         }),
       });
@@ -78,9 +79,10 @@ http.route({
     ) {
       return new Response(null, {
         headers: new Headers({
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5173",
           "Access-Control-Allow-Methods": "POST",
-          "Access-Control-Allow-Headers": "Content-Type, Digest",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Credentials": "true",
           "Access-Control-Max-Age": "86400",
         }),
       });

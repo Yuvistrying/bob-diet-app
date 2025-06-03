@@ -20,7 +20,7 @@ const createCheckout = async ({
   }
 
   const polar = new Polar({
-    server: "sandbox",
+    server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
     accessToken: process.env.POLAR_ACCESS_TOKEN,
   });
 
@@ -450,7 +450,10 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
     });
 
     // Validate the webhook event
-    validateEvent(rawBody, headers, process.env.POLAR_WEBHOOK_SECRET ?? "");
+    if (!process.env.POLAR_WEBHOOK_SECRET) {
+      throw new Error("POLAR_WEBHOOK_SECRET environment variable is not configured");
+    }
+    validateEvent(rawBody, headers, process.env.POLAR_WEBHOOK_SECRET);
 
     const body = JSON.parse(rawBody);
 
