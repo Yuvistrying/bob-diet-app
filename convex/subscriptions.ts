@@ -451,7 +451,9 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
 
     // Validate the webhook event
     if (!process.env.POLAR_WEBHOOK_SECRET) {
-      throw new Error("POLAR_WEBHOOK_SECRET environment variable is not configured");
+      throw new Error(
+        "POLAR_WEBHOOK_SECRET environment variable is not configured"
+      );
     }
     validateEvent(rawBody, headers, process.env.POLAR_WEBHOOK_SECRET);
 

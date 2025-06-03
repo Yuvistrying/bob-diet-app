@@ -11,7 +11,7 @@ export const chat = httpAction(async (ctx, req) => {
   const result = streamText({
     model: openai("gpt-4o"),
     messages,
-    async onFinish({ text, toolCalls, toolResults, usage, finishReason }) {
+    async onFinish({ text }) {
       // implement your own logic here, e.g. for storing messages
       // or recording token usage
       console.log(text);

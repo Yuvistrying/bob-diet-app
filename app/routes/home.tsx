@@ -57,14 +57,15 @@ export async function loader(args: Route.LoaderArgs) {
 
   // Parallel data fetching to reduce waterfall
   const [subscriptionData, plans] = await Promise.all([
-    userId 
-      ? fetchQuery(api.subscriptions.checkUserSubscriptionStatus, { userId })
-        .catch((error) => {
+    userId
+      ? fetchQuery(api.subscriptions.checkUserSubscriptionStatus, {
+          userId,
+        }).catch((error) => {
           console.error("Failed to fetch subscription data:", error);
           return null;
         })
       : Promise.resolve(null),
-    fetchAction(api.subscriptions.getAvailablePlans)
+    fetchAction(api.subscriptions.getAvailablePlans),
   ]);
 
   return {

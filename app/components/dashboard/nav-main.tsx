@@ -16,7 +16,7 @@ export const NavMain = memo(({
   items: {
     title: string;
     url: string;
-    icon?: any;
+    icon?: Icon;
   }[];
 }) => {
   const location = useLocation();

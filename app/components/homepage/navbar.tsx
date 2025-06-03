@@ -1,7 +1,7 @@
 "use client";
-import { useAuth, UserButton } from "@clerk/react-router";
+import { UserButton } from "@clerk/react-router";
 import { Github, Menu, X } from "lucide-react";
-import React, { useMemo, useCallback } from "react";
+import React, { useCallback } from "react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -18,8 +18,6 @@ export const Navbar = ({
 }: {
   loaderData?: { isSignedIn: boolean; hasActiveSubscription: boolean };
 }) => {
-  const { isSignedIn } = useAuth();
-
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
 
@@ -44,15 +42,14 @@ export const Navbar = ({
     setMenuState(false); // Close mobile menu
   }, []);
 
-  const dashboardLink = useMemo(() => {
-    if (!loaderData?.isSignedIn) return "/sign-up";
-    return loaderData.hasActiveSubscription ? "/dashboard" : "/pricing";
-  }, [loaderData?.isSignedIn, loaderData?.hasActiveSubscription]);
+  // Simple computations don't need useMemo
+  const dashboardLink = !loaderData?.isSignedIn 
+    ? "/sign-up" 
+    : loaderData.hasActiveSubscription ? "/dashboard" : "/pricing";
 
-  const dashboardText = useMemo(() => {
-    if (!loaderData?.isSignedIn) return "Get Started (Demo)";
-    return loaderData.hasActiveSubscription ? "Dashboard" : "Subscribe";
-  }, [loaderData?.isSignedIn, loaderData?.hasActiveSubscription]);
+  const dashboardText = !loaderData?.isSignedIn 
+    ? "Get Started (Demo)"
+    : loaderData.hasActiveSubscription ? "Dashboard" : "Subscribe";
   return (
     <header>
       <nav
@@ -126,7 +123,7 @@ export const Navbar = ({
                 >
                   <Github className="w-5 h-5" />
                 </Link>
-                {isSignedIn ? (
+                {loaderData?.isSignedIn ? (
                   <div className="flex items-center gap-3">
                     <Button asChild size="sm">
                       <Link to={dashboardLink} prefetch="viewport">
