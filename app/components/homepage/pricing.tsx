@@ -173,7 +173,7 @@ export default function Pricing({ loaderData }: { loaderData: any }) {
                             }
                           })()
                         ) : (
-                          "Get Started"
+                          "Get Started (Demo)"
                         )}
                       </Button>
                     </CardHeader>

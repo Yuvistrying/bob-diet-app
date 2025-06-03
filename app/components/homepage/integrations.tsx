@@ -2,9 +2,9 @@ import { Link } from "react-router";
 import { LogoIcon } from "~/components/logo";
 import {
   Convex,
+  Polar,
   ReactIcon,
   ReactRouter,
-  Polar,
   TailwindIcon,
   Typescript,
 } from "~/components/logos";
@@ -67,24 +67,35 @@ export default function IntegrationsSection({
                 SAAS application quickly and efficiently.
               </p>
 
-              <Button variant="outline" size="sm" asChild>
-                <Link
-                  to={
-                    loaderData?.isSignedIn
+              <div className="flex gap-3">
+                <Button size="sm" asChild>
+                  <Link
+                    to={
+                      loaderData?.isSignedIn
+                        ? loaderData?.hasActiveSubscription
+                          ? "/dashboard"
+                          : "/pricing"
+                        : "/sign-up"
+                    }
+                    prefetch="viewport"
+                  >
+                    {loaderData?.isSignedIn
                       ? loaderData?.hasActiveSubscription
-                        ? "/dashboard"
-                        : "/pricing"
-                      : "/sign-up"
-                  }
-                  prefetch="viewport"
-                >
-                  {loaderData?.isSignedIn
-                    ? loaderData?.hasActiveSubscription
-                      ? "Go to Dashboard"
-                      : "Subscribe Now"
-                    : "Get Started"}
-                </Link>
-              </Button>
+                        ? "Go to Dashboard (Demo)"
+                        : "Subscribe Now (Demo)"
+                      : "Get Started (Demo)"}
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link
+                    to="https://github.com/michaelshimeles/react-starter-kit"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ⭐️ Start on GitHub
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
