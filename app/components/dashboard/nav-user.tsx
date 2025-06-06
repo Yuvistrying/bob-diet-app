@@ -28,8 +28,8 @@ export function NavUser({ user }: any) {
   const userFullName = user.firstName + " " + user.lastName;
   const userEmail = user.emailAddresses[0].emailAddress;
   const userInitials =
-    user.firstName.charAt(0).toUpperCase() +
-    user.lastName.charAt(0).toUpperCase();
+    (user?.firstName?.charAt(0) || "").toUpperCase() +
+    (user?.lastName?.charAt(0) || "").toUpperCase();
   const userProfile = user.imageUrl;
   const { signOut } = useClerk();
 
