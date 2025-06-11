@@ -8,9 +8,17 @@
  * @module
  */
 
+import type * as bob from "../bob.js";
+import type * as chatHistory from "../chatHistory.js";
+import type * as foodLogs from "../foodLogs.js";
 import type * as http from "../http.js";
+import type * as onboarding from "../onboarding.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as usageTracking from "../usageTracking.js";
+import type * as userPreferences from "../userPreferences.js";
+import type * as userProfiles from "../userProfiles.js";
 import type * as users from "../users.js";
+import type * as weightLogs from "../weightLogs.js";
 
 import type {
   ApiFromModules,
@@ -27,9 +35,17 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  bob: typeof bob;
+  chatHistory: typeof chatHistory;
+  foodLogs: typeof foodLogs;
   http: typeof http;
+  onboarding: typeof onboarding;
   subscriptions: typeof subscriptions;
+  usageTracking: typeof usageTracking;
+  userPreferences: typeof userPreferences;
+  userProfiles: typeof userProfiles;
   users: typeof users;
+  weightLogs: typeof weightLogs;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
