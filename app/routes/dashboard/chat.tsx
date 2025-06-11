@@ -1,10 +1,14 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
-import Markdown from "react-markdown";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Card, CardContent } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
+import { Paperclip, Send } from "lucide-react";
 
 const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_URL!.replace(
   /.cloud$/,
@@ -12,16 +16,117 @@ const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_URL!.replace(
 );
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat({
-      maxSteps: 10,
-      api: `${CONVEX_SITE_URL}/api/chat`,
-    });
+  const profile = useQuery(api.userProfiles.getUserProfile, {});
+  const todayStats = useQuery(api.foodLogs.getTodayStats);
+  const latestWeight = useQuery(api.weightLogs.getLatestWeight);
+  const preferences = useQuery(api.userPreferences.getUserPreferences);
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    maxSteps: 10,
+    api: `${CONVEX_SITE_URL}/api/chat`,
+    initialMessages: profile ? [
+      {
+        id: "welcome",
+        role: "assistant",
+        content: `Hey there, ${profile.name}!\nTell me what you're eating, or attach a photo, I'll figure out the rest.`
+      }
+    ] : []
+  });
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isStealthMode = preferences?.displayMode === "stealth";
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const getProgressColor = (value: number, target: number) => {
+    const percentage = (value / target) * 100;
+    if (percentage < 80) return "bg-yellow-100 text-yellow-800";
+    if (percentage <= 100) return "bg-green-100 text-green-800";
+    return "bg-red-100 text-red-800";
+  };
 
   return (
-    <div className="flex flex-col w-full py-24 justify-center items-center">
-      <div className="w-full max-w-xl space-y-4 mb-20">
-        {messages.map((message, i) => (
+    <div className="flex flex-col h-full">
+      {/* Status Cards Grid */}
+      <div className="grid grid-cols-2 gap-3 p-4 bg-white">
+        {/* Goal Card */}
+        <Card className="bg-gray-50">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600 mb-1">Goal</div>
+            <div className="font-semibold">
+              {profile?.goal === "cut" ? "Cut" : profile?.goal === "gain" ? "Gain" : "Maintain"}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Calories Card */}
+        <Card className={cn(todayStats && profile && getProgressColor(todayStats.calories, profile.dailyCalorieTarget))}>
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600 mb-1">Daily Calories</div>
+            <div className="font-semibold">
+              {isStealthMode ? (
+                todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "On Track"
+              ) : (
+                `${todayStats?.calories || 0}/${profile?.dailyCalorieTarget || 2000}`
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Weight Card */}
+        <Card className="bg-green-100 text-green-800">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600 mb-1">Average Weight</div>
+            <div className="font-semibold">
+              {latestWeight?.weight || profile?.currentWeight || "—"} {latestWeight?.unit || "kg"}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Protein Card */}
+        <Card className={cn(todayStats && profile && getProgressColor(todayStats.protein, profile.proteinTarget))}>
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600 mb-1">Daily Proteins (gr)</div>
+            <div className="font-semibold">
+              {isStealthMode ? (
+                todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Need More" : "Good"
+              ) : (
+                `${todayStats?.protein || 0}/${profile?.proteinTarget || 150}`
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Carbs Card */}
+        {!isStealthMode && (
+          <Card className={cn(todayStats && profile && getProgressColor(todayStats.carbs, profile.carbsTarget))}>
+            <CardContent className="p-3">
+              <div className="text-xs text-gray-600 mb-1">Daily Carbs</div>
+              <div className="font-semibold">
+                {todayStats?.carbs || 0}/{profile?.carbsTarget || 200}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Fats Card */}
+        {!isStealthMode && (
+          <Card className={cn(todayStats && profile && getProgressColor(todayStats.fat, profile.fatTarget))}>
+            <CardContent className="p-3">
+              <div className="text-xs text-gray-600 mb-1">Daily Fats (gr)</div>
+              <div className="font-semibold">
+                {todayStats?.fat || 0}/{profile?.fatTarget || 65}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {messages.map((message) => (
           <div
             key={message.id}
             className={cn(
@@ -31,48 +136,59 @@ export default function Chat() {
           >
             <div
               className={cn(
-                "max-w-[65%] px-3 py-1.5 text-sm shadow-sm",
+                "max-w-[80%] px-4 py-2 rounded-2xl text-sm",
                 message.role === "user"
-                  ? "bg-[#0B93F6] text-white rounded-2xl rounded-br-sm"
-                  : "bg-[#E9E9EB] text-black rounded-2xl rounded-bl-sm"
+                  ? "bg-gray-800 text-white rounded-br-sm"
+                  : "bg-gray-100 text-gray-800 rounded-bl-sm"
               )}
             >
-              {message.parts.map((part) => {
-                switch (part.type) {
-                  case "text":
-                    return (
-                      <div
-                        key={`${message.id}-${i}`}
-                        className="prose-sm prose-p:my-0.5 prose-li:my-0.5 prose-ul:my-1 prose-ol:my-1"
-                      >
-                        <Markdown>{part.text}</Markdown>
-                      </div>
-                    );
-                  default:
-                    return null;
-                }
-              })}
+              <div className="whitespace-pre-wrap">{message.content}</div>
             </div>
           </div>
         ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 px-4 py-2 rounded-2xl rounded-bl-sm">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100" />
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200" />
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
+      {/* Input Area */}
       <form
-        className="flex gap-2 justify-center w-full items-center fixed bottom-0"
         onSubmit={handleSubmit}
+        className="border-t bg-white px-4 py-3"
       >
-        <div className="flex flex-col gap-2 justify-center items-start mb-8 max-w-xl w-full border p-2 rounded-lg bg-white ">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-gray-500"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
           <Input
-            className="w-full border-0 shadow-none !ring-transparent "
             value={input}
-            placeholder="Say something..."
             onChange={handleInputChange}
+            placeholder="Say anything"
+            className="flex-1 border-gray-300"
+            disabled={isLoading}
           />
-          <div className="flex justify-end gap-3 items-center w-full">
-            <Button size="sm" className="text-xs">
-              Send
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!input.trim() || isLoading}
+            className="bg-gray-800 hover:bg-gray-700"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </form>
     </div>
