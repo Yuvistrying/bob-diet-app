@@ -1,5 +1,5 @@
 import { getAuth } from "@clerk/react-router/ssr.server";
-import { fetchAction, fetchQuery } from "convex/nextjs";
+import { fetchAction, fetchQuery } from "~/lib/convex.server";
 import ContentSection from "~/components/homepage/content";
 import Footer from "~/components/homepage/footer";
 import Integrations from "~/components/homepage/integrations";
