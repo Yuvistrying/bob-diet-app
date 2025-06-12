@@ -14,6 +14,8 @@ import type * as chatHistory from "../chatHistory.js";
 import type * as foodLogs from "../foodLogs.js";
 import type * as http from "../http.js";
 import type * as onboarding from "../onboarding.js";
+import type * as reminderTracking from "../reminderTracking.js";
+import type * as reminders from "../reminders.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as usageTracking from "../usageTracking.js";
 import type * as userPreferences from "../userPreferences.js";
@@ -42,6 +44,8 @@ declare const fullApi: ApiFromModules<{
   foodLogs: typeof foodLogs;
   http: typeof http;
   onboarding: typeof onboarding;
+  reminderTracking: typeof reminderTracking;
+  reminders: typeof reminders;
   subscriptions: typeof subscriptions;
   usageTracking: typeof usageTracking;
   userPreferences: typeof userPreferences;
