@@ -117,13 +117,13 @@ export const getChatContext = query({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     // Get user preferences
     const preferences = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     // Get today's macros
     const today = new Date().toISOString().split('T')[0];

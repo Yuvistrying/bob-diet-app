@@ -41,7 +41,7 @@ export const checkUsageLimit = query({
       .withIndex("by_user_date", (q: any) => 
         q.eq("userId", userId).eq("date", today)
       )
-      .unique();
+      .first();
     
     if (!usage) {
       // First action of the day - always allowed
@@ -95,7 +95,7 @@ export const trackUsage = mutation({
       .withIndex("by_user_date", (q: any) => 
         q.eq("userId", userId).eq("date", today)
       )
-      .unique();
+      .first();
     
     if (!usage) {
       // Create new usage record for today
@@ -142,7 +142,7 @@ export const getUsageStats = query({
       .withIndex("by_user_date", (q: any) => 
         q.eq("userId", identity.subject).eq("date", today)
       )
-      .unique();
+      .first();
     
     // Check subscription status
     const subscription = await ctx.db

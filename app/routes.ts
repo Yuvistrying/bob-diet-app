@@ -12,11 +12,9 @@ export default [
   route("pricing", "routes/pricing.tsx"),
   route("success", "routes/success.tsx"),
   route("subscription-required", "routes/subscription-required.tsx"),
-  layout("routes/dashboard/layout.tsx", [
-    route("dashboard", "routes/dashboard/index.tsx"),
-    route("dashboard/chat", "routes/dashboard/chat.tsx"),
-    route("dashboard/logs", "routes/dashboard/logs.tsx"),
-    route("dashboard/settings", "routes/dashboard/settings.tsx"),
-    route("dashboard/onboarding", "routes/dashboard/onboarding.tsx"),
+  layout("routes/app-layout.tsx", [
+    route("chat", "routes/chat.tsx"),
+    route("diary", "routes/diary.tsx"),
+    route("profile", "routes/profile.tsx"),
   ]),
 ] satisfies RouteConfig;

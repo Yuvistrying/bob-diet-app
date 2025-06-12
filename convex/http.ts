@@ -6,23 +6,45 @@ import { streamText } from "ai";
 import { api } from "./_generated/api";
 
 export const chat = httpAction(async (ctx, req) => {
-  // Extract the `messages` from the body of the request
-  const { messages } = await req.json();
+  try {
+    console.log("HTTP routes configured");
+    console.log("Headers:", req.headers);
+    
+    // Extract the `messages` from the body of the request
+    const { messages } = await req.json();
 
-  // Check if we have the API key
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is not configured");
-  }
+    // Check if we have the API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5174",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      });
+    }
 
-  // Get the last user message
-  const lastUserMessage = messages[messages.length - 1];
-  const userMessage = lastUserMessage?.content || "";
+    // Get the last user message
+    const lastUserMessage = messages[messages.length - 1];
+    const userMessage = lastUserMessage?.content || "";
 
-  // Get user context for Bob
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
+    // Get user context for Bob
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5174",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Credentials": "true",
+        },
+      });
+    }
 
   // Check if user has completed onboarding
   const profile = await ctx.runQuery(api.userProfiles.getUserProfile, {});
@@ -52,11 +74,48 @@ export const chat = httpAction(async (ctx, req) => {
     });
   }
 
+  // Check if user is onboarding
+  const onboardingStatus = await ctx.runQuery(api.onboarding.getOnboardingStatus);
+  const isOnboarding = !onboardingStatus?.completed;
+
   // Get chat context
   const context = await ctx.runQuery(api.chatHistory.getChatContext);
 
-  // Build system prompt with user context
-  const systemPrompt = `You are Bob, a friendly AI diet coach helping ${context?.user.name || "there"}.
+  // Build system prompt based on onboarding status
+  let systemPrompt: string;
+  
+  if (isOnboarding) {
+    const currentStep = onboardingStatus?.currentStep || "welcome";
+    const responses = onboardingStatus?.responses || {};
+    
+    systemPrompt = `You are Bob, a friendly AI diet coach helping with user onboarding.
+
+CURRENT ONBOARDING STEP: ${currentStep}
+COLLECTED DATA: ${JSON.stringify(responses)}
+
+Your job is to guide the user through onboarding conversationally. Be casual and wholesome.
+
+ONBOARDING FLOW:
+1. name - Ask for their name (if not collected)
+2. current_weight - Ask for current weight with unit preference
+3. target_weight - Ask for goal weight  
+4. height_age - Ask for height (cm) and age
+5. gender - Ask for biological sex (for calorie calculations)
+6. activity_level - Ask about activity level (sedentary/light/moderate/active)
+7. goal - Ask about their goal (cut/maintain/gain)
+8. display_mode - Ask if they want standard mode (see all numbers) or stealth mode (focus on habits)
+
+Based on the current step and what they say, extract the information naturally. 
+Be encouraging and use emojis. Keep it conversational, not like a form.
+
+IMPORTANT: After each response from the user, you must call the appropriate function to save their data.
+Format your response as: [SAVE:step_name:extracted_value] followed by your conversational response.
+
+Example:
+User: "I'm Sarah"
+You: [SAVE:name:Sarah] Nice to meet you, Sarah! 🙌 Let's get you set up. What's your current weight?`;
+  } else {
+    systemPrompt = `You are Bob, a friendly AI diet coach helping ${context?.user.name || "there"}.
   
 User Profile:
   - Goal: ${context?.user.goal || "maintain"}
@@ -74,6 +133,7 @@ IMPORTANT: When the user mentions food or weight:
   - If display mode is "stealth", avoid showing numbers - focus on positive reinforcement.
   
 Personality: Casual, supportive gym buddy. Use emojis sparingly. Keep responses concise.`;
+  }
 
   const anthropic = createAnthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
@@ -86,22 +146,63 @@ Personality: Casual, supportive gym buddy. Use emojis sparingly. Keep responses 
     async onFinish({ text }) {
       // After streaming, process the message for logging
       try {
+        // Handle onboarding responses
+        if (isOnboarding && text.includes("[SAVE:")) {
+          // Extract save commands from the response
+          const savePattern = /\[SAVE:(\w+):([^\]]+)\]/g;
+          let match;
+          
+          while ((match = savePattern.exec(text)) !== null) {
+            const [_, step, value] = match;
+            
+            // Parse the value based on step
+            let parsedValue: any = value;
+            
+            if (step === "current_weight" || step === "target_weight") {
+              // Extract weight and unit
+              const weightMatch = value.match(/(\d+(?:\.\d+)?)\s*(kg|lbs|pounds?)?/i);
+              if (weightMatch) {
+                parsedValue = {
+                  weight: parseFloat(weightMatch[1]),
+                  unit: weightMatch[2]?.toLowerCase().startsWith('lb') ? 'lbs' : 'kg'
+                };
+              }
+            } else if (step === "height_age") {
+              // Extract height and age
+              const heightMatch = value.match(/(\d+)\s*cm/i);
+              const ageMatch = value.match(/(\d+)\s*(?:years?|yr)?/i);
+              parsedValue = {
+                height: heightMatch ? parseInt(heightMatch[1]) : null,
+                age: ageMatch ? parseInt(ageMatch[1]) : null
+              };
+            }
+            
+            // Save the onboarding progress
+            await ctx.runMutation(api.onboarding.saveOnboardingProgress, {
+              step,
+              response: parsedValue
+            });
+          }
+        }
+        
         // Save the conversation
         await ctx.runMutation(api.chatHistory.saveUserMessage, {
           content: userMessage,
         });
         
         await ctx.runMutation(api.chatHistory.saveBobMessage, {
-          content: text,
+          content: text.replace(/\[SAVE:[^\]]+\]/g, ''), // Remove save commands from stored message
         });
 
-        // Check if this was a food or weight mention and log it
-        const lowerMessage = userMessage.toLowerCase();
-        
-        // Simple food detection
-        if (lowerMessage.includes("ate") || lowerMessage.includes("had") || 
-            lowerMessage.includes("eating") || lowerMessage.includes("breakfast") ||
-            lowerMessage.includes("lunch") || lowerMessage.includes("dinner")) {
+        // Only process food/weight after onboarding
+        if (!isOnboarding) {
+          // Check if this was a food or weight mention and log it
+          const lowerMessage = userMessage.toLowerCase();
+          
+          // Simple food detection
+          if (lowerMessage.includes("ate") || lowerMessage.includes("had") || 
+              lowerMessage.includes("eating") || lowerMessage.includes("breakfast") ||
+              lowerMessage.includes("lunch") || lowerMessage.includes("dinner")) {
           // Log as food with AI estimation
           await ctx.runMutation(api.foodLogs.logFood, {
             description: userMessage,
@@ -129,6 +230,7 @@ Personality: Casual, supportive gym buddy. Use emojis sparingly. Keep responses 
             });
           }
         }
+        } // End of !isOnboarding check
       } catch (error) {
         console.error("Error processing message:", error);
       }
@@ -144,6 +246,20 @@ Personality: Casual, supportive gym buddy. Use emojis sparingly. Keep responses 
       Vary: "origin",
     },
   });
+  } catch (error) {
+    console.error("Chat error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5174",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true",
+      },
+    });
+  }
 });
 
 const http = httpRouter();
@@ -168,9 +284,9 @@ http.route({
     ) {
       return new Response(null, {
         headers: new Headers({
-          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5173",
-          "Access-Control-Allow-Methods": "POST",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5174",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-stainless-lang, x-stainless-package-version, x-stainless-os, x-stainless-arch, x-stainless-runtime, x-stainless-runtime-version",
           "Access-Control-Allow-Credentials": "true",
           "Access-Control-Max-Age": "86400",
         }),
@@ -195,7 +311,7 @@ http.route({
     ) {
       return new Response(null, {
         headers: new Headers({
-          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5173",
+          "Access-Control-Allow-Origin": process.env.FRONTEND_URL || "http://localhost:5174",
           "Access-Control-Allow-Methods": "POST",
           "Access-Control-Allow-Headers": "Content-Type, Authorization",
           "Access-Control-Allow-Credentials": "true",

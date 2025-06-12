@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as ai from "../ai.js";
 import type * as bob from "../bob.js";
 import type * as chatHistory from "../chatHistory.js";
 import type * as foodLogs from "../foodLogs.js";
@@ -35,6 +36,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  ai: typeof ai;
   bob: typeof bob;
   chatHistory: typeof chatHistory;
   foodLogs: typeof foodLogs;

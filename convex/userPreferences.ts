@@ -10,7 +10,7 @@ export const getUserPreferences = query({
     const prefs = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     // Return default preferences if none exist
     if (!prefs) {
@@ -67,7 +67,7 @@ export const updatePreferences = mutation({
     const existing = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     const updates = {
       ...args,
@@ -110,7 +110,7 @@ export const toggleDisplayMode = mutation({
     const prefs = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     if (!prefs) {
       // Create with stealth mode
