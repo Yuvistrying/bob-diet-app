@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Get chat history for user
 export const getChatHistory = query({
@@ -72,6 +73,7 @@ export const saveBobMessage = mutation({
       foodLogId: v.optional(v.id("foodLogs")),
       weightLogId: v.optional(v.id("weightLogs")),
       actionType: v.optional(v.string()),
+      toolCalls: v.optional(v.any()),
     })),
   },
   handler: async (ctx, args) => {
@@ -125,6 +127,9 @@ export const getChatContext = query({
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
     
+    // Get meal status
+    const mealStatus = await ctx.runQuery(api.reminders.getTodayMealStatus);
+    
     // Get today's macros
     const today = new Date().toISOString().split('T')[0];
     const todayLogs = await ctx.db
@@ -176,6 +181,7 @@ export const getChatContext = query({
         },
         meals: todayLogs.length,
       },
+      mealStatus: mealStatus,
       recentMessages: recentMessages.reverse(),
     };
   },
