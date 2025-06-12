@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useChat } from "@ai-sdk/react";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { useQuery, useAction } from "convex/react";
+import { useAuth } from "@clerk/react-router";
+import { useNavigate } from "react-router";
+import { api } from "../../convex/_generated/api";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";
@@ -15,23 +16,62 @@ const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_URL!.replace(
   ".site"
 );
 
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function Chat() {
+  const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
   const profile = useQuery(api.userProfiles.getUserProfile, {});
   const todayStats = useQuery(api.foodLogs.getTodayStats);
   const latestWeight = useQuery(api.weightLogs.getLatestWeight);
   const preferences = useQuery(api.userPreferences.getUserPreferences);
-  
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    maxSteps: 10,
-    api: `${CONVEX_SITE_URL}/api/chat`,
-    initialMessages: profile ? [
-      {
-        id: "welcome",
-        role: "assistant",
-        content: `Hey there, ${profile.name}!\nTell me what you're eating, or attach a photo, I'll figure out the rest.`
+  const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus);
+  const sendMessage = useAction(api.ai.chatAction);
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (isSignedIn === false) {
+      navigate("/sign-in");
+    }
+  }, [isSignedIn, navigate]);
+
+  // Set initial message based on onboarding status
+  useEffect(() => {
+    if (onboardingStatus !== undefined) {
+      if (!onboardingStatus?.completed) {
+        // Start onboarding
+        if (messages.length === 0 || messages[0].id !== "onboarding-start") {
+          setMessages([{
+            id: "onboarding-start",
+            role: "assistant",
+            content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nFirst up - what should I call you?"
+          }]);
+        }
+      } else if (profile && messages.length === 0) {
+        // Regular welcome for returning users
+        setMessages([{
+          id: "welcome",
+          role: "assistant",
+          content: `Hey there, ${profile.name}!\nTell me what you're eating, or attach a photo, I'll figure out the rest.`
+        }]);
+      } else if (profile && messages.length > 0 && messages[0].id === "onboarding-start") {
+        // Onboarding just completed, show welcome
+        setMessages([{
+          id: "welcome",
+          role: "assistant",
+          content: `Awesome! You're all set up, ${profile.name}! 🎉\n\nI'm here to help you ${profile.goal === 'cut' ? 'lose weight' : profile.goal === 'gain' ? 'gain muscle' : 'maintain your weight'}. Just tell me what you're eating throughout the day, and I'll track everything for you.\n\nLet's start - what did you have for your last meal?`
+        }]);
       }
-    ] : []
-  });
+    }
+  }, [onboardingStatus, profile]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isStealthMode = preferences?.displayMode === "stealth";
@@ -40,6 +80,49 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input.trim(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const response = await sendMessage({
+        messages: [...messages, userMessage].map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: response.text,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Sorry, I couldn't process that message. Please try again.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getProgressColor = (value: number, target: number) => {
     const percentage = (value / target) * 100;
     if (percentage < 80) return "bg-yellow-100 text-yellow-800";
@@ -47,10 +130,22 @@ export default function Chat() {
     return "bg-red-100 text-red-800";
   };
 
+  const isOnboarding = !onboardingStatus?.completed;
+
+  // Show loading state while checking auth
+  if (isSignedIn === undefined) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
-      {/* Status Cards Grid */}
-      <div className="grid grid-cols-2 gap-3 p-4 bg-white">
+      {/* Status Cards Grid - Only show after onboarding */}
+      {!isOnboarding && (
+        <div className="grid grid-cols-2 gap-3 p-4 bg-white">
         {/* Goal Card */}
         <Card className="bg-gray-50">
           <CardContent className="p-3">
@@ -122,7 +217,8 @@ export default function Chat() {
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -176,8 +272,8 @@ export default function Chat() {
           </Button>
           <Input
             value={input}
-            onChange={handleInputChange}
-            placeholder="Say anything"
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isOnboarding ? "Type your answer..." : "Say anything"}
             className="flex-1 border-gray-300"
             disabled={isLoading}
           />

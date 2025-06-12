@@ -189,7 +189,7 @@ export const checkUserSubscriptionStatus = query({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
-      .unique();
+      .first();
 
     if (!user) {
       return { hasActiveSubscription: false };
@@ -217,14 +217,14 @@ export const checkUserSubscriptionStatusByClerkId = query({
     let user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
-      .unique();
+      .first();
 
     // If not found with user_ prefix, try the raw userId
     if (!user) {
       user = await ctx.db
         .query("users")
         .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.clerkUserId))
-        .unique();
+        .first();
     }
 
     if (!user) {
@@ -252,7 +252,7 @@ export const fetchUserSubscription = query({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
-      .unique();
+      .first();
 
     if (!user) {
       return null;

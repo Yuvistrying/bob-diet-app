@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -250,7 +250,7 @@ export default function Logs() {
                 setAddType("food");
                 setAddDialogOpen(false);
                 // Navigate to chat
-                window.location.href = "/dashboard/chat";
+                window.location.href = "/chat";
               }}
             >
               <div className="text-center">

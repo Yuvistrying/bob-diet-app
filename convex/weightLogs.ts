@@ -136,7 +136,7 @@ export const getWeightStats = query({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     if (!profile) return null;
     

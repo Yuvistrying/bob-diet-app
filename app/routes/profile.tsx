@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -10,7 +10,7 @@ import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { useClerk } from "@clerk/react-router";
 
-export default function Settings() {
+export default function Profile() {
   const { signOut } = useClerk();
   const profile = useQuery(api.userProfiles.getUserProfile, {});
   const preferences = useQuery(api.userPreferences.getUserPreferences);
