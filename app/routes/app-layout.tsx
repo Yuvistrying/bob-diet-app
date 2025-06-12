@@ -1,20 +1,11 @@
 import { getAuth } from "@clerk/react-router/ssr.server";
 import { fetchQuery } from "~/lib/convex.server";
 import { redirect, useLoaderData, Outlet, NavLink, useLocation } from "react-router";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import type { Route } from "./+types/layout";
 import { createClerkClient } from "@clerk/react-router/api.server";
 import { cn } from "~/lib/utils";
-import { 
-  Home, 
-  MessageCircle, 
-  FileText, 
-  TrendingUp, 
-  Settings,
-  User
-} from "lucide-react";
-import { Button } from "~/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { MessageCircle, FileText, User } from "lucide-react";
 
 export async function loader(args: Route.LoaderArgs) {
   const { userId } = await getAuth(args);
@@ -38,38 +29,23 @@ export async function loader(args: Route.LoaderArgs) {
     throw redirect("/subscription-required");
   }
 
-  // Redirect to onboarding if not completed
-  if (!onboardingStatus?.completed && args.request.url.indexOf('/dashboard/onboarding') === -1) {
-    throw redirect("/dashboard/onboarding");
-  }
-
+  // Don't redirect to onboarding - we'll handle it in chat
   return { user, onboardingStatus };
 }
 
-export default function MobileDashboardLayout() {
-  const { user } = useLoaderData();
+export default function AppLayout() {
+  const { user, onboardingStatus } = useLoaderData();
   const location = useLocation();
   
   const navigation = [
-    { name: "Chat", href: "/dashboard/chat", icon: MessageCircle },
-    { name: "Diary", href: "/dashboard/logs", icon: FileText },
-    { name: user?.firstName || "Profile", href: "/dashboard/settings", icon: User },
+    { name: "Chat", href: "/chat", icon: MessageCircle },
+    { name: "Diary", href: "/diary", icon: FileText },
+    { name: user?.firstName || "Profile", href: "/profile", icon: User },
   ];
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] flex flex-col">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Bob Diet Coach</h1>
-        <Avatar className="h-8 w-8">
-          <AvatarImage src={user.imageUrl} alt={user.firstName || ""} />
-          <AvatarFallback>
-            {user.firstName?.[0] || user.emailAddresses[0].emailAddress[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      </header>
-
-      {/* Main Content */}
+      {/* Main Content - No header, full screen */}
       <main className="flex-1 overflow-y-auto pb-16">
         <Outlet />
       </main>

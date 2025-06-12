@@ -15,7 +15,7 @@ export const findUserByToken = query({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
-      .unique();
+      .first();
 
     if (user !== null) {
       return user;
@@ -37,7 +37,7 @@ export const upsertUser = mutation({
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
-      .unique();
+      .first();
 
     if (existingUser) {
       // Update if needed

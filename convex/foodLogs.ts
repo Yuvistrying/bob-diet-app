@@ -77,7 +77,7 @@ export const getTodayMacros = query({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     return {
       consumed: totals,

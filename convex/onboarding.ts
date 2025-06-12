@@ -25,7 +25,7 @@ export const getOnboardingStatus = query({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     if (profile?.onboardingCompleted) {
       return {
@@ -39,7 +39,7 @@ export const getOnboardingStatus = query({
     const progress = await ctx.db
       .query("onboardingProgress")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     return {
       completed: false,
@@ -66,7 +66,7 @@ export const saveOnboardingProgress = mutation({
     let progress = await ctx.db
       .query("onboardingProgress")
       .withIndex("by_user", q => q.eq("userId", userId))
-      .unique();
+      .first();
     
     if (!progress) {
       // Create new progress record
@@ -105,7 +105,7 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
   const progress = await ctx.db
     .query("onboardingProgress")
     .withIndex("by_user", (q: any) => q.eq("userId", userId))
-    .unique();
+    .first();
   
   if (!progress?.responses) return;
   
@@ -207,21 +207,21 @@ export const resetOnboarding = mutation({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     if (profile) await ctx.db.delete(profile._id);
     
     // Delete preferences
     const prefs = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     if (prefs) await ctx.db.delete(prefs._id);
     
     // Delete onboarding progress
     const progress = await ctx.db
       .query("onboardingProgress")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     if (progress) await ctx.db.delete(progress._id);
     
     return { reset: true };

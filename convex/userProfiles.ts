@@ -13,7 +13,7 @@ export const getUserProfile = query({
     return await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", userId))
-      .unique();
+      .first();
   },
 });
 
@@ -52,7 +52,7 @@ export const upsertUserProfile = mutation({
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", userId))
-      .unique();
+      .first();
     
     const profileData = {
       userId,
@@ -130,7 +130,7 @@ export const updateProfileField = mutation({
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", q => q.eq("userId", identity.subject))
-      .unique();
+      .first();
     
     if (!profile) {
       throw new Error("Profile not found");

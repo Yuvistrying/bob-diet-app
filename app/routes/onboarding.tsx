@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -37,7 +37,7 @@ export default function Onboarding() {
   useEffect(() => {
     if (onboardingStatus) {
       if (onboardingStatus.completed) {
-        navigate("/dashboard");
+        navigate("/chat");
       } else {
         setCurrentStep(onboardingStatus.currentStep || "welcome");
         setFormData(onboardingStatus.responses || {});
@@ -57,7 +57,7 @@ export default function Onboarding() {
       const nextStep = ONBOARDING_STEPS[currentIndex + 1];
       
       if (nextStep === "complete") {
-        navigate("/dashboard/chat");
+        navigate("/chat");
       } else {
         setCurrentStep(nextStep);
       }
