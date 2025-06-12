@@ -142,7 +142,8 @@ export default defineSchema({
     metadata: v.optional(v.object({
       foodLogId: v.optional(v.id("foodLogs")),
       weightLogId: v.optional(v.id("weightLogs")),
-      actionType: v.optional(v.string()) // "food_log", "weight_log", "question", etc.
+      actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
+      toolCalls: v.optional(v.any()) // Store tool calls for persistence
     }))
   })
   .index("by_user", ["userId"])

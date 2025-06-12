@@ -16,5 +16,6 @@ export default [
     route("chat", "routes/chat.tsx"),
     route("diary", "routes/diary.tsx"),
     route("profile", "routes/profile.tsx"),
+    route("settings", "routes/settings.tsx"),
   ]),
 ] satisfies RouteConfig;

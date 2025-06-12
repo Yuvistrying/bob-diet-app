@@ -127,6 +127,25 @@ export const deleteWeightLog = mutation({
   },
 });
 
+// Check if weight logged today
+export const hasLoggedWeightToday = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    const todayLog = await ctx.db
+      .query("weightLogs")
+      .withIndex("by_user_date", (q: any) => 
+        q.eq("userId", identity.subject).eq("date", today)
+      )
+      .first();
+    
+    return !!todayLog;
+  },
+});
+
 // Get weight statistics
 export const getWeightStats = query({
   handler: async (ctx) => {
