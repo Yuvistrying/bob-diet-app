@@ -4,6 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { streamText, tool } from "ai";
 import { z } from "zod";
 import { api } from "./_generated/api";
+import { paymentWebhook } from "./subscriptions";
 
 // Define tools for Bob
 const tools = {
@@ -277,6 +278,13 @@ http.route({
       return new Response();
     }
   }),
+});
+
+// Webhook endpoint for Polar payment events
+http.route({
+  path: "/webhooks/polar",
+  method: "POST",
+  handler: paymentWebhook,
 });
 
 export default http;

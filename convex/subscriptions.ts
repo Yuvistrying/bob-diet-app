@@ -438,8 +438,13 @@ const validateEvent = (
 };
 
 export const paymentWebhook = httpAction(async (ctx, request) => {
+  console.log("Webhook received at /webhooks/polar");
+  console.log("Request method:", request.method);
+  console.log("Request URL:", request.url);
+  
   try {
     const rawBody = await request.text();
+    console.log("Webhook body received, length:", rawBody.length);
 
     // Internally validateEvent uses headers as a dictionary e.g. headers["webhook-id"]
     // So we need to convert the headers to a dictionary
