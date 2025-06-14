@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/react-router";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -16,6 +16,7 @@ import { useEffect } from "react";
 
 export default function Success() {
   const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
   const subscription = useQuery(api.subscriptions.fetchUserSubscription);
   const upsertUser = useMutation(api.users.upsertUser);
 
@@ -25,6 +26,18 @@ export default function Success() {
       upsertUser();
     }
   }, [isSignedIn, upsertUser]);
+
+  // Add timeout to redirect if subscription doesn't load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!subscription) {
+        console.log("Subscription not loading, redirecting to chat...");
+        navigate("/chat");
+      }
+    }, 5000); // Wait 5 seconds
+
+    return () => clearTimeout(timer);
+  }, [subscription, navigate]);
 
   if (!isSignedIn) {
     return (

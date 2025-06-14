@@ -10,6 +10,8 @@ import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 import { Paperclip, Send } from "lucide-react";
+import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 
 interface Message {
   role: "user" | "assistant";
@@ -29,14 +31,35 @@ export default function Chat() {
   const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus);
   const chatHistory = useQuery(api.chatHistory.getChatHistory, { limit: 50 });
   
-  // Convex action for AI chat
-  const sendMessage = useAction(api.ai.chatAction);
+  // Convex actions for both AI versions
+  const sendMessageV1 = useAction(api.ai.chatAction);
+  const sendMessageV2 = useAction(api.agentActions.chat);
   
   // State
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Try to load persisted messages
+    const saved = localStorage.getItem('chatMessages');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved messages:', e);
+      }
+    }
+    return [];
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const [useAgentVersion, setUseAgentVersion] = useState(() => {
+    // Persist toggle state in localStorage
+    const saved = localStorage.getItem('useAgentVersion');
+    return saved === 'true';
+  });
+  const [agentThreadId, setAgentThreadId] = useState<string | null>(() => {
+    // Persist threadId in localStorage
+    return localStorage.getItem('agentThreadId');
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Redirect to sign-in if not authenticated
@@ -46,18 +69,43 @@ export default function Chat() {
     }
   }, [isSignedIn, navigate]);
 
+  // Persist toggle state
+  useEffect(() => {
+    localStorage.setItem('useAgentVersion', useAgentVersion.toString());
+  }, [useAgentVersion]);
+
+  // Persist threadId
+  useEffect(() => {
+    if (agentThreadId) {
+      localStorage.setItem('agentThreadId', agentThreadId);
+    }
+  }, [agentThreadId]);
+
+  // Persist messages
+  useEffect(() => {
+    localStorage.setItem('chatMessages', JSON.stringify(messages));
+  }, [messages]);
+
   // Load chat history on mount - with proper persistence
   useEffect(() => {
-    if (chatHistory) {
+    if (chatHistory && !hasLoadedHistory) {
+      // If we have persisted messages and they're more recent, keep them
+      const persistedMessages = messages;
       const formattedHistory: Message[] = chatHistory.map((msg) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
         toolCalls: msg.metadata?.toolCalls || undefined
       }));
-      setMessages(formattedHistory);
       
-      // Only show welcome message if there's truly no history
-      if (chatHistory.length === 0 && !hasLoadedHistory) {
+      // If we have more messages persisted than in history, keep the persisted ones
+      if (persistedMessages.length > formattedHistory.length) {
+        console.log('Keeping persisted messages as they are more recent');
+      } else {
+        setMessages(formattedHistory);
+      }
+      
+      // Only show welcome message if there's truly no history AND no persisted messages
+      if (chatHistory.length === 0 && persistedMessages.length === 0) {
         const isOnboarding = !onboardingStatus?.completed;
         
         if (isOnboarding) {
@@ -74,7 +122,7 @@ export default function Chat() {
       }
       setHasLoadedHistory(true);
     }
-  }, [chatHistory, onboardingStatus, profile]);
+  }, [chatHistory, onboardingStatus, profile, hasLoadedHistory]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -91,20 +139,35 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      // Send message to AI - filter out toolCalls from messages
-      const messagesForAI = [...messages, newUserMessage].map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      let response;
       
-      const response = await sendMessage({
-        messages: messagesForAI,
-      });
+      if (useAgentVersion) {
+        // V2: Convex Agent SDK - send prompt with threadId
+        response = await sendMessageV2({
+          prompt: userMessage,
+          threadId: agentThreadId || undefined,
+        });
+        // Save threadId for future messages
+        if (response.threadId && !agentThreadId) {
+          setAgentThreadId(response.threadId);
+        }
+      } else {
+        // V1: AI SDK - send full message history
+        const messagesForAI = [...messages, newUserMessage].map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+        
+        response = await sendMessageV1({
+          messages: messagesForAI,
+        });
+      }
 
       // Add AI response to messages with tool calls if any
+      console.log("Response from AI:", response);
       const assistantMessage: Message = { 
         role: "assistant", 
-        content: response.text,
+        content: response.text || "",
         toolCalls: response.toolCalls
       };
       setMessages(prev => [...prev, assistantMessage]);
@@ -153,8 +216,27 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-white border-b flex items-center justify-between p-3">
-        <h1 className="font-semibold">Bob - Your Diet Coach</h1>
+      <div className="bg-white border-b p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="font-semibold">Bob - Your Diet Coach</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="ai-version" className="text-xs text-gray-600">
+            AI v1
+          </Label>
+          <Switch
+            id="ai-version"
+            checked={useAgentVersion}
+            onCheckedChange={setUseAgentVersion}
+            className="scale-75"
+          />
+          <Label htmlFor="ai-version" className="text-xs text-gray-600">
+            Agent v2
+          </Label>
+          {useAgentVersion && (
+            <span className="text-xs text-orange-600 ml-2">(Testing)</span>
+          )}
+        </div>
       </div>
 
 

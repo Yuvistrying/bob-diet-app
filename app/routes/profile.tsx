@@ -55,12 +55,28 @@ export default function Profile() {
     });
   };
 
-  if (!profile || !preferences) {
-    return <div className="flex items-center justify-center h-full">Loading...</div>;
-  }
-
   return (
     <div className="flex-1 overflow-y-auto pb-20">
+      {/* Always show sign out button at the top */}
+      <div className="px-4 pt-4">
+        <Button 
+          variant="outline" 
+          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+          onClick={() => signOut()}
+        >
+          Sign Out
+        </Button>
+      </div>
+
+      {/* Show loading if profile not ready */}
+      {(!profile || !preferences) ? (
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-gray-500 mb-4">Loading profile...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* About You Section */}
       <Card className="m-4">
         <CardHeader>
@@ -226,15 +242,9 @@ export default function Profile() {
         >
           Manage Subscription
         </Button>
-        
-        <Button 
-          variant="outline" 
-          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-          onClick={() => signOut()}
-        >
-          Sign Out
-        </Button>
       </div>
+      </>
+      )}
     </div>
   );
 }

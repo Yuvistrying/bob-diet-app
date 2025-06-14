@@ -24,8 +24,12 @@ export async function loader(args: Route.LoaderArgs) {
     fetchQuery(api.onboarding.getOnboardingStatus, {})
   ]);
 
-  // Redirect to subscription-required if no active subscription
-  if (!subscriptionStatus?.hasActiveSubscription) {
+  // Get the current path
+  const url = new URL(args.request.url);
+  const isProfilePage = url.pathname === "/profile";
+
+  // Allow access to profile page even without subscription
+  if (!isProfilePage && !subscriptionStatus?.hasActiveSubscription) {
     throw redirect("/subscription-required");
   }
 
