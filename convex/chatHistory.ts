@@ -127,8 +127,8 @@ export const getChatContext = query({
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
     
-    // Get meal status
-    const mealStatus = await ctx.runQuery(api.reminders.getTodayMealStatus);
+    // Remove meal status - no longer used
+    const mealStatus = null;
     
     // Get today's macros
     const today = new Date().toISOString().split('T')[0];

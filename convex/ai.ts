@@ -158,12 +158,6 @@ TODAY'S PROGRESS:
 - Meals logged: ${context?.todayProgress.meals}
 - Daily weigh-in: ${hasWeighedToday ? "✅ Completed" : "❌ Not yet logged"}
 
-MEAL STATUS:
-- Breakfast: ${mealStatus?.mealStatus.breakfast.logged ? "✅ Logged" : mealStatus?.mealStatus.breakfast.isPast ? "❌ Missed" : "⏰ Pending"}
-- Lunch: ${mealStatus?.mealStatus.lunch.logged ? "✅ Logged" : mealStatus?.mealStatus.lunch.isPast ? "❌ Missed" : "⏰ Pending"}
-- Dinner: ${mealStatus?.mealStatus.dinner.logged ? "✅ Logged" : mealStatus?.mealStatus.dinner.isPast ? "❌ Missed" : "⏰ Pending"}
-- Completion: ${mealStatus?.completionPercentage || 0}%
-
 IMPORTANT RULES:
 1. ALWAYS ask for confirmation before logging food using the confirmFood tool
 2. Parse natural language for food mentions and estimate calories/macros
@@ -316,14 +310,8 @@ Apologize briefly and log it immediately.`;
             // Verify the log was created
             const verifyLog = await ctx.runQuery(api.foodLogs.getTodayStats);
             console.log("Verification - Today's stats after logging:", verifyLog);
-            
-            // Store success flag for response
-            toolCall.success = true;
-            toolCall.logId = logId;
           } catch (error) {
             console.error("ERROR: Failed to log food:", error);
-            toolCall.success = false;
-            toolCall.error = error;
           }
         } else if (toolCall.toolName === "logWeight") {
           // Log weight
@@ -393,7 +381,7 @@ Apologize briefly and log it immediately.`;
     let loggedSuccessfully = false;
     if (toolCalls && toolCalls.length > 0) {
       const logFoodCall = toolCalls.find(tc => tc.toolName === "logFood");
-      if (logFoodCall && logFoodCall.success) {
+      if (logFoodCall) {
         loggedSuccessfully = true;
       }
     }
