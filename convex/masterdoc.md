@@ -85,39 +85,48 @@ Every interaction happens through natural conversation with Bob. Users talk to h
 - **Deployment**: Vercel
 - **File Storage**: Convex File Storage (for temporary photo uploads)
 
-### Architecture Benefits
+### Convex-Powered Architecture
 
-- **Real-time Updates** - All UI components update instantly
-- **Stateful Conversations** - Thread persistence via Convex Agent
-- **Vector Search** - Semantic understanding of food history
-- **Scalable** - Serverless architecture handles growth
-- **Type-Safe** - End-to-end TypeScript
+Bob leverages Convex's real-time capabilities throughout:
+
+1. **Real-time Data Sync**
+   - All UI updates instantly via Convex subscriptions
+   - No polling or manual refreshes needed
+   - Seamless multi-device experience
+
+2. **Scheduled Functions**
+   - `ctx.scheduler.runAfter()` for immediate background tasks
+   - Cron jobs for periodic calibration and reminders
+   - Automatic usage limit resets at midnight
+
+3. **Vector Search**
+   - Native Convex vector indices for embeddings
+   - Semantic search across all food logs and photos
+   - Pattern matching for insights
+
+4. **File Storage**
+   - Secure image hosting with storage IDs
+   - No base64 bloat or localStorage issues
+   - Automatic garbage collection
+
+5. **Internal Functions**
+   - Chain complex operations with `internalMutation`
+   - Background processing without blocking UI
+   - Type-safe function composition
 
 ---
 
 ## Core Features - Implemented
 
-### 1. Conversational Food Logging ✅
+### 1. Photo Analysis ✅ [COMPLETED]
 
-Bob uses a two-step confirmation process for accuracy:
-
-```javascript
-// Step 1: Understanding
-User: "I had chicken and rice for lunch"
-Bob: [uses confirmFood tool] 
-"I see you had chicken and rice! Here's what I'm tracking:
-- Grilled chicken breast (150g): 248 cal, 46g protein
-- White rice (1 cup): 205 cal, 4g protein
-Total: 453 calories, 50g protein
-
-Should I log this for you?"
-
-// Step 2: Logging
-User: "Yes"
-Bob: [uses logFood tool]
-"Perfect! I've logged your lunch. You're at 823 calories for the day with 92g protein. 
-Great job hitting your protein target! 💪"
-```
+Advanced food recognition with intelligent learning:
+- **Convex File Storage** for secure image hosting
+- **Claude Vision API** for accurate food recognition  
+- **Vector similarity search** finds past similar meals
+- **One-click confirmation** for frictionless logging
+- **Smart error handling** with personality
+- **Usage limits** enforced (2/day free, unlimited Pro)
 
 ### 2. Weight Tracking ✅
 
@@ -617,34 +626,34 @@ Bob: "Pro users lose 2.3x more weight on average.
 
 ### Phase 1: Core Experience ✅ [COMPLETE]
 - Basic chat with Bob
-- Food/weight logging
+- Food/weight logging  
 - Progress tracking
 - Freemium limits
 - Real-time sync
 
-### Phase 2: Intelligence Layer 🚧 [IN PROGRESS]
-- Photo analysis with learning
-- Metabolism calibration
-- Pattern recognition
-- Similar meal search
+### Phase 2: Intelligence Layer 🚧 [CURRENT]
+- ✅ Photo analysis with learning
+- 🔄 Metabolism calibration (next priority)
+- 📅 Pattern recognition
+- 📅 Similar meal search
 
 ### Phase 3: Engagement Features 📅 [Q1 2025]
-- Smart reminders
+- Smart reminders via Convex cron
 - Email summaries
-- Plateau detection
-- Advanced insights
+- Plateau detection algorithms
+- Advanced insights dashboard
 
 ### Phase 4: Platform Expansion 📅 [Q2 2025]
 - WhatsApp integration
-- Voice input
+- Voice input processing
 - Apple Health sync
-- Meal planning
+- Meal planning with Convex functions
 
 ### Phase 5: Social & Gamification 📅 [Q3 2025]
 - Progress sharing
-- Challenges
+- Challenges system
 - Community features
-- Achievements
+- Achievement badges
 
 ---
 
