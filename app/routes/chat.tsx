@@ -571,6 +571,7 @@ export default function Chat() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            capture="environment"
             onChange={handleImageSelect}
             className="hidden"
           />
@@ -582,6 +583,28 @@ export default function Chat() {
             onClick={() => fileInputRef.current?.click()}
           >
             <Camera className="h-5 w-5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-gray-500"
+            onClick={() => {
+              // Create a temporary input without capture attribute for gallery
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*';
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  // Manually trigger the same handler
+                  handleImageSelect({ target: { files: [file] } } as any);
+                }
+              };
+              input.click();
+            }}
+          >
+            <Paperclip className="h-5 w-5" />
           </Button>
           <Input
             value={input}
