@@ -15,7 +15,8 @@ export const generateEmbedding = action({
   },
   handler: async (ctx, { text }) => {
     const model = openai.embedding("text-embedding-3-small");
-    const { embedding } = await model.embed(text);
+    const result = await model.doEmbed({ values: [text] });
+    const embedding = result.embeddings[0];
     
     return embedding;
   },
@@ -44,6 +45,7 @@ export const updateChatEmbedding = mutation({
 });
 
 // Search similar food logs using vector search
+// Note: This is deprecated - use vectorSearch.searchSimilarMeals instead
 export const searchSimilarMeals = query({
   args: {
     userId: v.string(),
@@ -51,25 +53,14 @@ export const searchSimilarMeals = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, searchText, limit = 5 }) => {
-    // Generate embedding for search text
-    const searchEmbedding = await ctx.runAction(api.embeddings.generateEmbedding, {
-      text: searchText,
-    });
-    
-    // Search using vector index
-    const results = await ctx.db
-      .query("foodLogs")
-      .withSearchIndex("by_embedding", (q) => 
-        q.search("embedding", searchEmbedding)
-          .eq("userId", userId)
-      )
-      .take(limit);
-    
-    return results;
+    // Deprecated - vector search requires actions
+    // Use api.vectorSearch.searchSimilarMeals instead
+    return [];
   },
 });
 
 // Search chat history using vector search
+// Note: This is deprecated - use vectorSearch.searchChatHistory instead
 export const searchChatHistory = query({
   args: {
     userId: v.string(),
@@ -77,21 +68,9 @@ export const searchChatHistory = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { userId, searchText, limit = 10 }) => {
-    // Generate embedding for search text
-    const searchEmbedding = await ctx.runAction(api.embeddings.generateEmbedding, {
-      text: searchText,
-    });
-    
-    // Search using vector index
-    const results = await ctx.db
-      .query("chatHistory")
-      .withSearchIndex("by_embedding", (q) => 
-        q.search("embedding", searchEmbedding)
-          .eq("userId", userId)
-      )
-      .take(limit);
-    
-    return results;
+    // Deprecated - vector search requires actions
+    // Use api.vectorSearch.searchChatHistory instead
+    return [];
   },
 });
 

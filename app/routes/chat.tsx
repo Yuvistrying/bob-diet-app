@@ -5,16 +5,19 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { useAuth } from "@clerk/react-router";
 import { useNavigate } from "react-router";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Paperclip, Send } from "lucide-react";
+import { Camera, Paperclip, Send, X, Check } from "lucide-react";
+import { ClientOnly } from "~/components/ClientOnly";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   toolCalls?: any[];
+  imageUrl?: string;
 }
 
 export default function Chat() {
@@ -32,21 +35,12 @@ export default function Chat() {
   // Convex action for Agent SDK
   const sendMessage = useAction(api.agentActions.chat);
   
+  // Convex mutations for file upload
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const storeFileId = useMutation(api.files.storeFileId);
+  
   // State
-  const [messages, setMessages] = useState<Message[]>(() => {
-    // Try to load persisted messages
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chatMessages');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error('Failed to parse saved messages:', e);
-        }
-      }
-    }
-    return [];
-  });
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
@@ -57,7 +51,10 @@ export default function Chat() {
     }
     return null;
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -66,6 +63,24 @@ export default function Chat() {
     }
   }, [isSignedIn, navigate]);
 
+  // Load persisted messages after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length === 0 && !hasLoadedHistory) {
+      const saved = localStorage.getItem('chatMessages');
+      if (saved) {
+        try {
+          const parsedMessages = JSON.parse(saved);
+          if (parsedMessages.length > 0) {
+            setMessages(parsedMessages);
+          }
+        } catch (e) {
+          console.error('Failed to parse saved messages:', e);
+          localStorage.removeItem('chatMessages');
+        }
+      }
+    }
+  }, []);
+
   // Persist threadId
   useEffect(() => {
     if (typeof window !== 'undefined' && threadId) {
@@ -73,10 +88,34 @@ export default function Chat() {
     }
   }, [threadId]);
 
-  // Persist messages
+  // Persist messages (without images to avoid quota issues)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('chatMessages', JSON.stringify(messages));
+      // Keep only the last 50 messages to prevent quota issues
+      const recentMessages = messages.slice(-50);
+      
+      // Remove image URLs before storing to avoid localStorage quota issues
+      const messagesForStorage = recentMessages.map(msg => ({
+        ...msg,
+        imageUrl: msg.imageUrl ? "[Photo uploaded]" : undefined // Store indicator, not the actual image
+      }));
+      
+      try {
+        localStorage.setItem('chatMessages', JSON.stringify(messagesForStorage));
+      } catch (e) {
+        console.error('Failed to save messages to localStorage:', e);
+        // If we still exceed quota, clear old messages
+        if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+          localStorage.removeItem('chatMessages');
+          // Try again with just the last 10 messages
+          try {
+            const minimalMessages = messagesForStorage.slice(-10);
+            localStorage.setItem('chatMessages', JSON.stringify(minimalMessages));
+          } catch (e2) {
+            console.error('Failed to save even minimal messages:', e2);
+          }
+        }
+      }
     }
   }, [messages]);
 
@@ -122,10 +161,22 @@ export default function Chat() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
     const userMessage = input.trim();
-    const newUserMessage: Message = { role: "user", content: userMessage };
+    const hasImage = !!selectedImage;
+    
+    // Create user message
+    let messageContent = userMessage;
+    if (hasImage) {
+      messageContent = userMessage || "What's in this photo?";
+    }
+    
+    const newUserMessage: Message = { 
+      role: "user", 
+      content: messageContent,
+      imageUrl: imagePreview || undefined
+    };
     
     // Add user message to UI immediately
     setMessages(prev => [...prev, newUserMessage]);
@@ -133,10 +184,34 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
+      let finalMessage = userMessage;
+      
+      let storageId: string | null = null;
+      
+      // If there's an image, upload it to Convex storage
+      if (selectedImage && imagePreview) {
+        try {
+          storageId = await uploadPhoto(selectedImage);
+          finalMessage = `[Image attached] ${userMessage || "Please analyze this food photo"}`;
+        } catch (uploadError) {
+          console.error("Failed to upload image:", uploadError);
+          setMessages(prev => [...prev, {
+            role: "assistant",
+            content: "Sorry, I couldn't upload the image. Please try again."
+          }]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Clear the image after sending
+        clearImage();
+      }
+      
       // Send message using Convex Agent SDK
       const response = await sendMessage({
-        prompt: userMessage,
+        prompt: finalMessage,
         threadId: threadId || undefined,
+        storageId: storageId as any || undefined, // Type assertion for string -> Id conversion
       });
       
       // Save threadId for future messages
@@ -168,6 +243,54 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Handle image selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Clear selected image
+  const clearImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle photo upload to Convex storage
+  const uploadPhoto = async (file: File): Promise<string> => {
+    // Get upload URL from Convex
+    const uploadUrl = await generateUploadUrl({ 
+      metadata: { type: "image", purpose: "food-analysis" } 
+    });
+    
+    // Upload the file
+    const result = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    
+    if (!result.ok) {
+      throw new Error("Failed to upload image");
+    }
+    
+    const { storageId } = await result.json();
+    
+    // Store the file ID
+    await storeFileId({ storageId, uploadUrl });
+    
+    return storageId;
+  };
 
   // Helper functions
   const getProgressColor = (value: number, target: number) => {
@@ -281,7 +404,8 @@ export default function Chat() {
 
       {/* Chat Messages - Scrollable area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-        {messages.map((message, index) => {
+        <ClientOnly>
+          {messages.map((message, index) => {
           // Handle messages with tool calls (like confirmFood)
           if (message.toolCalls && message.toolCalls.length > 0) {
             const confirmFoodCall = message.toolCalls.find(tc => tc.toolName === "confirmFood");
@@ -318,8 +442,46 @@ export default function Chat() {
                             </div>
                           )}
                         </div>
-                        <div className="mt-3 font-medium">
-                          Should I log this as your {args.mealType}? 🤔
+                        <div className="mt-3 space-y-3">
+                          <div className="font-medium">
+                            Should I log this as your {args.mealType}? 🤔
+                          </div>
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            onClick={async () => {
+                              // Add user message
+                              const yesMessage: Message = { role: "user", content: "yes" };
+                              setMessages(prev => [...prev, yesMessage]);
+                              setIsLoading(true);
+                              
+                              try {
+                                // Send confirmation
+                                const response = await sendMessage({
+                                  prompt: "yes",
+                                  threadId: threadId || undefined,
+                                });
+                                
+                                // Add response
+                                const assistantMessage: Message = { 
+                                  role: "assistant", 
+                                  content: response.text || "",
+                                  toolCalls: response.toolCalls
+                                };
+                                setMessages(prev => [...prev, assistantMessage]);
+                              } catch (error) {
+                                console.error("Error confirming:", error);
+                              } finally {
+                                setIsLoading(false);
+                              }
+                            }}
+                            disabled={isLoading}
+                          >
+                            <Check className="h-4 w-4 mr-2" />
+                            Yes, log it!
+                          </Button>
+                          <p className="text-xs text-gray-600 text-center">
+                            If this isn't accurate, just tell me what to change in the chat below
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
@@ -346,11 +508,26 @@ export default function Chat() {
                     : "bg-gray-100 text-gray-800 rounded-bl-sm"
                 )}
               >
+                {message.imageUrl && message.imageUrl !== "[Photo uploaded]" && (
+                  <img 
+                    src={message.imageUrl} 
+                    alt="Uploaded food" 
+                    className="max-w-full rounded-lg mb-2"
+                    style={{ maxHeight: '200px' }}
+                  />
+                )}
+                {message.imageUrl === "[Photo uploaded]" && message.role === "user" && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <Camera className="h-4 w-4" />
+                    <span>Photo uploaded</span>
+                  </div>
+                )}
                 <div className="whitespace-pre-wrap">{message.content}</div>
               </div>
             </div>
           );
         })}
+        </ClientOnly>
         
         {isLoading && (
           <div className="flex justify-start">
@@ -371,26 +548,52 @@ export default function Chat() {
         onSubmit={handleSubmit}
         className="border-t bg-white px-4 py-3 flex-shrink-0"
       >
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="mb-3 relative inline-block">
+            <img 
+              src={imagePreview} 
+              alt="Selected food" 
+              className="h-20 rounded-lg"
+            />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-1"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="text-gray-500"
+            onClick={() => fileInputRef.current?.click()}
           >
-            <Paperclip className="h-5 w-5" />
+            <Camera className="h-5 w-5" />
           </Button>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isOnboarding ? "Type your answer..." : "Say anything"}
+            placeholder={isOnboarding ? "Type your answer..." : selectedImage ? "Add context (optional)" : "Say anything"}
             className="flex-1 border-gray-300"
             disabled={isLoading}
           />
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && !selectedImage) || isLoading}
             className="bg-gray-800 hover:bg-gray-700"
           >
             <Send className="h-4 w-4" />
