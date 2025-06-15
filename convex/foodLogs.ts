@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Get today's nutrition stats
 export const getTodayStats = query({
@@ -155,6 +156,12 @@ export const logFood = mutation({
       aiEstimated: args.aiEstimated,
       confidence: args.confidence,
       createdAt: Date.now(),
+    });
+    
+    // Generate embedding for the food log asynchronously
+    ctx.scheduler.runAfter(0, api.embeddings.embedNewFoodLog, {
+      foodLogId,
+      description: args.description,
     });
     
     return foodLogId;

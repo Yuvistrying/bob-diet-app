@@ -143,6 +143,40 @@ export const showProgress = createTool({
   },
 });
 
+export const findSimilarMeals = createTool({
+  description: "Search for similar meals the user has eaten before",
+  args: z.object({
+    searchText: z.string().describe("Description of the meal to search for"),
+    limit: z.number().default(3).describe("Number of similar meals to return"),
+  }),
+  handler: async (ctx, args): Promise<{ meals: any[]; summary: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const similarMeals = await ctx.runQuery(api.embeddings.searchSimilarMeals, {
+      userId: identity.subject,
+      searchText: args.searchText,
+      limit: args.limit,
+    });
+    
+    if (similarMeals.length === 0) {
+      return {
+        meals: [],
+        summary: "I couldn't find any similar meals in your history.",
+      };
+    }
+    
+    const mealSummaries = similarMeals.map(meal => 
+      `${meal.description} (${meal.totalCalories} cal, ${meal.totalProtein}g protein) - ${meal.date}`
+    ).join('\n');
+    
+    return {
+      meals: similarMeals,
+      summary: `Found ${similarMeals.length} similar meals:\n${mealSummaries}`,
+    };
+  },
+});
+
 // Get the same system prompt we use in ai.ts
 export function getBobInstructions(
   context: any,
@@ -216,6 +250,7 @@ CONVERSATION FLOW:
 - User denies → Ask what to change
 - User asks about progress → Use showProgress tool
 - If user reminds you to log → Apologize and use logFood tool immediately
+- When user mentions a meal they've had before → Use findSimilarMeals to check their history
 
 CRITICAL TOOL USAGE:
 1. ALWAYS include a text message when using ANY tool - never send a tool call without accompanying text
@@ -253,7 +288,7 @@ const openai = createOpenAI({
 export const bobAgent = new Agent(components.agent, {
   chat: anthropic("claude-sonnet-4-20250514"),  // Claude for EVERYTHING!
   instructions: "You are Bob, a friendly AI diet coach.", // Default, will be overridden per message
-  tools: { confirmFood, logFood, logWeight, showProgress },
+  tools: { confirmFood, logFood, logWeight, showProgress, findSimilarMeals },
   maxSteps: 5, // Allow multiple tool calls in one response
   maxRetries: 3,
   // OpenAI embeddings for vector search (finding similar meals)

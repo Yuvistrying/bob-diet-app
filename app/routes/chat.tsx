@@ -10,8 +10,6 @@ import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 import { Paperclip, Send } from "lucide-react";
-import { Switch } from "~/components/ui/switch";
-import { Label } from "~/components/ui/label";
 
 interface Message {
   role: "user" | "assistant";
@@ -31,19 +29,20 @@ export default function Chat() {
   const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus);
   const chatHistory = useQuery(api.chatHistory.getChatHistory, { limit: 50 });
   
-  // Convex actions for both AI versions
-  const sendMessageV1 = useAction(api.ai.chatAction);
-  const sendMessageV2 = useAction(api.agentActions.chat);
+  // Convex action for Agent SDK
+  const sendMessage = useAction(api.agentActions.chat);
   
   // State
   const [messages, setMessages] = useState<Message[]>(() => {
     // Try to load persisted messages
-    const saved = localStorage.getItem('chatMessages');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse saved messages:', e);
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chatMessages');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Failed to parse saved messages:', e);
+        }
       }
     }
     return [];
@@ -51,14 +50,12 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
-  const [useAgentVersion, setUseAgentVersion] = useState(() => {
-    // Persist toggle state in localStorage
-    const saved = localStorage.getItem('useAgentVersion');
-    return saved === 'true';
-  });
-  const [agentThreadId, setAgentThreadId] = useState<string | null>(() => {
+  const [threadId, setThreadId] = useState<string | null>(() => {
     // Persist threadId in localStorage
-    return localStorage.getItem('agentThreadId');
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('agentThreadId');
+    }
+    return null;
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,21 +66,18 @@ export default function Chat() {
     }
   }, [isSignedIn, navigate]);
 
-  // Persist toggle state
-  useEffect(() => {
-    localStorage.setItem('useAgentVersion', useAgentVersion.toString());
-  }, [useAgentVersion]);
-
   // Persist threadId
   useEffect(() => {
-    if (agentThreadId) {
-      localStorage.setItem('agentThreadId', agentThreadId);
+    if (typeof window !== 'undefined' && threadId) {
+      localStorage.setItem('agentThreadId', threadId);
     }
-  }, [agentThreadId]);
+  }, [threadId]);
 
   // Persist messages
   useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
   }, [messages]);
 
   // Load chat history on mount - with proper persistence
@@ -139,28 +133,15 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      let response;
+      // Send message using Convex Agent SDK
+      const response = await sendMessage({
+        prompt: userMessage,
+        threadId: threadId || undefined,
+      });
       
-      if (useAgentVersion) {
-        // V2: Convex Agent SDK - send prompt with threadId
-        response = await sendMessageV2({
-          prompt: userMessage,
-          threadId: agentThreadId || undefined,
-        });
-        // Save threadId for future messages
-        if (response.threadId && !agentThreadId) {
-          setAgentThreadId(response.threadId);
-        }
-      } else {
-        // V1: AI SDK - send full message history
-        const messagesForAI = [...messages, newUserMessage].map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
-        
-        response = await sendMessageV1({
-          messages: messagesForAI,
-        });
+      // Save threadId for future messages
+      if (response.threadId && !threadId) {
+        setThreadId(response.threadId);
       }
 
       // Add AI response to messages with tool calls if any
@@ -216,27 +197,8 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-white border-b p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="font-semibold">Bob - Your Diet Coach</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="ai-version" className="text-xs text-gray-600">
-            AI v1
-          </Label>
-          <Switch
-            id="ai-version"
-            checked={useAgentVersion}
-            onCheckedChange={setUseAgentVersion}
-            className="scale-75"
-          />
-          <Label htmlFor="ai-version" className="text-xs text-gray-600">
-            Agent v2
-          </Label>
-          {useAgentVersion && (
-            <span className="text-xs text-orange-600 ml-2">(Testing)</span>
-          )}
-        </div>
+      <div className="bg-white border-b p-4">
+        <h1 className="font-semibold">Bob - Your Diet Coach</h1>
       </div>
 
 
