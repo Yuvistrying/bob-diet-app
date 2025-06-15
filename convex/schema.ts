@@ -128,10 +128,16 @@ export default defineSchema({
     photoUrl: v.optional(v.string()),
     aiEstimated: v.boolean(),
     confidence: v.string(), // "high", "medium", "low"
-    createdAt: v.number()
+    createdAt: v.number(),
+    embedding: v.optional(v.array(v.float64()))
   })
   .index("by_user_date", ["userId", "date"])
-  .index("by_user_meal_date", ["userId", "meal", "date"]),
+  .index("by_user_meal_date", ["userId", "meal", "date"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 1536,
+    filterFields: ["userId"]
+  }),
 
   // Chat history with Bob
   chatHistory: defineTable({
@@ -144,10 +150,16 @@ export default defineSchema({
       weightLogId: v.optional(v.id("weightLogs")),
       actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
       toolCalls: v.optional(v.any()) // Store tool calls for persistence
-    }))
+    })),
+    embedding: v.optional(v.array(v.float64()))
   })
   .index("by_user", ["userId"])
-  .index("by_user_timestamp", ["userId", "timestamp"]),
+  .index("by_user_timestamp", ["userId", "timestamp"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 1536,
+    filterFields: ["userId", "role"]
+  }),
 
   // Usage tracking for freemium
   usageTracking: defineTable({
