@@ -1,7 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { Agent, createTool } from "@convex-dev/agent";
-import { api, components } from "./_generated/api";
+import { api, components, internal } from "./_generated/api";
 import { z } from "zod";
 
 // Initialize Anthropic with our API key
@@ -150,11 +150,12 @@ export const findSimilarMeals = createTool({
     limit: z.number().default(3).describe("Number of similar meals to return"),
   }),
   handler: async (ctx, args): Promise<{ meals: any[]; summary: string }> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    // Get user ID from the context
+    const userId = (ctx as any).userId;
+    if (!userId) throw new Error("User ID not found in context");
     
     const similarMeals = await ctx.runQuery(api.embeddings.searchSimilarMeals, {
-      userId: identity.subject,
+      userId: userId,
       searchText: args.searchText,
       limit: args.limit,
     });
@@ -166,7 +167,7 @@ export const findSimilarMeals = createTool({
       };
     }
     
-    const mealSummaries = similarMeals.map(meal => 
+    const mealSummaries = similarMeals.map((meal: any) => 
       `${meal.description} (${meal.totalCalories} cal, ${meal.totalProtein}g protein) - ${meal.date}`
     ).join('\n');
     
@@ -174,6 +175,166 @@ export const findSimilarMeals = createTool({
       meals: similarMeals,
       summary: `Found ${similarMeals.length} similar meals:\n${mealSummaries}`,
     };
+  },
+});
+
+export const analyzePhoto = createTool({
+  description: "Analyze a food photo to estimate calories and macros",
+  args: z.object({
+    storageId: z.string().optional().describe("Convex storage ID of the food image to analyze"),
+    mealContext: z.string().optional().describe("Any context about the meal"),
+  }),
+  handler: async (ctx, args): Promise<any> => {
+    // Get user ID from the context
+    const userId = (ctx as any).userId;
+    if (!userId) throw new Error("User ID not found in context");
+    
+    // Detect meal type based on time
+    const hour = new Date().getHours();
+    const defaultMealType = 
+      hour < 11 ? "breakfast" :
+      hour < 15 ? "lunch" :
+      hour < 18 ? "snack" :
+      "dinner";
+    
+    // Check usage limits
+    const usage = await ctx.runQuery(api.usage.getPhotoUsageToday, {
+      userId: userId,
+    });
+    
+    const subscriptionStatus = await ctx.runQuery(api.usage.getUserSubscriptionStatus);
+    
+    if (!subscriptionStatus.isPro && usage >= 2) {
+      return {
+        error: true,
+        message: "You've reached your daily photo analysis limit (2/2). Upgrade to Pro for unlimited analyses! 📸",
+        upgradeUrl: "/pricing",
+      };
+    }
+    
+    try {
+      // Get the storage ID from args
+      const storageId = args.storageId;
+      
+      if (!storageId) {
+        return {
+          error: true,
+          message: "No image was provided. Please upload a photo first.",
+        };
+      }
+      
+      // Call Claude Vision API for analysis
+      const analysis = await ctx.runAction(internal.vision.analyzeFood, {
+        storageId: storageId as any, // Type assertion needed for string -> Id conversion
+        context: args.mealContext,
+      });
+      
+      // Check if Claude detected no food in the image
+      if (analysis.error && analysis.noFood) {
+        // Extract what Claude saw from the description
+        let whatClaude = "something that's not food";
+        if (analysis.description) {
+          // Try to extract what Claude actually saw
+          if (analysis.description.includes("selfie")) {
+            whatClaude = "a selfie";
+          } else if (analysis.description.includes("person")) {
+            whatClaude = "a photo of a person";
+          } else if (analysis.description.includes("furniture")) {
+            whatClaude = "furniture or room interior";
+          } else if (analysis.description.includes("landscape")) {
+            whatClaude = "a landscape or scenery";
+          }
+        }
+        
+        return {
+          error: true,
+          message: `Hey, that looks like ${whatClaude}! Unfortunately, I need a food photo to analyze calories. 📸\n\nCan you upload a picture of your meal instead? Just snap a photo of what you're eating and I'll help you track it!`,
+          noFood: true,
+        };
+      }
+      
+      // Check for other errors
+      if (analysis.error) {
+        return {
+          error: true,
+          message: analysis.message || "I couldn't analyze the photo. Please make sure it's a clear image of food and try again.",
+        };
+      }
+      
+      // Generate embedding from photo metadata if available
+      let enhancedEstimate = null;
+      if (analysis.metadata) {
+        const metadataText = `${analysis.metadata.visualDescription} ${analysis.metadata.platingStyle} ${analysis.metadata.portionSize}`;
+        const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
+          text: metadataText,
+        });
+        
+        // Search for similar past photos
+        const similarPhotos = await ctx.runQuery(api.photos.searchSimilar, {
+          userId: userId,
+          embedding: embedding,
+          limit: 3,
+        });
+        
+        // Enhance analysis with historical data
+        if (similarPhotos.length > 0) {
+          const avgCalories = Math.round(
+            similarPhotos.reduce((sum: number, p: any) => sum + p.analysis.totalCalories, 0) / similarPhotos.length
+          );
+          
+          const confidence = 
+            analysis.overallConfidence === "low" && 
+            Math.abs(avgCalories - analysis.totalCalories) < 100 
+              ? "medium" 
+              : analysis.overallConfidence;
+          
+          enhancedEstimate = {
+            historicalAverage: avgCalories,
+            similarMealsFound: similarPhotos.length,
+            adjustedConfidence: confidence,
+            suggestion: `Based on ${similarPhotos.length} similar meals you've had before, this is likely around ${avgCalories} calories`,
+          };
+        }
+      }
+      
+      // Save analysis with embedding
+      const photoId = await ctx.runAction(api.vision.savePhotoAnalysis, {
+        storageId: storageId as any, // Type assertion needed for string -> Id conversion
+        analysis,
+        embedding: analysis.metadata ? await ctx.runAction(api.embeddings.generateEmbedding, {
+          text: `${analysis.metadata.visualDescription} ${analysis.metadata.platingStyle} ${analysis.metadata.portionSize}`,
+        }) : undefined,
+      });
+      
+      // Track usage
+      await ctx.runMutation(api.usage.incrementPhotoUsage, {
+        userId: userId,
+      });
+      
+      // Return data formatted for easy use with confirmFood
+      return {
+        photoId,
+        success: true,
+        confirmFoodData: {
+          description: `Photo analysis: ${analysis.foods.map((f: any) => f.name).join(", ")}`,
+          items: analysis.foods,
+          totalCalories: enhancedEstimate?.historicalAverage || analysis.totalCalories,
+          totalProtein: analysis.totalProtein,
+          totalCarbs: analysis.totalCarbs,
+          totalFat: analysis.totalFat,
+          mealType: defaultMealType || "snack", // Use the detected meal type
+          confidence: enhancedEstimate?.adjustedConfidence || analysis.overallConfidence,
+        },
+        enhancedEstimate,
+        metadata: analysis.metadata,
+      };
+    } catch (error) {
+      console.error("Photo analysis error:", error);
+      return {
+        error: true,
+        message: "I couldn't analyze the photo. Please make sure it's a clear image of food and try again.",
+      };
+    }
   },
 });
 
@@ -251,6 +412,7 @@ CONVERSATION FLOW:
 - User asks about progress → Use showProgress tool
 - If user reminds you to log → Apologize and use logFood tool immediately
 - When user mentions a meal they've had before → Use findSimilarMeals to check their history
+- When user shares a photo → Use analyzePhoto tool with the provided storageId
 
 CRITICAL TOOL USAGE:
 1. ALWAYS include a text message when using ANY tool - never send a tool call without accompanying text
@@ -262,12 +424,28 @@ CRITICAL TOOL USAGE:
    - Your text response should confirm it's logged: "Logged it! You've got X calories left today"
 5. NEVER ask for confirmation twice for the same food
 6. ALWAYS complete the two-step process: confirmFood → user says yes → logFood
+7. When user shares a photo, use analyzePhoto with the provided image URL immediately
+8. PHOTO ANALYSIS FLOW: When analyzePhoto returns food data successfully:
+   - You MUST use confirmFood IN THE SAME RESPONSE (don't wait for another message)
+   - Your text should be: "Let me analyze your photo and confirm what I found:"
+   - Then immediately use confirmFood with the detected food items
+   - This creates a smooth flow: photo → analysis → confirmation card all at once
 
-EXAMPLE FLOW:
+EXAMPLE FLOWS:
+
+1. Text-based food logging:
 User: "I had a banana for breakfast"
 You: "Let me confirm what you had:" [USE confirmFood tool with banana data]
 User: "yes"
 You: [USE logFood tool with same banana data] "Perfect! I've logged your banana breakfast. You have X calories remaining today."
+
+2. Photo-based food logging:
+User: [uploads photo]
+You: "Let me analyze your photo!" [USE analyzePhoto tool]
+[analyzePhoto returns food data]
+You: "Let me analyze your photo and confirm what I found:" [USE confirmFood tool with detected items]
+User: "yes"
+You: [USE logFood tool with same data] "Perfect! I've logged your meal. You have X calories remaining today."
 
 IMPORTANT RELIABILITY RULES:
 1. If you show a confirmation, you MUST follow through with logging when confirmed
@@ -288,7 +466,7 @@ const openai = createOpenAI({
 export const bobAgent = new Agent(components.agent, {
   chat: anthropic("claude-sonnet-4-20250514"),  // Claude for EVERYTHING!
   instructions: "You are Bob, a friendly AI diet coach.", // Default, will be overridden per message
-  tools: { confirmFood, logFood, logWeight, showProgress, findSimilarMeals },
+  tools: { confirmFood, logFood, logWeight, showProgress, findSimilarMeals, analyzePhoto },
   maxSteps: 5, // Allow multiple tool calls in one response
   maxRetries: 3,
   // OpenAI embeddings for vector search (finding similar meals)

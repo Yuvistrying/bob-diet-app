@@ -209,4 +209,55 @@ export default defineSchema({
     startedAt: v.number(),
     completedAt: v.optional(v.number())
   }).index("by_user", ["userId"]),
+
+  // Photo analyses for food recognition
+  photoAnalyses: defineTable({
+    userId: v.string(),
+    timestamp: v.number(),
+    storageId: v.id("_storage"), // Convex storage ID for the photo
+    analysis: v.object({
+      foods: v.array(v.object({
+        name: v.string(),
+        quantity: v.string(),
+        calories: v.number(),
+        protein: v.number(),
+        carbs: v.number(),
+        fat: v.number(),
+        confidence: v.string() // "low", "medium", "high"
+      })),
+      totalCalories: v.number(),
+      totalProtein: v.number(),
+      totalCarbs: v.number(),
+      totalFat: v.number(),
+      overallConfidence: v.string(), // "low", "medium", "high"
+      metadata: v.optional(v.object({
+        visualDescription: v.string(),
+        platingStyle: v.string(),
+        portionSize: v.string()
+      }))
+    }),
+    confirmed: v.boolean(),
+    loggedFoodId: v.optional(v.id("foodLogs")),
+    embedding: v.optional(v.array(v.float64()))
+  })
+  .index("by_user_date", ["userId", "timestamp"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 1536,
+    filterFields: ["userId"]
+  }),
+
+  // File uploads tracking
+  files: defineTable({
+    userId: v.string(),
+    storageId: v.optional(v.id("_storage")),
+    uploadUrl: v.optional(v.string()),
+    uploadedAt: v.number(),
+    metadata: v.optional(v.object({
+      type: v.string(),
+      purpose: v.string(),
+    })),
+  })
+    .index("by_user", ["userId"])
+    .index("by_upload_url", ["uploadUrl"]),
 });

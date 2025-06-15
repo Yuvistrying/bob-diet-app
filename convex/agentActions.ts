@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { action, mutation } from "./_generated/server";
-import { api } from "./_generated/api";
+import { action, mutation, internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { bobAgent, getBobInstructions } from "./bobAgent";
 import { Id } from "./_generated/dataModel";
 
@@ -16,8 +16,9 @@ export const chat = action({
   args: {
     prompt: v.string(),
     threadId: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
   },
-  handler: async (ctx, { prompt, threadId }) => {
+  handler: async (ctx, { prompt, threadId, storageId }) => {
     const userId = await getUserId(ctx);
     
     // Get context for Bob's instructions
@@ -60,6 +61,15 @@ export const chat = action({
       }
     }
     
+    // Check if this is an image message
+    const isImageMessage = storageId || prompt.includes("[Image attached]");
+    let actualPrompt = prompt;
+    
+    if (isImageMessage && storageId) {
+      // Keep the clean prompt without image data
+      actualPrompt = prompt.replace("[Image attached] ", "").trim() || "Please analyze this food photo";
+    }
+    
     // Check if this is a confirmation response
     const isConfirmationResponse = 
       prompt.toLowerCase() === "yes" || 
@@ -93,6 +103,21 @@ REQUIRED ACTIONS:
       contextualInstructions += `\n\nCRITICAL: The user is reminding you to log food that was already confirmed. You MUST use the logFood tool NOW with this data:
 ${JSON.stringify(lastConfirmFoodData, null, 2)}
 Apologize briefly and log it immediately.`;
+    } else if (isImageMessage && storageId) {
+      contextualInstructions += `\n\nIMAGE ANALYSIS: The user has shared a food photo. 
+
+The user's message about the photo: "${actualPrompt}"
+
+REQUIRED STEPS:
+1. First, use the analyzePhoto tool with storageId parameter set to "${storageId}"
+2. When analyzePhoto returns success:true with confirmFoodData, you MUST:
+   - Say "Let me analyze your photo and confirm what I found:"
+   - Use the confirmFood tool with the data from confirmFoodData
+   - This must happen in THE SAME RESPONSE as the analyzePhoto result
+3. The confirmFoodData object contains all fields needed for confirmFood:
+   - description, items, totalCalories, totalProtein, totalCarbs, totalFat, mealType, confidence
+
+CRITICAL: You must use TWO tools in your response: analyzePhoto followed by confirmFood`;
     }
     
     // Create or continue thread
@@ -108,7 +133,7 @@ Apologize briefly and log it immediately.`;
     
     // Generate response with the thread
     const result = await thread.generateText({
-      prompt,
+      prompt: actualPrompt,
       system: contextualInstructions,
       maxSteps: 5, // Ensure multiple steps for tool calls + text
     });
@@ -198,14 +223,13 @@ Apologize briefly and log it immediately.`;
     // Ensure we always return some text
     const finalText = cleanedText || result.text || "I'm processing your request...";
     
-    // Extract tool calls from steps if available
+    // Extract ALL tool calls from ALL steps
     let toolCalls: any[] = [];
     if (result.steps && Array.isArray(result.steps)) {
       for (const step of result.steps) {
         if (step.toolCalls && Array.isArray(step.toolCalls)) {
-          // Get the tool calls from the first step (usually the one with confirmFood)
-          toolCalls = step.toolCalls;
-          break;
+          // Collect tool calls from all steps
+          toolCalls = [...toolCalls, ...step.toolCalls];
         }
       }
     }
