@@ -7,5 +7,15 @@ export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
   server: {
     port: 5174,
+    host: true, // This allows external connections
+    hmr: {
+      clientPort: 443,
+      protocol: 'wss'
+    },
+    allowedHosts: [
+      'localhost',
+      '.loca.lt',
+      'deep-peas-clap.loca.lt'
+    ]
   },
 });
