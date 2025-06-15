@@ -1,4 +1,21 @@
-# Bob Diet Coach - Remaining Features Implementation Plan (Updated)
+## 1. Dynamic Metabolism Calibration 🎯 [NEXT PRIORITY]
+
+### Description
+Bob learns each user's actual metabolism by observing weight results, not by applying generic formulas. Weight change is the truth - calories are just the input we adjust.
+
+### Updated Implementation (Weight-First Approach)
+
+#### 1.1 Moving Average System
+```typescript
+// In convex/analytics.ts
+export const updateMovingAverages = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    
+    // Get weight and food data
+    const [weightLogs, foodLogs] = await Promise.all([
+      # Bob Diet Coach - Remaining Features Implementation Plan (Updated)
 
 ## Overview
 This document outlines the remaining features to implement for Bob Diet Coach v2. With photo analysis complete, the core functionality is at ~90%, and these features will complete the vision.
@@ -18,9 +35,15 @@ Successfully implemented with:
 ## 1. Dynamic Metabolism Calibration 🎯 [NEXT PRIORITY]
 
 ### Description
-Bob learns each user's actual metabolism using rolling averages and Convex's real-time capabilities.
+Bob learns each user's actual metabolism by observing weight results, not by applying generic formulas. Weight change is the ultimate truth - calories are just the input variable we learn to adjust.
 
-### Updated Implementation (Convex-Optimized)
+### Philosophy: Weight-First Learning
+```
+Traditional approach: "3,500 calorie deficit should = 0.45kg loss"
+Bob's approach: "You lost 0.3kg eating 1,500 cal, so that's YOUR reality"
+```
+
+### Updated Implementation (Weight-First Approach)
 
 #### 1.1 Moving Average System
 ```typescript
@@ -30,7 +53,7 @@ export const updateMovingAverages = internalMutation({
   handler: async (ctx, { userId }) => {
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     
-    // Efficient queries using Convex indices
+    // Get weight and food data
     const [weightLogs, foodLogs] = await Promise.all([
       ctx.db.query("weightLogs")
         .withIndex("by_user_created", q => q.eq("userId", userId))
@@ -64,63 +87,196 @@ export const updateMovingAverages = internalMutation({
         }
       });
       
-      // Schedule calibration check
-      await ctx.scheduler.runAfter(0, internal.calibration.checkForCalibration, { userId });
+      // Check if we can learn from the results
+      await ctx.scheduler.runAfter(0, internal.calibration.learnFromResults, { userId });
     }
   }
 });
 ```
 
-#### 1.2 Bob Tool Integration
+#### 1.2 Weight-Based Calibration Logic
+```typescript
+// In convex/calibration.ts
+export const learnFromResults = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const profile = await getUserProfile(ctx, userId);
+    const current = profile.movingAverages;
+    
+    // Get previous week's averages
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const prevWeightLogs = await ctx.db.query("weightLogs")
+      .withIndex("by_user_created", q => q.eq("userId", userId))
+      .filter(q => q.gte(q.field("createdAt"), oneWeekAgo - 7 * 24 * 60 * 60 * 1000))
+      .filter(q => q.lt(q.field("createdAt"), oneWeekAgo))
+      .collect();
+    
+    if (prevWeightLogs.length < 3) return; // Need historical data
+    
+    const prevAvgWeight = prevWeightLogs.reduce((sum, log) => sum + log.weight, 0) / prevWeightLogs.length;
+    
+    // THE TRUTH: What happened to weight?
+    const actualWeightChange = current.weight7d - prevAvgWeight;
+    const weeklyCalories = current.calories7d;
+    
+    // Learn from the results
+    if (Math.abs(actualWeightChange) < 0.1) {
+      // Weight stable = found maintenance
+      await ctx.db.insert("calibrationHistory", {
+        userId,
+        date: new Date().toISOString().split('T')[0],
+        oldCalorieTarget: profile.targetCalories,
+        newCalorieTarget: Math.round(weeklyCalories), // Their actual maintenance
+        reason: `Weight stable at ${weeklyCalories} calories - this is YOUR maintenance`,
+        dataPointsAnalyzed: 14,
+        confidence: "high",
+        createdAt: Date.now()
+      });
+      
+      // For weight loss, create deficit from THEIR maintenance
+      if (profile.goal === "cut") {
+        const newTarget = Math.round(weeklyCalories - 300); // Start conservative
+        await ctx.db.patch(profile._id, {
+          targetCalories: newTarget,
+          maintenanceCalories: Math.round(weeklyCalories)
+        });
+      }
+    } else if (actualWeightChange < -0.1) {
+      // Losing weight - learn the rate
+      const deficitFromTarget = profile.targetCalories - weeklyCalories;
+      const lossRate = actualWeightChange; // kg per week
+      
+      // Check if loss rate matches goal
+      const desiredLossRate = profile.weeklyLossGoal || 0.5; // kg per week
+      
+      if (Math.abs(lossRate) < desiredLossRate * 0.5) {
+        // Losing too slowly
+        const adjustment = Math.round((desiredLossRate - Math.abs(lossRate)) * 1000); // Rough adjustment
+        const newTarget = profile.targetCalories - adjustment;
+        
+        await ctx.db.insert("calibrationHistory", {
+          userId,
+          date: new Date().toISOString().split('T')[0],
+          oldCalorieTarget: profile.targetCalories,
+          newCalorieTarget: newTarget,
+          reason: `Losing ${Math.abs(lossRate)}kg/week at ${weeklyCalories} cal. Adjusting for ${desiredLossRate}kg/week goal`,
+          dataPointsAnalyzed: 14,
+          confidence: "medium",
+          createdAt: Date.now()
+        });
+        
+        await ctx.db.patch(profile._id, { targetCalories: newTarget });
+      }
+    }
+    
+    // Update weekly analytics
+    await ctx.db.insert("weeklyAnalytics", {
+      userId,
+      weekStartDate: getMonday(new Date()),
+      avgDailyCalories: weeklyCalories,
+      avgDailyProtein: current.protein7d,
+      avgDailyCarbs: 0, // Calculate if tracking
+      avgDailyFat: 0, // Calculate if tracking
+      startWeight: prevAvgWeight,
+      endWeight: current.weight7d,
+      actualWeightChange,
+      expectedWeightChange: 0, // We don't use formulas!
+      adherenceScore: calculateAdherence(foodLogs),
+      createdAt: Date.now()
+    });
+  }
+});
+```
+
+#### 1.3 Bob Tool for Weight-Based Insights
 ```javascript
 // Add to bobAgent.ts
 export const getCalibrationInsights = createTool({
-  description: "Get metabolism calibration insights based on recent data",
+  description: "Get personalized metabolism insights based on actual weight results",
   args: z.object({
-    checkNow: z.boolean().optional().describe("Force check for calibration opportunity")
+    timeframe: z.enum(["recent", "historical"]).default("recent")
   }),
   handler: async (ctx, args): Promise<object> => {
-    // Get latest calibration
-    const latest = await ctx.runQuery(internal.calibration.getLatest, {
-      userId: ctx.userId
-    });
-    
-    // Get current moving averages
     const profile = await ctx.runQuery(internal.users.getProfile, {
       userId: ctx.userId
     });
     
-    if (!profile.movingAverages || !latest) {
+    if (!profile.movingAverages) {
       return {
         hasInsights: false,
-        message: "I'm still learning your metabolism. Need about 2 weeks of consistent tracking!"
+        message: "I'm still learning your body's patterns. Keep tracking for about 2 weeks!"
       };
     }
     
-    // Check if calibration needed
-    if (args.checkNow) {
-      await ctx.runMutation(internal.calibration.checkForCalibration, {
-        userId: ctx.userId
-      });
+    // Get calibration history
+    const calibrations = await ctx.runQuery(internal.calibration.getHistory, {
+      userId: ctx.userId,
+      limit: args.timeframe === "recent" ? 1 : 5
+    });
+    
+    // Get weekly analytics for patterns
+    const weeklyData = await ctx.runQuery(internal.analytics.getWeekly, {
+      userId: ctx.userId,
+      weeks: 4
+    });
+    
+    // Analyze patterns
+    const insights = analyzeWeightPatterns(weeklyData);
+    
+    if (calibrations.length > 0) {
+      const latest = calibrations[0];
+      return {
+        hasInsights: true,
+        maintenanceCalories: profile.maintenanceCalories || "Still learning",
+        currentTarget: profile.targetCalories,
+        lastAdjustment: {
+          date: latest.date,
+          change: latest.newCalorieTarget - latest.oldCalorieTarget,
+          reason: latest.reason
+        },
+        weightTrend: {
+          current: profile.movingAverages.weight7d,
+          weeklyChange: insights.avgWeeklyChange,
+          direction: insights.trend
+        },
+        recommendation: generatePersonalizedRecommendation(profile, insights)
+      };
     }
     
     return {
       hasInsights: true,
-      currentTarget: profile.targetCalories,
-      lastAdjustment: latest.newCalorieTarget - latest.oldCalorieTarget,
-      confidence: latest.confidence,
-      daysSinceCalibration: Math.floor((Date.now() - latest.createdAt) / (24 * 60 * 60 * 1000)),
-      recommendation: generateRecommendation(profile, latest)
+      message: "Still gathering data, but here's what I see so far...",
+      currentAverages: {
+        weight: profile.movingAverages.weight7d,
+        calories: profile.movingAverages.calories7d
+      }
     };
   }
 });
+
+// Helper function for Bob's responses
+function generatePersonalizedRecommendation(profile, insights) {
+  if (insights.avgWeeklyChange < 0.1 && profile.goal === "cut") {
+    return "Your weight isn't moving. Based on YOUR data, you need to eat less than " + 
+           profile.movingAverages.calories7d + " calories to see progress.";
+  }
+  
+  if (Math.abs(insights.avgWeeklyChange) > 1) {
+    return "You're losing fast! This might not be sustainable. Consider eating " +
+           "100-200 more calories to protect muscle mass.";
+  }
+  
+  return "You're losing at a healthy rate. Your body responds well to " + 
+         profile.targetCalories + " calories.";
+}
 ```
 
-#### 1.3 Trigger Points
-- After every weight log
-- After every food log  
-- When Bob detects plateau
-- When user asks about progress
+#### 1.4 Trigger Points
+- After every weight log → Update moving averages
+- After every food log → Update moving averages  
+- When 7+ days of data exist → Check for patterns
+- When user asks "How am I doing?" → Provide insights
+- Weekly → Generate analytics snapshot
 
 ---
 
