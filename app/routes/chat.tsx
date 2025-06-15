@@ -191,13 +191,26 @@ export default function Chat() {
       // If there's an image, upload it to Convex storage
       if (selectedImage && imagePreview) {
         try {
+          console.log('Starting image upload...', {
+            fileName: selectedImage.name,
+            fileSize: selectedImage.size,
+            fileType: selectedImage.type
+          });
+          
           storageId = await uploadPhoto(selectedImage);
+          console.log('Upload successful, storageId:', storageId);
+          
           finalMessage = `[Image attached] ${userMessage || "Please analyze this food photo"}`;
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
+          console.error('Upload error details:', {
+            message: uploadError.message,
+            stack: uploadError.stack
+          });
+          
           setMessages(prev => [...prev, {
             role: "assistant",
-            content: "Sorry, I couldn't upload the image. Please try again."
+            content: `Sorry, I couldn't upload the image. Error: ${uploadError.message || 'Unknown error'}. Please try again.`
           }]);
           setIsLoading(false);
           return;
@@ -244,16 +257,41 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Handle image selection
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+  // Handle file processing
+  const processImageFile = (file: File) => {
+    if (!file || !file.type.startsWith('image/')) {
+      console.error('Invalid file type:', file?.type);
+      return;
+    }
+    
+    try {
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Sorry, I couldn't read the image file. Please try again."
+        }]);
+      };
       reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Sorry, I encountered an error processing the image. Please try again."
+      }]);
+    }
+  };
+
+  // Handle image selection from input
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
     }
   };
 
@@ -268,28 +306,43 @@ export default function Chat() {
 
   // Handle photo upload to Convex storage
   const uploadPhoto = async (file: File): Promise<string> => {
-    // Get upload URL from Convex
-    const uploadUrl = await generateUploadUrl({ 
-      metadata: { type: "image", purpose: "food-analysis" } 
-    });
-    
-    // Upload the file
-    const result = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
-    
-    if (!result.ok) {
-      throw new Error("Failed to upload image");
+    try {
+      // Get upload URL from Convex
+      console.log('Getting upload URL from Convex...');
+      const uploadUrl = await generateUploadUrl({ 
+        metadata: { type: "image", purpose: "food-analysis" } 
+      });
+      console.log('Got upload URL:', uploadUrl);
+      
+      // Upload the file
+      console.log('Uploading file to Convex storage...');
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      
+      console.log('Upload response status:', result.status);
+      
+      if (!result.ok) {
+        const errorText = await result.text();
+        console.error('Upload failed:', errorText);
+        throw new Error(`Failed to upload image: ${result.status} ${errorText}`);
+      }
+      
+      const responseData = await result.json();
+      console.log('Upload response data:', responseData);
+      const { storageId } = responseData;
+      
+      // Store the file ID
+      console.log('Storing file ID...');
+      await storeFileId({ storageId, uploadUrl });
+      
+      return storageId;
+    } catch (error) {
+      console.error('Upload error in uploadPhoto:', error);
+      throw error;
     }
-    
-    const { storageId } = await result.json();
-    
-    // Store the file ID
-    await storeFileId({ storageId, uploadUrl });
-    
-    return storageId;
   };
 
   // Helper functions
@@ -597,8 +650,8 @@ export default function Chat() {
               input.onchange = (e) => {
                 const file = (e.target as HTMLInputElement).files?.[0];
                 if (file) {
-                  // Manually trigger the same handler
-                  handleImageSelect({ target: { files: [file] } } as any);
+                  // Use the direct file processor
+                  processImageFile(file);
                 }
               };
               input.click();
