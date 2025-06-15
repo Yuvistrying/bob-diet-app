@@ -55,13 +55,21 @@ export const saveUserMessage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     
-    return await ctx.db.insert("chatHistory", {
+    const chatId = await ctx.db.insert("chatHistory", {
       userId: identity.subject,
       role: "user",
       content: args.content,
       timestamp: Date.now(),
       metadata: args.metadata,
     });
+    
+    // Generate embedding asynchronously
+    ctx.scheduler.runAfter(0, api.embeddings.embedNewChatMessage, {
+      chatId,
+      content: args.content,
+    });
+    
+    return chatId;
   },
 });
 
@@ -80,13 +88,21 @@ export const saveBobMessage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     
-    return await ctx.db.insert("chatHistory", {
+    const chatId = await ctx.db.insert("chatHistory", {
       userId: identity.subject,
       role: "assistant",
       content: args.content,
       timestamp: Date.now(),
       metadata: args.metadata,
     });
+    
+    // Generate embedding asynchronously
+    ctx.scheduler.runAfter(0, api.embeddings.embedNewChatMessage, {
+      chatId,
+      content: args.content,
+    });
+    
+    return chatId;
   },
 });
 
@@ -184,5 +200,25 @@ export const getChatContext = query({
       mealStatus: mealStatus,
       recentMessages: recentMessages.reverse(),
     };
+  },
+});
+
+// Get contextually relevant chat history using semantic search
+export const getRelevantChatContext = query({
+  args: {
+    searchText: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { searchText, limit = 5 }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    
+    const relevantChats = await ctx.runQuery(api.embeddings.searchChatHistory, {
+      userId: identity.subject,
+      searchText,
+      limit,
+    });
+    
+    return relevantChats;
   },
 });
