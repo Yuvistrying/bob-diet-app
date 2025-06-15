@@ -14,8 +14,7 @@ export default defineConfig({
     },
     allowedHosts: [
       'localhost',
-      '.loca.lt',
-      'deep-peas-clap.loca.lt'
+      '.loca.lt'
     ]
   },
 });

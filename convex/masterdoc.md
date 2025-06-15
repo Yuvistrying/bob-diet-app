@@ -20,14 +20,14 @@
 
 ## Executive Summary
 
-Bob Diet Coach is an AI-powered diet coaching SaaS that revolutionizes weight management through natural conversation. Unlike traditional calorie counting apps, users simply chat with Bob about their meals and weight, while Bob learns their unique metabolism and provides truly personalized coaching based on real results.
+Bob Diet Coach is an AI-powered diet coaching SaaS that revolutionizes weight management through natural conversation. Unlike traditional calorie counting apps that rely on generic formulas, Bob learns each user's unique metabolism by observing actual weight results, providing truly personalized coaching based on what YOUR scale shows, not what calculators predict.
 
 ### Key Differentiators
 - **Conversational Interface** - No forms, just natural chat
-- **Adaptive Learning** - Calibrates to each user's actual metabolism
+- **Results-Based Learning** - Calibrates to YOUR actual weight changes
 - **Stealth Mode** - For users who prefer not to see numbers
 - **Photo Intelligence** - Advanced food recognition that improves over time
-- **Real Results** - Adjusts based on actual weight changes, not formulas
+- **Real Metabolism Discovery** - Learns what calories actually do to YOUR body
 
 ---
 
@@ -77,8 +77,7 @@ Every interaction happens through natural conversation with Bob. Users talk to h
 - **Backend**: Convex (real-time database + serverless functions)
 - **AI Integration**: 
   - Convex Agent SDK (@convex-dev/agent)
-  - Claude 4 Sonnet (primary - 90% of interactions)
-  - Claude 4 Opus (photo analysis, complex calibration - 10%)
+  - Claude 4 Sonnet (all interactions including photo analysis)
   - OpenAI Embeddings (text-embedding-3-small)
 - **Auth**: Clerk (integrated)
 - **Payments**: Polar.sh (integrated)
@@ -130,14 +129,18 @@ Advanced food recognition with intelligent learning:
 
 ### 2. Weight Tracking ✅
 
-Intelligent weight logging with trend analysis:
+Intelligent weight logging with trend analysis and learning:
 
 ```javascript
 User: "Weight is 82.5kg today"
 Bob: [uses logWeight tool]
-"Logged 82.5kg! You're down 0.3kg from yesterday and 1.2kg this week. 
-Your 7-day average is trending perfectly toward your goal! 📉"
+"Logged 82.5kg! Your 7-day average is 82.3kg, down 0.4kg from last week.
+
+Based on YOUR results: eating 1,520 avg calories = 0.4kg loss per week.
+You're learning exactly how YOUR body responds! 📉"
 ```
+
+Bob tracks moving averages and learns the relationship between your intake and weight changes.
 
 ### 3. Progress Visualization ✅
 
@@ -439,17 +442,21 @@ const bobAgent = new Agent(components.agent, {
   chat: anthropic.chat("claude-sonnet-4-20250514"),
   
   // System instructions defining Bob's personality
-  instructions: `You are Bob, a friendly and knowledgeable AI diet coach...`,
+  instructions: `You are Bob, a friendly and knowledgeable AI diet coach who learns 
+  from real results, not generic formulas. You understand that weight change is the 
+  ultimate truth, and you adjust recommendations based on what each user's scale 
+  actually shows, not what calculators predict...`,
   
   // Tools Bob can use
   tools: {
-    confirmFood,      // Parse and confirm food
-    logFood,          // Save to database
-    logWeight,        // Track weight
-    showProgress,     // Display stats
-    analyzePhoto,     // Vision analysis
-    findSimilarMeals, // Vector search
-    getCalibrationInsights // Metabolism learning
+    confirmFood,          // Parse and confirm food
+    logFood,              // Save to database
+    logWeight,            // Track weight
+    showProgress,         // Display stats
+    analyzePhoto,         // Vision analysis
+    findSimilarMeals,     // Vector search
+    getCalibrationInsights, // Learn from weight results
+    getWeightTrends       // Show moving averages
   },
   
   // Embeddings for semantic search
