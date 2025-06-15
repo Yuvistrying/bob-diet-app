@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { api } from "./_generated/api";
 
 // Get chat history for user
@@ -15,7 +15,7 @@ export const getChatHistory = query({
     
     const messages = await ctx.db
       .query("chatHistory")
-      .withIndex("by_user_timestamp", (q: any) => q.eq("userId", identity.subject))
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .take(limit);
     
@@ -35,8 +35,8 @@ export const getTodayChats = query({
     
     const messages = await ctx.db
       .query("chatHistory")
-      .withIndex("by_user_timestamp", (q: any) => q.eq("userId", identity.subject))
-      .filter((q: any) => q.gte(q.field("timestamp"), todayStart.getTime()))
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.gte(q.field("timestamp"), todayStart.getTime()))
       .collect();
     
     return messages;
@@ -114,7 +114,7 @@ export const clearChatHistory = mutation({
     
     const messages = await ctx.db
       .query("chatHistory")
-      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect();
     
     for (const message of messages) {
@@ -134,13 +134,13 @@ export const getChatContext = query({
     // Get user profile
     const profile = await ctx.db
       .query("userProfiles")
-      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
     
     // Get user preferences
     const preferences = await ctx.db
       .query("userPreferences")
-      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
     
     // Remove meal status - no longer used
@@ -150,7 +150,7 @@ export const getChatContext = query({
     const today = new Date().toISOString().split('T')[0];
     const todayLogs = await ctx.db
       .query("foodLogs")
-      .withIndex("by_user_date", (q: any) => 
+      .withIndex("by_user_date", (q) => 
         q.eq("userId", identity.subject).eq("date", today)
       )
       .collect();
@@ -172,7 +172,7 @@ export const getChatContext = query({
     // Get recent messages for context
     const recentMessages = await ctx.db
       .query("chatHistory")
-      .withIndex("by_user_timestamp", (q: any) => q.eq("userId", identity.subject))
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .take(10);
     
@@ -204,17 +204,16 @@ export const getChatContext = query({
 });
 
 // Get contextually relevant chat history using semantic search
-export const getRelevantChatContext = query({
+export const getRelevantChatContext = action({
   args: {
     searchText: v.string(),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { searchText, limit = 5 }) => {
+  handler: async (ctx, { searchText, limit = 5 }): Promise<any[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     
-    const relevantChats = await ctx.runQuery(api.embeddings.searchChatHistory, {
-      userId: identity.subject,
+    const relevantChats = await ctx.runAction(api.vectorSearch.searchChatHistory, {
       searchText,
       limit,
     });

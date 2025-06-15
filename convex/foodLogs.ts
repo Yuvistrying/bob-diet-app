@@ -12,7 +12,7 @@ export const getTodayStats = query({
     
     const todayLogs = await ctx.db
       .query("foodLogs")
-      .withIndex("by_user_date", (q: any) => 
+      .withIndex("by_user_date", (q) => 
         q.eq("userId", identity.subject).eq("date", today)
       )
       .collect();
@@ -41,7 +41,7 @@ export const getFoodLogsByDate = query({
     
     const logs = await ctx.db
       .query("foodLogs")
-      .withIndex("by_user_date", (q: any) => 
+      .withIndex("by_user_date", (q) => 
         q.eq("userId", userId).eq("date", args.date)
       )
       .collect();
@@ -61,7 +61,7 @@ export const getTodayMacros = query({
     
     const logs = await ctx.db
       .query("foodLogs")
-      .withIndex("by_user_date", (q: any) => 
+      .withIndex("by_user_date", (q) => 
         q.eq("userId", identity.subject).eq("date", today)
       )
       .collect();
@@ -77,7 +77,7 @@ export const getTodayMacros = query({
     // Get user's targets
     const profile = await ctx.db
       .query("userProfiles")
-      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
     
     return {
@@ -247,7 +247,7 @@ export const getFoodLogsRange = query({
     const logs = await ctx.db
       .query("foodLogs")
       .withIndex("by_user_date")
-      .filter((q: any) => 
+      .filter((q) => 
         q.and(
           q.eq(q.field("userId"), identity.subject),
           q.gte(q.field("date"), args.startDate),

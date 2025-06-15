@@ -9,19 +9,24 @@
  */
 
 import type * as agentActions from "../agentActions.js";
-import type * as ai from "../ai.js";
 import type * as bob from "../bob.js";
 import type * as bobAgent from "../bobAgent.js";
 import type * as chatHistory from "../chatHistory.js";
 import type * as debugSubscription from "../debugSubscription.js";
+import type * as embeddings from "../embeddings.js";
+import type * as files from "../files.js";
 import type * as foodLogs from "../foodLogs.js";
 import type * as http from "../http.js";
 import type * as onboarding from "../onboarding.js";
+import type * as photos from "../photos.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as usage from "../usage.js";
 import type * as usageTracking from "../usageTracking.js";
 import type * as userPreferences from "../userPreferences.js";
 import type * as userProfiles from "../userProfiles.js";
 import type * as users from "../users.js";
+import type * as vectorSearch from "../vectorSearch.js";
+import type * as vision from "../vision.js";
 import type * as weightLogs from "../weightLogs.js";
 
 import type {
@@ -40,19 +45,24 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   agentActions: typeof agentActions;
-  ai: typeof ai;
   bob: typeof bob;
   bobAgent: typeof bobAgent;
   chatHistory: typeof chatHistory;
   debugSubscription: typeof debugSubscription;
+  embeddings: typeof embeddings;
+  files: typeof files;
   foodLogs: typeof foodLogs;
   http: typeof http;
   onboarding: typeof onboarding;
+  photos: typeof photos;
   subscriptions: typeof subscriptions;
+  usage: typeof usage;
   usageTracking: typeof usageTracking;
   userPreferences: typeof userPreferences;
   userProfiles: typeof userProfiles;
   users: typeof users;
+  vectorSearch: typeof vectorSearch;
+  vision: typeof vision;
   weightLogs: typeof weightLogs;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
