@@ -90,6 +90,7 @@ export default defineSchema({
         dinner: v.optional(v.string())
       })
     }),
+    agentThreadId: v.optional(v.string()), // Store the agent thread ID
     updatedAt: v.number()
   }).index("by_user", ["userId"]),
 
@@ -139,6 +140,29 @@ export default defineSchema({
     filterFields: ["userId"]
   }),
 
+  // Session cache for performance (with TTL)
+  sessionCache: defineTable({
+    userId: v.string(),
+    cacheKey: v.string(),
+    data: v.string(), // JSON stringified
+    expiresAt: v.number(), // timestamp
+  })
+  .index("by_user_key", ["userId", "cacheKey"])
+  .index("by_expires", ["expiresAt"]), // for cleanup
+  
+  // Chat sessions for better conversation management
+  chatSessions: defineTable({
+    userId: v.string(),
+    startDate: v.string(), // YYYY-MM-DD
+    threadId: v.string(),
+    messageCount: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    lastMessageAt: v.number(),
+  })
+  .index("by_user_date", ["userId", "startDate"])
+  .index("by_user_active", ["userId", "isActive"]),
+
   // Chat history with Bob
   chatHistory: defineTable({
     userId: v.string(),
@@ -149,7 +173,9 @@ export default defineSchema({
       foodLogId: v.optional(v.id("foodLogs")),
       weightLogId: v.optional(v.id("weightLogs")),
       actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
-      toolCalls: v.optional(v.any()) // Store tool calls for persistence
+      toolCalls: v.optional(v.any()), // Store tool calls for persistence
+      threadId: v.optional(v.string()), // Agent thread ID for conversation continuity
+      storageId: v.optional(v.id("_storage")) // Image storage ID if photo was uploaded
     })),
     embedding: v.optional(v.array(v.float64()))
   })
@@ -260,4 +286,23 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_upload_url", ["uploadUrl"]),
+    
+  // Conversation summaries for context compression
+  conversationSummaries: defineTable({
+    userId: v.string(),
+    date: v.string(), // YYYY-MM-DD
+    summary: v.object({
+      keyPoints: v.array(v.string()), // Important facts learned
+      foodPatterns: v.array(v.string()), // Eating habits observed
+      userPreferences: v.array(v.string()), // Preferences mentioned
+      goals: v.array(v.string()), // Goals or concerns expressed
+      contextNotes: v.string(), // General context
+    }),
+    messageCount: v.number(),
+    lastMessageId: v.optional(v.id("chatHistory")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+  .index("by_user_date", ["userId", "date"])
+  .index("by_user_created", ["userId", "createdAt"]),
 });

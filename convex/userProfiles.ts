@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Get user profile
 export const getUserProfile = query({
@@ -65,15 +66,24 @@ export const upsertUserProfile = mutation({
       updatedAt: now,
     };
     
+    let profileId;
     if (existing) {
       await ctx.db.patch(existing._id, profileData);
-      return existing._id;
+      profileId = existing._id;
     } else {
-      return await ctx.db.insert("userProfiles", {
+      profileId = await ctx.db.insert("userProfiles", {
         ...profileData,
         createdAt: now,
       });
     }
+    
+    // Clear cached context since profile data has changed
+    // Clear cached context when profile is updated
+    await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
+      cacheKey: "chat_context"
+    });
+    
+    return profileId;
   },
 });
 
@@ -139,6 +149,26 @@ export const updateProfileField = mutation({
     await ctx.db.patch(profile._id, {
       [args.field]: args.value,
       updatedAt: Date.now(),
+    });
+    
+    // If the name field is being updated, also update it in the users table
+    if (args.field === "name" && typeof args.value === "string") {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
+        .first();
+      
+      if (user) {
+        await ctx.db.patch(user._id, {
+          name: args.value,
+        });
+      }
+    }
+    
+    // Clear cached context since profile data has changed
+    // Clear cached context when profile is created/updated
+    await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
+      cacheKey: "chat_context"
     });
   },
 });
