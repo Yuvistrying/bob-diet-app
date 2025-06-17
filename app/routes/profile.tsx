@@ -8,12 +8,12 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { useClerk } from "@clerk/react-router";
+import { useAuth } from "@clerk/react-router";
 
 export default function Profile() {
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const profile = useQuery(api.userProfiles.getUserProfile, {});
-  const preferences = useQuery(api.userPreferences.getUserPreferences);
+  const preferences = useQuery(api.userPreferences.getUserPreferences, {});
   
   const updateProfile = useMutation(api.userProfiles.updateProfileField);
   const updatePreferences = useMutation(api.userPreferences.updatePreferences);
@@ -22,7 +22,11 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     name: profile?.name || "",
     age: profile?.age || 0,
+    height: profile?.height || 170,
+    currentWeight: profile?.currentWeight || 70,
+    targetWeight: profile?.targetWeight || 70,
     gender: profile?.gender || "other",
+    activityLevel: profile?.activityLevel || "moderate",
     goal: profile?.goal || "maintain",
   });
 
@@ -34,8 +38,20 @@ export default function Profile() {
     if (formData.age !== profile?.age) {
       await updateProfile({ field: "age", value: formData.age });
     }
+    if (formData.height !== profile?.height) {
+      await updateProfile({ field: "height", value: formData.height });
+    }
+    if (formData.currentWeight !== profile?.currentWeight) {
+      await updateProfile({ field: "currentWeight", value: formData.currentWeight });
+    }
+    if (formData.targetWeight !== profile?.targetWeight) {
+      await updateProfile({ field: "targetWeight", value: formData.targetWeight });
+    }
     if (formData.gender !== profile?.gender) {
       await updateProfile({ field: "gender", value: formData.gender });
+    }
+    if (formData.activityLevel !== profile?.activityLevel) {
+      await updateProfile({ field: "activityLevel", value: formData.activityLevel });
     }
     if (formData.goal !== profile?.goal) {
       await updateProfile({ field: "goal", value: formData.goal });
@@ -107,6 +123,44 @@ export default function Profile() {
           </div>
 
           <div>
+            <Label htmlFor="height">Height (cm)</Label>
+            <Input
+              id="height"
+              type="number"
+              value={isEditing ? formData.height : profile.height}
+              onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) })}
+              disabled={!isEditing}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="currentWeight">Current Weight (kg)</Label>
+            <Input
+              id="currentWeight"
+              type="number"
+              step="0.1"
+              value={isEditing ? formData.currentWeight : profile.currentWeight}
+              onChange={(e) => setFormData({ ...formData, currentWeight: parseFloat(e.target.value) })}
+              disabled={!isEditing}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="targetWeight">Target Weight (kg)</Label>
+            <Input
+              id="targetWeight"
+              type="number"
+              step="0.1"
+              value={isEditing ? formData.targetWeight : profile.targetWeight}
+              onChange={(e) => setFormData({ ...formData, targetWeight: parseFloat(e.target.value) })}
+              disabled={!isEditing}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
             <Label>Gender</Label>
             <p className="text-xs text-gray-600 mb-2">
               Asking because this affects calorie and nutrient recommendations
@@ -128,6 +182,28 @@ export default function Profile() {
                 Rather not say
               </ToggleGroupItem>
             </ToggleGroup>
+          </div>
+
+          <div>
+            <Label>Activity Level</Label>
+            <p className="text-xs text-gray-600 mb-2">
+              How active are you on a typical day?
+            </p>
+            <Select 
+              value={isEditing ? formData.activityLevel : profile.activityLevel}
+              onValueChange={(value) => setFormData({ ...formData, activityLevel: value })}
+              disabled={!isEditing}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sedentary">Sedentary (little to no exercise)</SelectItem>
+                <SelectItem value="light">Light (exercise 1-3 days/week)</SelectItem>
+                <SelectItem value="moderate">Moderate (exercise 3-5 days/week)</SelectItem>
+                <SelectItem value="active">Very Active (exercise 6-7 days/week)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -170,7 +246,11 @@ export default function Profile() {
                     setFormData({
                       name: profile.name,
                       age: profile.age,
+                      height: profile.height,
+                      currentWeight: profile.currentWeight,
+                      targetWeight: profile.targetWeight,
                       gender: profile.gender,
+                      activityLevel: profile.activityLevel,
                       goal: profile.goal,
                     });
                   }}

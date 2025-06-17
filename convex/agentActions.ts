@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action, mutation, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { bobAgent, getBobInstructions } from "./bobAgent";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 
 // Helper to get userId from Clerk auth
 async function getUserId(ctx: any): Promise<string> {
@@ -18,14 +18,91 @@ export const chat = action({
     threadId: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
   },
-  handler: async (ctx, { prompt, threadId, storageId }) => {
+  handler: async (ctx, { prompt, threadId, storageId }): Promise<any> => {
     const userId = await getUserId(ctx);
     
-    // Get context for Bob's instructions
-    const onboardingStatus = await ctx.runQuery(api.onboarding.getOnboardingStatus);
-    const context = await ctx.runQuery(api.chatHistory.getChatContext);
-    const profile = await ctx.runQuery(api.userProfiles.getUserProfile, {});
-    const hasWeighedToday = await ctx.runQuery(api.weightLogs.hasLoggedWeightToday);
+    // Check if this is a confirmation response (keep session if so)
+    const isConfirmationResponse = 
+      prompt.toLowerCase() === "yes" || 
+      prompt.toLowerCase() === "yep" || 
+      prompt.toLowerCase() === "sure" ||
+      prompt.toLowerCase() === "yes awesome!" ||
+      prompt.toLowerCase().includes("correct") ||
+      prompt.toLowerCase().includes("that's right");
+    
+    // Get or create daily session (keep thread if confirming food)
+    const session: any = await ctx.runMutation(api.chatSessions.getOrCreateDailySession, {
+      forceKeepThread: isConfirmationResponse
+    });
+    if (!session) throw new Error("Failed to create session");
+    
+    // Use session's threadId if no threadId provided
+    if (!threadId && session.threadId) {
+      threadId = session.threadId;
+    }
+    
+    // Try to get cached context first
+    const contextCacheKey = "chat_context_minimal";
+    const cachedContext = await ctx.runQuery(api.sessionCache.getSessionCache, { 
+      cacheKey: contextCacheKey 
+    });
+    
+    let onboardingStatus, minimalContext, historicalSummary, profile, hasWeighedToday;
+    
+    if (cachedContext && !storageId) { // Don't use cache for photo uploads
+      // Use cached data
+      ({ onboardingStatus, minimalContext, historicalSummary, profile, hasWeighedToday } = cachedContext);
+    } else {
+      // Get minimal context for today + compressed historical summary
+      [onboardingStatus, minimalContext, historicalSummary, profile, hasWeighedToday] = await Promise.all([
+        ctx.runQuery(api.onboarding.getOnboardingStatus),
+        ctx.runQuery(api.chatHistory.getTodayThreadContext), // NEW: Minimal today context
+        ctx.runQuery(api.conversationSummary.compressHistoricalContext), // NEW: Compressed history
+        ctx.runQuery(api.userProfiles.getUserProfile, {}),
+        ctx.runQuery(api.weightLogs.hasLoggedWeightToday)
+      ]);
+      
+      // Cache the context (5 minute TTL)
+      await ctx.runMutation(api.sessionCache.setSessionCache, {
+        cacheKey: contextCacheKey,
+        data: {
+          onboardingStatus,
+          minimalContext,
+          historicalSummary,
+          profile,
+          hasWeighedToday
+        },
+        ttlSeconds: 300
+      });
+    }
+    
+    // Build full context from minimal + historical
+    const context = {
+      user: {
+        name: profile?.name || "there",
+        goal: profile?.goal || "maintain",
+        currentWeight: profile?.currentWeight,
+        targetWeight: profile?.targetWeight,
+        displayMode: profile?.displayMode || "standard",
+      },
+      todayProgress: minimalContext?.todaySummary ? {
+        calories: {
+          consumed: minimalContext.todaySummary.caloriesConsumed,
+          target: profile?.dailyCalorieTarget || 2000,
+          remaining: (profile?.dailyCalorieTarget || 2000) - minimalContext.todaySummary.caloriesConsumed,
+        },
+        meals: minimalContext.todaySummary.mealsLogged,
+        protein: {
+          consumed: minimalContext.todaySummary.proteinConsumed,
+          target: profile?.proteinTarget || 150,
+        },
+      } : null,
+      recentMessages: minimalContext?.recentMessages || [],
+      conversationSummary: minimalContext?.conversationSummary,
+      keyTopics: minimalContext?.keyTopics || [],
+      todaySummary: minimalContext?.todaySummary,
+      historicalContext: historicalSummary,
+    };
     
     // Get current time for meal type detection
     const now = new Date();
@@ -46,20 +123,22 @@ export const chat = action({
       defaultMealType
     );
     
+    
     // Get the last confirmFood data if this is a confirmation
     let lastConfirmFoodData = null;
-    if (context?.recentMessages) {
-      for (let i = context.recentMessages.length - 1; i >= 0; i--) {
-        const msg = context.recentMessages[i];
-        if (msg.role === "assistant" && msg.metadata?.toolCalls) {
-          const confirmCall = msg.metadata.toolCalls.find((tc: any) => tc.toolName === "confirmFood");
-          if (confirmCall) {
-            lastConfirmFoodData = confirmCall.args;
-            break;
-          }
-        }
-      }
+    if (isConfirmationResponse && minimalContext?.pendingFood) {
+      lastConfirmFoodData = minimalContext.pendingFood.data;
     }
+    
+    // Save user message to chat history
+    await ctx.runMutation(api.chatHistory.saveUserMessage, {
+      content: prompt,
+      metadata: { 
+        actionType: storageId ? "photo_analysis" : "text",
+        threadId,
+        storageId: storageId || undefined
+      }
+    });
     
     // Check if this is an image message
     const isImageMessage = storageId || prompt.includes("[Image attached]");
@@ -68,16 +147,11 @@ export const chat = action({
     if (isImageMessage && storageId) {
       // Keep the clean prompt without image data
       actualPrompt = prompt.replace("[Image attached] ", "").trim() || "Please analyze this food photo";
+      // Clear context cache for photo analysis to ensure fresh data
+      await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
+        cacheKey: "chat_context"
+      });
     }
-    
-    // Check if this is a confirmation response
-    const isConfirmationResponse = 
-      prompt.toLowerCase() === "yes" || 
-      prompt.toLowerCase() === "yep" || 
-      prompt.toLowerCase() === "sure" ||
-      prompt.toLowerCase() === "yes awesome!" ||
-      prompt.toLowerCase().includes("correct") ||
-      prompt.toLowerCase().includes("that's right");
     
     // Check if user is reminding Bob to log
     const needsLoggingReminder = 
@@ -104,38 +178,51 @@ REQUIRED ACTIONS:
 ${JSON.stringify(lastConfirmFoodData, null, 2)}
 Apologize briefly and log it immediately.`;
     } else if (isImageMessage && storageId) {
-      contextualInstructions += `\n\nIMAGE ANALYSIS: The user has shared a food photo. 
+      contextualInstructions += `\n\nIMAGE ANALYSIS: The user has shared a NEW food photo. 
 
-The user's message about the photo: "${actualPrompt}"
+CRITICAL INSTRUCTIONS:
+1. IGNORE all previous food conversations - this is a NEW photo
+2. Use the analyzePhoto tool with storageId: "${storageId}"
+3. Wait for the analyzePhoto result which will contain the ACTUAL food in the photo
+4. When analyzePhoto returns with confirmFoodData, you MUST:
+   - Use the EXACT data from the analyzePhoto result
+   - Do NOT make up your own food items
+   - Do NOT use food items from previous conversations
+   - Your message should describe what the PHOTO ANALYSIS found, not what you think
+5. Use confirmFood with the EXACT confirmFoodData from analyzePhoto
 
-REQUIRED STEPS:
-1. First, use the analyzePhoto tool with storageId parameter set to "${storageId}"
-2. When analyzePhoto returns success:true with confirmFoodData, you MUST:
-   - Say "Let me analyze your photo and confirm what I found:"
-   - Use the confirmFood tool with the data from confirmFoodData
-   - This must happen in THE SAME RESPONSE as the analyzePhoto result
-3. The confirmFoodData object contains all fields needed for confirmFood:
-   - description, items, totalCalories, totalProtein, totalCarbs, totalFat, mealType, confidence
+WRONG: "I see pizza" [but confirmFood shows chicken]
+RIGHT: Use exactly what analyzePhoto returns
 
-CRITICAL: You must use TWO tools in your response: analyzePhoto followed by confirmFood`;
+The photo analysis will tell you what food is actually in the image.`;
     }
     
     // Create or continue thread
     let thread;
+    let isNewThread = false;
     if (threadId) {
-      const threadResult = await bobAgent.continueThread(ctx, { threadId, userId });
+      const threadResult: any = await bobAgent.continueThread(ctx, { threadId, userId });
       thread = threadResult.thread;
     } else {
       const threadResult = await bobAgent.createThread(ctx, { userId });
       thread = threadResult.thread;
       threadId = threadResult.threadId;
+      isNewThread = true;
+    }
+    
+    // Update session with thread ID if new
+    if (isNewThread && session._id) {
+      await ctx.runMutation(api.chatSessions.updateSessionThreadId, {
+        sessionId: session._id,
+        threadId: threadId!,
+      });
     }
     
     // Generate response with the thread
-    const result = await thread.generateText({
+    const result: any = await thread.generateText({
       prompt: actualPrompt,
       system: contextualInstructions,
-      maxSteps: 5, // Ensure multiple steps for tool calls + text
+      maxSteps: 3, // Reduced for faster responses while still allowing tool calls
     });
     
     // Log the full result to see its structure
@@ -158,7 +245,11 @@ CRITICAL: You must use TWO tools in your response: analyzePhoto followed by conf
         // Parse the value based on step
         let parsedValue: any = value;
         
-        if (step === "current_weight" || step === "target_weight") {
+        if (step === "name") {
+          // Clean and trim the name value, removing quotes if present
+          parsedValue = value.trim().replace(/^["']|["']$/g, '');
+          console.log(`Extracted name: "${parsedValue}" from value: "${value}"`);
+        } else if (step === "current_weight" || step === "target_weight") {
           const weightMatch = value.match(/(\d+(?:\.\d+)?)\s*(kg|lbs|pounds?)?/i);
           if (weightMatch) {
             parsedValue = {
@@ -173,9 +264,55 @@ CRITICAL: You must use TWO tools in your response: analyzePhoto followed by conf
             height: heightMatch ? parseInt(heightMatch[1]) : null,
             age: ageMatch ? parseInt(ageMatch[1]) : null
           };
+        } else if (step === "gender") {
+          // Normalize gender values
+          const lowerValue = value.toLowerCase().trim();
+          if (lowerValue.includes("male") && !lowerValue.includes("female")) {
+            parsedValue = "male";
+          } else if (lowerValue.includes("female") || lowerValue.includes("woman")) {
+            parsedValue = "female";
+          } else {
+            parsedValue = "other";
+          }
+          console.log(`Extracted gender: "${parsedValue}" from value: "${value}"`);
+        } else if (step === "activity_level") {
+          // Normalize activity level
+          const lowerValue = value.toLowerCase().trim();
+          if (lowerValue.includes("sedentary") || lowerValue.includes("little")) {
+            parsedValue = "sedentary";
+          } else if (lowerValue.includes("light")) {
+            parsedValue = "light";
+          } else if (lowerValue.includes("moderate")) {
+            parsedValue = "moderate";
+          } else if (lowerValue.includes("active") || lowerValue.includes("very")) {
+            parsedValue = "active";
+          } else {
+            parsedValue = value.trim();
+          }
+        } else if (step === "goal") {
+          // Normalize goal
+          const lowerValue = value.toLowerCase().trim();
+          if (lowerValue.includes("lose") || lowerValue.includes("cut")) {
+            parsedValue = "cut";
+          } else if (lowerValue.includes("gain") || lowerValue.includes("bulk")) {
+            parsedValue = "gain";
+          } else if (lowerValue.includes("maintain")) {
+            parsedValue = "maintain";
+          } else {
+            parsedValue = value.trim();
+          }
+        } else if (step === "display_mode") {
+          // Normalize display mode
+          const lowerValue = value.toLowerCase().trim();
+          if (lowerValue.includes("stealth") || lowerValue.includes("hide")) {
+            parsedValue = "stealth";
+          } else {
+            parsedValue = "standard";
+          }
         }
         
         // Save the onboarding progress
+        console.log(`Saving onboarding progress - Step: ${step}, Value: ${JSON.stringify(parsedValue)}`);
         await ctx.runMutation(api.onboarding.saveOnboardingProgress, {
           step,
           response: parsedValue
@@ -184,14 +321,14 @@ CRITICAL: You must use TWO tools in your response: analyzePhoto followed by conf
     }
     
     // Remove extraction markers from the response
-    const cleanedText = result.text.replace(/\[EXTRACT:[^\]]+\]/g, '');
+    const cleanedText: string = result.text.replace(/\[EXTRACT:[^\]]+\]/g, '');
     
     // Check if we successfully logged food (for safety check)
     let loggedSuccessfully = false;
     
     // First check result.toolCalls (though it's usually empty)
     if (result.toolCalls && result.toolCalls.length > 0) {
-      const logFoodCall = result.toolCalls.find(tc => tc.toolName === "logFood");
+      const logFoodCall = result.toolCalls.find((tc: any) => tc.toolName === "logFood");
       if (logFoodCall) {
         loggedSuccessfully = true;
       }
@@ -221,7 +358,7 @@ CRITICAL: You must use TWO tools in your response: analyzePhoto followed by conf
     }
     
     // Ensure we always return some text
-    const finalText = cleanedText || result.text || "I'm processing your request...";
+    const finalText: string = cleanedText || result.text || "I'm processing your request...";
     
     // Extract ALL tool calls from ALL steps
     let toolCalls: any[] = [];
@@ -236,11 +373,30 @@ CRITICAL: You must use TWO tools in your response: analyzePhoto followed by conf
     
     console.log("Extracted toolCalls:", toolCalls);
     
-    return {
+    const responseMetadata = {
+      actionType: storageId ? "photo_analysis_response" : "general_chat",
+      threadId,
+      toolCalls: toolCalls && toolCalls.length > 0 ? toolCalls : undefined,
+      // Add food or weight log IDs if they were created
+      foodLogId: toolCalls?.find((tc: any) => tc.toolName === "logFood")?.result?.logId,
+      weightLogId: toolCalls?.find((tc: any) => tc.toolName === "logWeight")?.result?.logId,
+    };
+    
+    // Save Bob's response to chat history
+    await ctx.runMutation(api.chatHistory.saveBobMessage, {
+      content: finalText,
+      metadata: responseMetadata
+    });
+    
+    const response: any = {
       text: finalText,
       toolCalls: toolCalls || [],
       threadId, // Return threadId for future messages
     };
+    
+    // Response caching removed - using database session cache instead
+    
+    return response;
   },
 });
 

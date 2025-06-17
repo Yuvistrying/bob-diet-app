@@ -164,6 +164,12 @@ export const logFood = mutation({
       description: args.description,
     });
     
+    // Clear cached context since food data has changed
+    // Clear cached context when food is logged
+    await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
+      cacheKey: "chat_context"
+    });
+    
     return foodLogId;
   },
 });

@@ -16,12 +16,13 @@ export async function loader(args: Route.LoaderArgs) {
   }
 
   // Parallel data fetching to reduce waterfall
-  const [subscriptionStatus, user, onboardingStatus] = await Promise.all([
+  const [subscriptionStatus, user, onboardingStatus, userProfile] = await Promise.all([
     fetchQuery(api.subscriptions.checkUserSubscriptionStatus, { userId }),
     createClerkClient({
       secretKey: process.env.CLERK_SECRET_KEY,
     }).users.getUser(userId),
-    fetchQuery(api.onboarding.getOnboardingStatus, {})
+    fetchQuery(api.onboarding.getOnboardingStatus, {}),
+    fetchQuery(api.userProfiles.getUserProfile, {})
   ]);
 
   // Get the current path
@@ -34,17 +35,17 @@ export async function loader(args: Route.LoaderArgs) {
   }
 
   // Don't redirect to onboarding - we'll handle it in chat
-  return { user, onboardingStatus };
+  return { user, onboardingStatus, userProfile };
 }
 
 export default function AppLayout() {
-  const { user, onboardingStatus } = useLoaderData();
+  const { user, onboardingStatus, userProfile } = useLoaderData();
   const location = useLocation();
   
   const navigation = [
     { name: "Chat", href: "/chat", icon: MessageCircle },
     { name: "Diary", href: "/diary", icon: FileText },
-    { name: user?.firstName || "Profile", href: "/profile", icon: User },
+    { name: userProfile?.name || user?.firstName || "Profile", href: "/profile", icon: User },
   ];
 
   return (

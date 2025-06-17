@@ -9,17 +9,25 @@
  */
 
 import type * as agentActions from "../agentActions.js";
+import type * as backgroundJobHandlers from "../backgroundJobHandlers.js";
+import type * as backgroundJobs from "../backgroundJobs.js";
 import type * as bob from "../bob.js";
 import type * as bobAgent from "../bobAgent.js";
 import type * as chatHistory from "../chatHistory.js";
+import type * as chatSessions from "../chatSessions.js";
+import type * as conversationSummary from "../conversationSummary.js";
 import type * as debugSubscription from "../debugSubscription.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as foodLogs from "../foodLogs.js";
 import type * as http from "../http.js";
+import type * as instructionTemplates from "../instructionTemplates.js";
 import type * as onboarding from "../onboarding.js";
+import type * as onboardingFix from "../onboardingFix.js";
 import type * as photos from "../photos.js";
+import type * as sessionCache from "../sessionCache.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as testUtils from "../testUtils.js";
 import type * as usage from "../usage.js";
 import type * as usageTracking from "../usageTracking.js";
 import type * as userPreferences from "../userPreferences.js";
@@ -45,17 +53,25 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   agentActions: typeof agentActions;
+  backgroundJobHandlers: typeof backgroundJobHandlers;
+  backgroundJobs: typeof backgroundJobs;
   bob: typeof bob;
   bobAgent: typeof bobAgent;
   chatHistory: typeof chatHistory;
+  chatSessions: typeof chatSessions;
+  conversationSummary: typeof conversationSummary;
   debugSubscription: typeof debugSubscription;
   embeddings: typeof embeddings;
   files: typeof files;
   foodLogs: typeof foodLogs;
   http: typeof http;
+  instructionTemplates: typeof instructionTemplates;
   onboarding: typeof onboarding;
+  onboardingFix: typeof onboardingFix;
   photos: typeof photos;
+  sessionCache: typeof sessionCache;
   subscriptions: typeof subscriptions;
+  testUtils: typeof testUtils;
   usage: typeof usage;
   usageTracking: typeof usageTracking;
   userPreferences: typeof userPreferences;
