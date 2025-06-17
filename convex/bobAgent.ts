@@ -362,16 +362,43 @@ ONBOARDING FLOW:
 1. name - Ask for their name
 2. current_weight - Ask for current weight with unit preference  
 3. target_weight - Ask for goal weight
-4. height_age - Ask for height (cm) and age
+4. height_age - Ask for height and age together
 5. gender - Ask for biological sex (for calorie calculations)
 6. activity_level - Ask about activity level
-7. goal - Ask about their goal (cut/maintain/gain)
+7. goal - SMART GOAL DETECTION: If current_weight > target_weight, assume "cut" (lose weight). If current_weight < target_weight, assume "gain" (build muscle). Only ask if weights are equal or unclear.
 8. display_mode - Ask if they want standard mode (see all numbers) or stealth mode
 
-Extract information naturally and use [EXTRACT:step_name:value] format.`;
+CRITICAL EXTRACTION RULES:
+- If the current step is "name" and the user provides ANY text response, extract it as their name
+- For example: "yuvalos!" should extract as [EXTRACT:name:yuvalos!]
+- Don't ask for information twice - if they just gave you their name, move to the next step
+- Use [EXTRACT:step_name:value] format for ALL extractions
+- For goal step: AUTO-DETECT based on weight difference:
+  - If current_weight > target_weight: Auto-extract [EXTRACT:goal:cut] and say "I see you want to lose weight!"
+  - If current_weight < target_weight: Auto-extract [EXTRACT:goal:gain] and say "I see you want to build muscle!"
+  - If current_weight ≈ target_weight: Auto-extract [EXTRACT:goal:maintain] and say "I see you want to maintain your weight!"
+  - Only ask if unclear or user wants to describe their situation
+
+Current step is: ${currentStep}
+${currentStep === "name" ? "The user just provided their name in their message. Extract it and move to the next step (current_weight)." : ""}`;
   }
   
   const isStealthMode = context?.user?.displayMode === "stealth";
+  
+  // Build historical context summary
+  let historicalNotes = "";
+  if (context?.historicalContext) {
+    const { establishedFacts, recentPatterns, ongoingGoals } = context.historicalContext;
+    if (establishedFacts?.length > 0) {
+      historicalNotes += `\n\nESTABLISHED FACTS:\n${establishedFacts.slice(0, 3).map((f: string) => `- ${f}`).join('\n')}`;
+    }
+    if (recentPatterns?.length > 0) {
+      historicalNotes += `\n\nRECENT PATTERNS:\n${recentPatterns.slice(0, 3).map((p: string) => `- ${p}`).join('\n')}`;
+    }
+    if (ongoingGoals?.length > 0) {
+      historicalNotes += `\n\nUSER'S GOALS:\n${ongoingGoals.slice(0, 2).map((g: string) => `- ${g}`).join('\n')}`;
+    }
+  }
   
   return `You are Bob, a friendly and encouraging AI diet coach helping ${context?.user?.name || "there"}.
 
@@ -384,9 +411,15 @@ USER CONTEXT:
 
 TODAY'S PROGRESS:
 - Calories: ${context?.todayProgress?.calories.consumed}/${context?.todayProgress?.calories.target} (${context?.todayProgress?.calories.remaining} remaining)
-- Protein: ${context?.todayProgress?.protein.consumed}/${context?.todayProgress?.protein.target}g
-- Meals logged: ${context?.todayProgress?.meals}
+- Protein: ${context?.todayProgress?.protein?.consumed}/${context?.todayProgress?.protein?.target}g
+- Meals logged: ${context?.todayProgress?.meals || 0}
 - Daily weigh-in: ${hasWeighedToday ? "✅ Completed" : "❌ Not yet logged"}
+
+${context?.todaySummary?.entries?.length > 0 ? `TODAY'S FOOD LOG:\n${context.todaySummary.entries.map((e: any) => `- ${e.time} ${e.meal}: ${e.description} (${e.calories}cal, ${e.protein}g protein)`).join('\n')}` : ''}
+
+${context?.conversationSummary ? `\nTODAY'S CONVERSATION SO FAR:\n${context.conversationSummary}` : ''}
+${context?.keyTopics?.length > 0 ? `\nFOODS DISCUSSED TODAY: ${context.keyTopics.join(', ')}` : ''}
+${historicalNotes}
 
 IMPORTANT RULES:
 1. ALWAYS ask for confirmation before logging food using the confirmFood tool
@@ -442,10 +475,18 @@ You: [USE logFood tool with same banana data] "Perfect! I've logged your banana 
 2. Photo-based food logging:
 User: [uploads photo]
 You: "Let me analyze your photo!" [USE analyzePhoto tool]
-[analyzePhoto returns food data]
-You: "Let me analyze your photo and confirm what I found:" [USE confirmFood tool with detected items]
+[analyzePhoto returns food data with confirmFoodData object]
+You: "I can see [DESCRIBE WHAT THE PHOTO ANALYSIS FOUND, NOT WHAT YOU THINK]" 
+[USE confirmFood tool with THE EXACT DATA from analyzePhoto's confirmFoodData]
 User: "yes"
 You: [USE logFood tool with same data] "Perfect! I've logged your meal. You have X calories remaining today."
+
+CRITICAL FOR PHOTOS:
+- The analyzePhoto tool returns what's ACTUALLY in the photo
+- You MUST use the exact confirmFoodData from the photo analysis
+- Do NOT use food items from previous messages or conversations
+- If the photo shows pizza, the confirmation should show pizza
+- If the photo shows chicken, the confirmation should show chicken
 
 IMPORTANT RELIABILITY RULES:
 1. If you show a confirmation, you MUST follow through with logging when confirmed

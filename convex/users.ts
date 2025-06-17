@@ -63,3 +63,31 @@ export const upsertUser = mutation({
     return await ctx.db.get(userId);
   },
 });
+
+// Update user's name from onboarding
+export const updateUserName = mutation({
+  args: {
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Find the user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Update the name
+    await ctx.db.patch(user._id, {
+      name: args.name,
+    });
+
+    return user;
+  },
+});

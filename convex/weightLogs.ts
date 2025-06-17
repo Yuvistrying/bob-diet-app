@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Get latest weight entry
 export const getLatestWeight = query({
@@ -87,6 +88,7 @@ export const logWeight = mutation({
       )
       .first();
     
+    let logId;
     if (existing) {
       // Update existing log
       await ctx.db.patch(existing._id, {
@@ -95,10 +97,10 @@ export const logWeight = mutation({
         time,
         notes: args.notes,
       });
-      return existing._id;
+      logId = existing._id;
     } else {
       // Create new log
-      return await ctx.db.insert("weightLogs", {
+      logId = await ctx.db.insert("weightLogs", {
         userId: identity.subject,
         weight: args.weight,
         unit: args.unit,
@@ -108,6 +110,14 @@ export const logWeight = mutation({
         createdAt: Date.now(),
       });
     }
+    
+    // Clear cached context since weight data has changed
+    // Clear cached context when weight is logged
+    await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
+      cacheKey: "chat_context"
+    });
+    
+    return logId;
   },
 });
 

@@ -39,6 +39,51 @@ export const getUserPreferences = query({
 });
 
 // Update user preferences
+// Save agent thread ID
+export const saveAgentThreadId = mutation({
+  args: {
+    threadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const existing = await ctx.db
+      .query("userPreferences")
+      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .first();
+    
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        agentThreadId: args.threadId,
+        updatedAt: Date.now(),
+      });
+    } else {
+      // Create new preferences with thread ID
+      await ctx.db.insert("userPreferences", {
+        userId: identity.subject,
+        displayMode: "standard",
+        showCalories: true,
+        showProtein: true,
+        showCarbs: true,
+        showFats: true,
+        language: "en",
+        darkMode: false,
+        cuteMode: false,
+        reminderSettings: {
+          weighInReminder: true,
+          mealReminders: false,
+          reminderTimes: {
+            weighIn: "08:00",
+          }
+        },
+        agentThreadId: args.threadId,
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
+
 export const updatePreferences = mutation({
   args: {
     displayMode: v.optional(v.string()),

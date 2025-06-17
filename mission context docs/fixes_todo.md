@@ -42,6 +42,7 @@
 - [ ] Currently non-existent - needs full implementation
 - [ ] User preferences for units, notifications, etc.
 - [ ] dark mode- not functional
+- [ ] no option to shift and enetr to do down one row
 
 ## 🎨 UI/UX Design
 

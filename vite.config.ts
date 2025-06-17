@@ -8,9 +8,11 @@ export default defineConfig({
   server: {
     port: 5174,
     host: true, // This allows external connections
-    hmr: {
+    hmr: process.env.LOCALTUNNEL ? {
       clientPort: 443,
       protocol: 'wss'
+    } : {
+      port: 5174
     },
     allowedHosts: [
       'localhost',
