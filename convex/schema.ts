@@ -107,6 +107,22 @@ export default defineSchema({
   .index("by_user_date", ["userId", "date"])
   .index("by_user_created", ["userId", "createdAt"]),
 
+  // Goal history tracking
+  goalHistory: defineTable({
+    userId: v.string(),
+    goal: v.string(), // "cut", "gain", "maintain"
+    startingWeight: v.number(),
+    targetWeight: v.number(),
+    startingUnit: v.string(), // "kg" or "lbs"
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    status: v.string(), // "active", "completed", "abandoned"
+    createdAt: v.number()
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_status", ["userId", "status"])
+  .index("by_user_created", ["userId", "createdAt"]),
+
   // Food logging
   foodLogs: defineTable({
     userId: v.string(),
