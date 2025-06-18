@@ -6,22 +6,38 @@ import { api } from "./_generated/api";
 export const getChatHistory = query({
   args: {
     limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return { messages: [], hasMore: false, total: 0 };
     
     // Default to 20 messages for performance
     const limit = args.limit || 20;
+    const offset = args.offset || 0;
     
+    // Get total count for pagination
+    const allMessages = await ctx.db
+      .query("chatHistory")
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
+      .collect();
+    
+    // Get paginated messages
     const messages = await ctx.db
       .query("chatHistory")
       .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .take(limit);
+      .take(limit + offset);
     
-    // Return in chronological order
-    return messages.reverse();
+    // Skip the offset and take the limit
+    const paginatedMessages = messages.slice(offset, offset + limit);
+    
+    // Return in chronological order with metadata
+    return {
+      messages: paginatedMessages.reverse(),
+      hasMore: allMessages.length > (offset + limit),
+      total: allMessages.length
+    };
   },
 });
 
