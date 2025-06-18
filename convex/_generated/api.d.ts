@@ -20,6 +20,7 @@ import type * as debugSubscription from "../debugSubscription.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as foodLogs from "../foodLogs.js";
+import type * as goalHistory from "../goalHistory.js";
 import type * as http from "../http.js";
 import type * as instructionTemplates from "../instructionTemplates.js";
 import type * as onboarding from "../onboarding.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   embeddings: typeof embeddings;
   files: typeof files;
   foodLogs: typeof foodLogs;
+  goalHistory: typeof goalHistory;
   http: typeof http;
   instructionTemplates: typeof instructionTemplates;
   onboarding: typeof onboarding;
