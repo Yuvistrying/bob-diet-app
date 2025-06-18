@@ -62,6 +62,7 @@
 ### Freemium Model
 - [ ] **Must start free without credit card** - Currently requires payment info
 - [ ] Plan new payment flow according to freemium model (5 chats + 2 photos daily)
+- [ ] Add freemium limits display (e.g., "0/5 messages", "0/2 photo uploads") for users on free tier
 - [ ] Trial period implementation
 - [ ] Auth flow improvements
 
