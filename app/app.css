@@ -1,8 +1,7 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
 /* Import terminal-style font */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -130,14 +129,46 @@
 }
 
 .dark {
-    --sidebar: hsl(240 5.9% 10%);
-    --sidebar-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-primary: hsl(224.3 76.3% 48%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(240 3.7% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(240 3.7% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+    /* Dark theme colors inspired by Grok */
+    --background: #000000;
+    --foreground: #e0e0e0;
+    --card: #1a1a1a;
+    --card-foreground: #e0e0e0;
+    --popover: #1a1a1a;
+    --popover-foreground: #e0e0e0;
+    --primary: #6b7280;
+    --primary-foreground: #ffffff;
+    --secondary: #2a2a2a;
+    --secondary-foreground: #e0e0e0;
+    --muted: #2a2a2a;
+    --muted-foreground: #a0a0a0;
+    --accent: #333333;
+    --accent-foreground: #e0e0e0;
+    --destructive: #ff5555;
+    --destructive-foreground: #ffffff;
+    --border: #333333;
+    --input: #2a2a2a;
+    --ring: #6b7280;
+    
+    /* Sidebar dark theme */
+    --sidebar: #1a1a1a;
+    --sidebar-foreground: #e0e0e0;
+    --sidebar-primary: #6b7280;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #2a2a2a;
+    --sidebar-accent-foreground: #e0e0e0;
+    --sidebar-border: #333333;
+    --sidebar-ring: #6b7280;
+    
+    /* Dark mode shadows */
+    --shadow-2xs: 0px 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-xs: 0px 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0px 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow: 0px 2px 6px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0px 8px 16px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0px 12px 24px rgba(0, 0, 0, 0.3);
+    --shadow-2xl: 0px 16px 32px rgba(0, 0, 0, 0.3);
 }
 
 @layer base {
@@ -147,5 +178,51 @@
   body {
     @apply bg-background text-foreground;
     }
+}
+
+/* Smooth theme transitions */
+html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Chat-specific styles */
+.chat-bubble-user {
+    @apply bg-gray-200 dark:bg-gray-800;
+}
+
+.chat-bubble-tail::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: -8px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 10px 10px;
+    border-color: transparent transparent #e5e7eb transparent;
+}
+
+.dark .chat-bubble-tail::after {
+    border-color: transparent transparent #1f2937 transparent;
+}
+
+/* Markdown prose adjustments for dark mode */
+/* Removed prose-invert as it's not available without @tailwindcss/typography plugin */
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+    @apply w-2;
+}
+
+.dark ::-webkit-scrollbar-track {
+    @apply bg-gray-900;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    @apply bg-gray-700 rounded-full;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-600;
 }
 
