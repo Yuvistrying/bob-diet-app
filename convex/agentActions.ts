@@ -185,14 +185,18 @@ CRITICAL INSTRUCTIONS:
 2. Use the analyzePhoto tool with storageId: "${storageId}"
 3. Wait for the analyzePhoto result which will contain the ACTUAL food in the photo
 4. When analyzePhoto returns with confirmFoodData, you MUST:
-   - Use the EXACT data from the analyzePhoto result
+   - Describe what the PHOTO ANALYSIS found in your message
+   - Use confirmFood tool to show the food for user confirmation
+   - Do NOT log the food yet - wait for user to confirm
    - Do NOT make up your own food items
    - Do NOT use food items from previous conversations
-   - Your message should describe what the PHOTO ANALYSIS found, not what you think
-5. Use confirmFood with the EXACT confirmFoodData from analyzePhoto
+5. IMPORTANT: Do NOT use logFood until the user confirms (says yes/yep/sure)
 
-WRONG: "I see pizza" [but confirmFood shows chicken]
-RIGHT: Use exactly what analyzePhoto returns
+FLOW:
+1. analyzePhoto → Get food data
+2. confirmFood → Show to user for confirmation  
+3. WAIT for user response
+4. Only use logFood AFTER user confirms
 
 The photo analysis will tell you what food is actually in the image.`;
     }

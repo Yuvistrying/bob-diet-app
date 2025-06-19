@@ -191,3 +191,47 @@ export const toggleDisplayMode = mutation({
     }
   },
 });
+
+// Update theme preference
+export const updateTheme = mutation({
+  args: {
+    darkMode: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const existing = await ctx.db
+      .query("userPreferences")
+      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .first();
+    
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        darkMode: args.darkMode,
+        updatedAt: Date.now(),
+      });
+    } else {
+      // Create new preferences with theme
+      await ctx.db.insert("userPreferences", {
+        userId: identity.subject,
+        displayMode: "standard",
+        showCalories: true,
+        showProtein: true,
+        showCarbs: true,
+        showFats: true,
+        language: "en",
+        darkMode: args.darkMode,
+        cuteMode: false,
+        reminderSettings: {
+          weighInReminder: true,
+          mealReminders: false,
+          reminderTimes: {
+            weighIn: "08:00",
+          }
+        },
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});

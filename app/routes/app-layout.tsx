@@ -49,14 +49,12 @@ export default function AppLayout() {
   ];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* Main Content - No header, full screen */}
-      <main className="flex-1 overflow-hidden">
-        <Outlet />
-      </main>
+    <>
+      {/* Main Content */}
+      <Outlet />
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t bg-background">
+      {/* Bottom Navigation - fixed position */}
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-black z-50">
         <div className="grid grid-cols-3">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href || 
@@ -67,19 +65,19 @@ export default function AppLayout() {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  "flex flex-col items-center py-3 px-1 text-xs transition-colors",
+                  "flex flex-col items-center py-3 px-1 text-xs transition-all",
                   isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-gray-900 dark:text-gray-100 font-bold" 
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 mb-1", isActive && "text-primary")} />
+                <item.icon className={cn("h-5 w-5 mb-1", isActive && "text-gray-900 dark:text-gray-100")} />
                 <span>{item.name}</span>
               </NavLink>
             );
           })}
         </div>
       </nav>
-    </div>
+    </>
   );
 }
