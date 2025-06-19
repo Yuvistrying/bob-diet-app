@@ -43,6 +43,28 @@ export const getImageUrl = query({
   },
 });
 
+// Get multiple image URLs at once
+export const getMultipleImageUrls = query({
+  args: {
+    storageIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, { storageIds }) => {
+    const urls: Record<string, string | null> = {};
+    
+    for (const storageId of storageIds) {
+      try {
+        const url = await ctx.storage.getUrl(storageId);
+        urls[storageId] = url;
+      } catch (error) {
+        console.error(`Failed to get URL for storageId ${storageId}:`, error);
+        urls[storageId] = null;
+      }
+    }
+    
+    return urls;
+  },
+});
+
 // Store the storage ID after successful upload
 export const storeFileId = mutation({
   args: {

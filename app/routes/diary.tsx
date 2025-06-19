@@ -182,15 +182,21 @@ export default function Logs() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col bg-gray-100 dark:bg-gray-950" style={{ height: "100vh", minHeight: "-webkit-fill-available" }}>
       <Tabs defaultValue="food" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-        <div className="px-4 pt-4 border-b">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="food" className="flex items-center gap-2">
+        <div className="px-4 pt-4 border-b border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-950">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-950">
+            <TabsTrigger 
+              value="food" 
+              className="flex items-center gap-2 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 data-[state=active]:bg-primary data-[state=active]:text-white dark:data-[state=active]:text-white"
+            >
               <Utensils className="h-4 w-4" />
               Food
             </TabsTrigger>
-            <TabsTrigger value="weight" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="weight" 
+              className="flex items-center gap-2 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 data-[state=active]:bg-primary data-[state=active]:text-white dark:data-[state=active]:text-white"
+            >
               <Weight className="h-4 w-4" />
               Weight
             </TabsTrigger>
@@ -198,14 +204,14 @@ export default function Logs() {
         </div>
 
         <TabsContent value="food" className="mt-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto pb-20">
+          <div className="h-full overflow-y-auto" style={{ paddingBottom: "80px" }}>
             {/* Today's Summary */}
             {isToday && (
-              <div className="grid grid-cols-2 gap-2 p-3 border-b">
-                <Card>
+              <div className="grid grid-cols-2 gap-2 p-3 border-b border-gray-200 dark:border-gray-800">
+                <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                   <CardContent className="p-2 text-center">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-mono">🔥 Calories</div>
-                    <div className="text-lg font-semibold font-mono">
+                    <div className="text-xs text-muted-foreground dark:text-gray-400 uppercase tracking-wider font-mono">🔥 Calories</div>
+                    <div className="text-lg font-semibold font-mono text-gray-900 dark:text-gray-100">
                       {isStealthMode ? (
                         todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "On Track"
                       ) : (
@@ -215,10 +221,10 @@ export default function Logs() {
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                   <CardContent className="p-2 text-center">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-mono">🥩 Protein</div>
-                    <div className="text-lg font-semibold font-mono">
+                    <div className="text-xs text-muted-foreground dark:text-gray-400 uppercase tracking-wider font-mono">🥩 Protein</div>
+                    <div className="text-lg font-semibold font-mono text-gray-900 dark:text-gray-100">
                       {isStealthMode ? (
                         todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Need More" : "Good"
                       ) : (
@@ -226,7 +232,7 @@ export default function Logs() {
                       )}
                     </div>
                     {!isStealthMode && (
-                      <div className="text-xs text-muted-foreground font-mono">
+                      <div className="text-xs text-muted-foreground dark:text-gray-400 font-mono">
                         of {profile?.proteinTarget || 150}g
                       </div>
                     )}
@@ -235,25 +241,25 @@ export default function Logs() {
 
                 {!isStealthMode && (
                   <>
-                    <Card>
+                    <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                       <CardContent className="p-2 text-center">
-                        <div className="text-xs text-muted-foreground uppercase tracking-wider font-mono">🍞 Carbs</div>
-                        <div className="text-lg font-semibold font-mono">
+                        <div className="text-xs text-muted-foreground dark:text-gray-400 uppercase tracking-wider font-mono">🍞 Carbs</div>
+                        <div className="text-lg font-semibold font-mono text-gray-900 dark:text-gray-100">
                           {todayStats?.carbs || 0}g
                         </div>
-                        <div className="text-xs text-muted-foreground font-mono">
+                        <div className="text-xs text-muted-foreground dark:text-gray-400 font-mono">
                           of {profile?.carbsTarget || 200}g
                         </div>
                       </CardContent>
                     </Card>
                     
-                    <Card>
+                    <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                       <CardContent className="p-2 text-center">
-                        <div className="text-xs text-muted-foreground uppercase tracking-wider font-mono">🥑 Fats</div>
-                        <div className="text-lg font-semibold font-mono">
+                        <div className="text-xs text-muted-foreground dark:text-gray-400 uppercase tracking-wider font-mono">🥑 Fats</div>
+                        <div className="text-lg font-semibold font-mono text-gray-900 dark:text-gray-100">
                           {todayStats?.fat || 0}g
                         </div>
-                        <div className="text-xs text-muted-foreground font-mono">
+                        <div className="text-xs text-muted-foreground dark:text-gray-400 font-mono">
                           of {profile?.fatTarget || 65}g
                         </div>
                       </CardContent>
@@ -266,21 +272,46 @@ export default function Logs() {
             {/* Food Logs */}
             <div className="px-3 py-3 space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">📅 {formatDate(selectedDate)}</h3>
-                <div className="text-sm text-gray-600 mb-3 font-mono">
+                <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">📅 {formatDate(selectedDate)}</h3>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-3 font-mono">
                   {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </div>
+                
+                {isToday && (
+                  <Card 
+                    className="mb-3 cursor-pointer bg-primary/10 dark:bg-primary/20 hover:bg-primary/20 dark:hover:bg-primary/30 transition-all duration-200 transform hover:scale-[1.02] border-2 border-dashed border-primary/30 dark:border-primary/40 hover:border-primary/50"
+                    onClick={() => {
+                      setAddType("food");
+                      setFoodForm({
+                        time: new Date().toTimeString().slice(0, 5),
+                        description: "",
+                        calories: "",
+                        protein: "",
+                        carbs: "",
+                        fat: ""
+                      });
+                      setAddDialogOpen(true);
+                    }}
+                  >
+                    <CardContent className="p-4 flex items-center justify-center gap-3">
+                      <div className="bg-primary/20 dark:bg-primary/30 rounded-full p-2">
+                        <Plus className="h-5 w-5 text-primary dark:text-primary" />
+                      </div>
+                      <span className="font-medium text-primary dark:text-primary">Add food entry</span>
+                    </CardContent>
+                  </Card>
+                )}
                 
                 {foodLogs && foodLogs.length > 0 ? (
                   <div className="space-y-3">
                     {foodLogs.map((log) => (
-                      <Card key={log._id}>
+                      <Card key={log._id} className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                         <CardContent className="p-3">
                           <div className="flex justify-between items-start mb-2">
-                            <div className="font-medium font-mono">{log.time}</div>
+                            <div className="font-medium font-mono text-gray-900 dark:text-gray-100">{log.time}</div>
                             <div className="flex items-center gap-1">
                               {!isStealthMode && (
-                                <div className="text-sm text-gray-600 font-mono mr-2">
+                                <div className="text-sm text-gray-600 dark:text-gray-400 font-mono mr-2">
                                   {log.totalCalories} kcal
                                 </div>
                               )}
@@ -289,7 +320,7 @@ export default function Logs() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6"
+                                    className="h-6 w-6 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                                     onClick={() => openEditDialog(log)}
                                   >
                                     <Pencil className="h-3 w-3" />
@@ -297,7 +328,7 @@ export default function Logs() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-red-600 hover:text-red-700"
+                                    className="h-6 w-6 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                                     onClick={() => {
                                       setDeletingLogId(log._id);
                                       setDeleteConfirmOpen(true);
@@ -309,11 +340,11 @@ export default function Logs() {
                               )}
                             </div>
                           </div>
-                          <div className="text-sm text-gray-700 mb-2">
+                          <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                             {log.description}
                           </div>
                           {!isStealthMode && (
-                            <div className="text-xs text-gray-500 font-mono">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                               {log.totalCalories} kcal • {log.totalProtein}g Protein • {log.totalCarbs}g Carbs • {log.totalFat}g Fats
                             </div>
                           )}
@@ -322,8 +353,8 @@ export default function Logs() {
                     ))}
                   </div>
                 ) : (
-                  <Card>
-                    <CardContent className="p-8 text-center text-muted-foreground font-mono">
+                  <Card className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                    <CardContent className="p-8 text-center text-muted-foreground dark:text-gray-400 font-mono">
                       No food logged for this day
                     </CardContent>
                   </Card>
@@ -334,20 +365,20 @@ export default function Logs() {
         </TabsContent>
 
         <TabsContent value="weight" className="mt-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto pb-20 px-3 py-3 space-y-4">
+          <div className="h-full overflow-y-auto px-3 py-3 space-y-4" style={{ paddingBottom: "140px" }}>
             {/* Current Week Section */}
             {currentWeekData && (
-              <Card>
+              <Card className="max-w-lg mx-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardContent className="p-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold">Current Week</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📅 This Week</h3>
                     {currentWeekData.average && (
                       <div className="mt-2">
-                        <div className="text-2xl font-bold font-mono">
-                          {currentWeekData.average} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
+                        <div className="text-2xl font-bold font-mono text-gray-900 dark:text-gray-100">
+                          Average: {currentWeekData.average} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
                         </div>
                         {weekOverWeekChange && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground dark:text-gray-400 mt-1">
                             {weekOverWeekChange.change > 0 ? (
                               <TrendingUp className="h-4 w-4" />
                             ) : weekOverWeekChange.change < 0 ? (
@@ -362,54 +393,88 @@ export default function Logs() {
                     )}
                   </div>
                   
-                  {/* Week days grid */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {currentWeekData.days.map((day) => (
-                      <div 
-                        key={day.date} 
-                        className={cn(
-                          "text-center p-2 rounded-lg border relative",
-                          day.isToday ? "border-primary bg-primary/10" : "border-border",
-                          day.weight && !day.isToday ? "bg-muted/30" : ""
-                        )}
-                      >
-                        {day.isToday && (
-                          <div className="text-xs font-semibold text-primary mb-0.5">
-                            📍 Today
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          {day.dayName}
-                        </div>
-                        <div className={cn(
-                          "text-sm font-medium",
-                          day.isToday && "font-bold"
-                        )}>
-                          {day.dayNumber}
-                        </div>
-                        {day.weight && (
-                          <div className={cn(
-                            "text-xs font-mono mt-1",
-                            day.isToday && "font-bold text-primary"
-                          )}>
-                            {day.weight}
-                          </div>
-                        )}
-                        {day.isToday && day.weight && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 absolute top-0 right-0 m-1"
-                            onClick={() => {
-                              const todayLog = weightLogs?.find(log => log.date === day.date);
+                  {/* Today's Weight - Prominent */}
+                  {(() => {
+                    const today = currentWeekData.days.find(d => d.isToday);
+                    if (!today) return null;
+                    
+                    return (
+                      <div className="mb-4">
+                        <Card 
+                          className="border-primary bg-primary/5 dark:bg-primary/10 cursor-pointer hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                          onClick={() => {
+                            if (today.weight) {
+                              const todayLog = weightLogs?.find(log => log.date === today.date);
                               if (todayLog) openEditWeightDialog(todayLog);
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        )}
+                            } else {
+                              setAddType("weight");
+                              setAddDialogOpen(true);
+                            }
+                          }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">📍 Today</span>
+                                  <span className="text-sm text-muted-foreground dark:text-gray-400">
+                                    {today.dayName}, {new Date(today.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
+                                {today.weight ? (
+                                  <div className="text-2xl font-bold font-mono text-primary dark:text-primary mt-1">
+                                    {today.weight} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Plus className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
+                                    <span className="text-sm text-muted-foreground dark:text-gray-400">Log weight</span>
+                                  </div>
+                                )}
+                              </div>
+                              {today.weight && (
+                                <Pencil className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
-                    ))}
+                    );
+                  })()}
+                  
+                  {/* Past days of the week */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2 text-muted-foreground dark:text-gray-400">Previous Days</h4>
+                    <div className="space-y-2">
+                      {currentWeekData.days
+                        .filter(day => !day.isToday && new Date(day.date) < new Date())
+                        .reverse()
+                        .map((day) => (
+                          <div 
+                            key={day.date}
+                            className={cn(
+                              "flex items-center justify-between p-2 rounded-lg border",
+                              day.weight ? "bg-muted/30" : ""
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{day.dayName}</div>
+                                <div className="text-xs text-muted-foreground dark:text-gray-400">
+                                  {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
+                              {day.weight ? (
+                                <>{day.weight} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}</>
+                              ) : (
+                                <span className="text-muted-foreground dark:text-gray-400">—</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -417,16 +482,16 @@ export default function Logs() {
 
             {/* Recent Trends Section */}
             {weeklyTrends && weeklyTrends.length > 0 && (
-              <Card>
+              <Card className="max-w-lg mx-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardContent className="p-4">
-                  <h3 className="text-lg font-semibold mb-3">Recent Trends</h3>
+                  <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Recent Trends</h3>
                   
                   {/* Trend list */}
                   <div className="space-y-2 mb-4">
                     {weeklyTrends.map((week) => (
                       <div key={week.weekNumber} className="flex justify-between items-center">
-                        <span className="text-sm">{week.week}</span>
-                        <span className="text-sm font-mono font-medium">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{week.week}</span>
+                        <span className="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
                           {week.average} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"} ({week.entryCount} entries)
                         </span>
                       </div>
@@ -450,8 +515,8 @@ export default function Logs() {
                           />
                           <Tooltip 
                             contentStyle={{ 
-                              backgroundColor: 'white',
-                              border: '1px solid #e5e7eb',
+                              backgroundColor: 'rgb(255, 255, 255)',
+                              border: '1px solid rgb(229, 231, 235)',
                               borderRadius: '6px',
                               fontSize: '12px'
                             }}
@@ -475,10 +540,10 @@ export default function Logs() {
 
             {/* Monthly Overview */}
             {monthlyProgress && (
-              <Card>
+              <Card className="max-w-lg mx-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold">Monthly Overview</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Monthly Overview</h3>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
@@ -486,9 +551,9 @@ export default function Logs() {
                         className="h-8 w-8"
                         onClick={() => setMonthOffset(monthOffset - 1)}
                       >
-                        <ChevronLeft className="h-4 w-4" />
+                        <ChevronLeft className="h-4 w-4 text-gray-900 dark:text-gray-100" />
                       </Button>
-                      <span className="text-sm font-medium w-32 text-center">
+                      <span className="text-sm font-medium w-32 text-center text-gray-900 dark:text-gray-100">
                         {monthlyProgress.monthName}
                       </span>
                       <Button
@@ -498,18 +563,18 @@ export default function Logs() {
                         onClick={() => setMonthOffset(monthOffset + 1)}
                         disabled={monthOffset >= 0}
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4 text-gray-900 dark:text-gray-100" />
                       </Button>
                     </div>
                   </div>
                   
                   {monthlyProgress.monthAverage && (
                     <div className="mb-4">
-                      <div className="text-xl font-bold font-mono">
+                      <div className="text-xl font-bold font-mono text-gray-900 dark:text-gray-100">
                         Average: {monthlyProgress.monthAverage} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
                       </div>
                       {monthlyProgress.changeFromLastMonth !== null && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground dark:text-gray-400 mt-1">
                           {monthlyProgress.changeFromLastMonth > 0 ? (
                             <TrendingUp className="h-4 w-4" />
                           ) : monthlyProgress.changeFromLastMonth < 0 ? (
@@ -540,8 +605,8 @@ export default function Logs() {
                           />
                           <Tooltip 
                             contentStyle={{ 
-                              backgroundColor: 'white',
-                              border: '1px solid #e5e7eb',
+                              backgroundColor: 'rgb(255, 255, 255)',
+                              border: '1px solid rgb(229, 231, 235)',
                               borderRadius: '6px',
                               fontSize: '12px'
                             }}
@@ -564,65 +629,42 @@ export default function Logs() {
             )}
 
             {/* Full Log History (Collapsible) */}
-            <Card>
+            <Card className="max-w-lg mx-auto mb-16 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
               <CardContent className="p-4">
                 <button
                   onClick={() => setShowFullHistory(!showFullHistory)}
                   className="w-full flex items-center justify-between text-left"
                 >
-                  <h3 className="text-lg font-semibold">Full Log History</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Full Log History</h3>
                   {showFullHistory ? (
-                    <ChevronLeft className="h-4 w-4 transform rotate-90" />
+                    <ChevronLeft className="h-4 w-4 transform rotate-90 text-gray-900 dark:text-gray-100" />
                   ) : (
-                    <ChevronLeft className="h-4 w-4 transform -rotate-90" />
+                    <ChevronLeft className="h-4 w-4 transform -rotate-90 text-gray-900 dark:text-gray-100" />
                   )}
                 </button>
                 
                 {showFullHistory && weightLogs && weightLogs.length > 0 && (
-                  <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
-                    {weightLogs.map((log) => {
-                      const isToday = log.date === new Date().toISOString().split('T')[0];
+                  <div className="mt-4 space-y-2 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
+                    {weightLogs
+                      .filter(log => log.date !== new Date().toISOString().split('T')[0]) // Exclude today's entry
+                      .map((log) => {
                       return (
                         <div 
                           key={log._id} 
-                          className={cn(
-                            "flex justify-between items-center p-2 rounded",
-                            isToday ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
-                          )}
+                          className="flex justify-between items-center p-2 rounded hover:bg-muted/50 dark:hover:bg-gray-800"
                         >
                           <div>
-                            {isToday && (
-                              <div className="text-xs font-semibold text-primary">
-                                📍 Today
-                              </div>
-                            )}
-                            <div className={cn(
-                              "text-sm font-medium",
-                              isToday && "font-bold"
-                            )}>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {formatDate(log.date)}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground dark:text-gray-400">
                               {log.time}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={cn(
-                              "text-sm font-mono font-medium",
-                              isToday && "font-bold text-primary"
-                            )}>
+                            <span className="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
                               {log.weight} {log.unit}
                             </span>
-                            {isToday && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => openEditWeightDialog(log)}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                            )}
                           </div>
                         </div>
                       );
@@ -631,7 +673,7 @@ export default function Logs() {
                 )}
                 
                 {showFullHistory && (!weightLogs || weightLogs.length === 0) && (
-                  <div className="mt-4 text-center text-muted-foreground text-sm">
+                  <div className="mt-4 text-center text-muted-foreground dark:text-gray-400 text-sm">
                     No weight entries yet
                   </div>
                 )}
@@ -642,108 +684,81 @@ export default function Logs() {
         </TabsContent>
       </Tabs>
 
-      {/* Add Button - Context aware */}
-      {activeTab === "food" ? (
-        <Button 
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 rounded-full w-56"
-          onClick={() => {
-            setAddType("food");
-            setFoodForm({
-              time: new Date().toTimeString().slice(0, 5),
-              description: "",
-              calories: "",
-              protein: "",
-              carbs: "",
-              fat: ""
-            });
-            setAddDialogOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          🍽️ Add Food
-        </Button>
-      ) : (
-        <Button 
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 rounded-full w-56"
-          onClick={() => {
-            setAddType("weight");
-            setAddDialogOpen(true);
-          }}
-          disabled={!!todayWeightLog}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {todayWeightLog ? "⚖️ Weight logged today" : "⚖️ Add Weight"}
-        </Button>
-      )}
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <DialogHeader>
-            <DialogTitle>{addType === "food" ? "Add Food Entry" : "Log Weight"}</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">{addType === "food" ? "Add Food Entry" : "Log Weight"}</DialogTitle>
           </DialogHeader>
           
           {addType === "food" && (
             <div className="mt-4 space-y-4">
               <div>
-                <Label htmlFor="food-time">Time</Label>
+                <Label htmlFor="food-time" className="text-gray-700 dark:text-gray-300">Time</Label>
                 <Input
                   id="food-time"
                   type="time"
                   value={foodForm.time}
                   onChange={(e) => setFoodForm({ ...foodForm, time: e.target.value })}
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label htmlFor="food-desc">Description *</Label>
+                <Label htmlFor="food-desc" className="text-gray-700 dark:text-gray-300">Description *</Label>
                 <Input
                   id="food-desc"
                   placeholder="e.g., Grilled chicken with rice"
                   value={foodForm.description}
                   onChange={(e) => setFoodForm({ ...foodForm, description: e.target.value })}
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="food-cal">Calories *</Label>
+                  <Label htmlFor="food-cal" className="text-gray-700 dark:text-gray-300">Calories *</Label>
                   <Input
                     id="food-cal"
                     type="number"
                     placeholder="0"
                     value={foodForm.calories}
                     onChange={(e) => setFoodForm({ ...foodForm, calories: e.target.value })}
+                    className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="food-protein">Protein (g)</Label>
+                  <Label htmlFor="food-protein" className="text-gray-700 dark:text-gray-300">Protein (g)</Label>
                   <Input
                     id="food-protein"
                     type="number"
                     placeholder="0"
                     value={foodForm.protein}
                     onChange={(e) => setFoodForm({ ...foodForm, protein: e.target.value })}
+                    className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="food-carbs">Carbs (g)</Label>
+                  <Label htmlFor="food-carbs" className="text-gray-700 dark:text-gray-300">Carbs (g)</Label>
                   <Input
                     id="food-carbs"
                     type="number"
                     placeholder="0"
                     value={foodForm.carbs}
                     onChange={(e) => setFoodForm({ ...foodForm, carbs: e.target.value })}
+                    className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="food-fat">Fats (g)</Label>
+                  <Label htmlFor="food-fat" className="text-gray-700 dark:text-gray-300">Fats (g)</Label>
                   <Input
                     id="food-fat"
                     type="number"
                     placeholder="0"
                     value={foodForm.fat}
                     onChange={(e) => setFoodForm({ ...foodForm, fat: e.target.value })}
+                    className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
               </div>
@@ -760,12 +775,13 @@ export default function Logs() {
           {addType === "weight" && (
             <div className="mt-4 space-y-4">
               <div>
-                <Label htmlFor="weight">Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
+                <Label htmlFor="weight" className="text-gray-700 dark:text-gray-300">Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
                 <Input
                   id="weight"
                   type="number"
                   step="0.1"
                   placeholder="Enter weight"
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
                       handleAddWeight((e.target as HTMLInputElement).value);
@@ -791,56 +807,61 @@ export default function Logs() {
 
       {/* Edit Food Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <DialogHeader>
-            <DialogTitle>Edit Food Entry</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">Edit Food Entry</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-desc">Description *</Label>
+              <Label htmlFor="edit-desc" className="text-gray-700 dark:text-gray-300">Description *</Label>
               <Input
                 id="edit-desc"
                 value={foodForm.description}
                 onChange={(e) => setFoodForm({ ...foodForm, description: e.target.value })}
+                className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-cal">Calories *</Label>
+                <Label htmlFor="edit-cal" className="text-gray-700 dark:text-gray-300">Calories *</Label>
                 <Input
                   id="edit-cal"
                   type="number"
                   value={foodForm.calories}
                   onChange={(e) => setFoodForm({ ...foodForm, calories: e.target.value })}
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-protein">Protein (g)</Label>
+                <Label htmlFor="edit-protein" className="text-gray-700 dark:text-gray-300">Protein (g)</Label>
                 <Input
                   id="edit-protein"
                   type="number"
                   value={foodForm.protein}
                   onChange={(e) => setFoodForm({ ...foodForm, protein: e.target.value })}
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-carbs">Carbs (g)</Label>
+                <Label htmlFor="edit-carbs" className="text-gray-700 dark:text-gray-300">Carbs (g)</Label>
                 <Input
                   id="edit-carbs"
                   type="number"
                   value={foodForm.carbs}
                   onChange={(e) => setFoodForm({ ...foodForm, carbs: e.target.value })}
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-fat">Fats (g)</Label>
+                <Label htmlFor="edit-fat" className="text-gray-700 dark:text-gray-300">Fats (g)</Label>
                 <Input
                   id="edit-fat"
                   type="number"
                   value={foodForm.fat}
                   onChange={(e) => setFoodForm({ ...foodForm, fat: e.target.value })}
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -857,11 +878,11 @@ export default function Logs() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <DialogHeader>
-            <DialogTitle>Delete Food Entry?</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">Delete Food Entry?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground dark:text-gray-400">
             Are you sure you want to delete this food entry? This action cannot be undone.
           </p>
           <div className="flex gap-2 mt-4">
@@ -885,19 +906,20 @@ export default function Logs() {
 
       {/* Edit Weight Dialog */}
       <Dialog open={editWeightDialogOpen} onOpenChange={setEditWeightDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <DialogHeader>
-            <DialogTitle>Edit Weight Entry</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">Edit Weight Entry</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-weight">Weight ({editingWeightLog?.unit || "kg"})</Label>
+              <Label htmlFor="edit-weight" className="text-gray-700 dark:text-gray-300">Weight ({editingWeightLog?.unit || "kg"})</Label>
               <Input
                 id="edit-weight"
                 type="number"
                 step="0.1"
                 value={weightForm}
                 onChange={(e) => setWeightForm(e.target.value)}
+                className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
             <Button 

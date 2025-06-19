@@ -16,9 +16,10 @@
       "routes/pricing": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/success": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/subscription-required": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
-      "routes/dashboard/index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
-      "routes/dashboard/chat": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
-      "routes/dashboard/settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+      "routes/chat": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/diary": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/profile": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
     },
     "routes": {
       "root": {
@@ -81,35 +82,44 @@
           "runtime": "nodejs"
         }
       },
-      "routes/dashboard/layout": {
-        "id": "routes/dashboard/layout",
+      "routes/app-layout": {
+        "id": "routes/app-layout",
         "parentId": "root",
-        "file": "app/routes/dashboard/layout.tsx",
+        "file": "app/routes/app-layout.tsx",
         "config": {}
       },
-      "routes/dashboard/index": {
-        "id": "routes/dashboard/index",
-        "parentId": "routes/dashboard/layout",
-        "file": "app/routes/dashboard/index.tsx",
-        "path": "dashboard",
+      "routes/chat": {
+        "id": "routes/chat",
+        "parentId": "routes/app-layout",
+        "file": "app/routes/chat.tsx",
+        "path": "chat",
         "config": {
           "runtime": "nodejs"
         }
       },
-      "routes/dashboard/chat": {
-        "id": "routes/dashboard/chat",
-        "parentId": "routes/dashboard/layout",
-        "file": "app/routes/dashboard/chat.tsx",
-        "path": "dashboard/chat",
+      "routes/diary": {
+        "id": "routes/diary",
+        "parentId": "routes/app-layout",
+        "file": "app/routes/diary.tsx",
+        "path": "diary",
         "config": {
           "runtime": "nodejs"
         }
       },
-      "routes/dashboard/settings": {
-        "id": "routes/dashboard/settings",
-        "parentId": "routes/dashboard/layout",
-        "file": "app/routes/dashboard/settings.tsx",
-        "path": "dashboard/settings",
+      "routes/profile": {
+        "id": "routes/profile",
+        "parentId": "routes/app-layout",
+        "file": "app/routes/profile.tsx",
+        "path": "profile",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/settings": {
+        "id": "routes/settings",
+        "parentId": "routes/app-layout",
+        "file": "app/routes/settings.tsx",
+        "path": "settings",
         "config": {
           "runtime": "nodejs"
         }
@@ -117,9 +127,9 @@
     }
   },
   "reactRouterConfig": {
-    "appDirectory": "/Users/michaelshimeles/Desktop/rsk/app",
+    "appDirectory": "/Users/yuval/Desktop/bob_diet_coach/react-starter-kit/app",
     "basename": "/",
-    "buildDirectory": "/Users/michaelshimeles/Desktop/rsk/build",
+    "buildDirectory": "/Users/yuval/Desktop/bob_diet_coach/react-starter-kit/build",
     "future": {
       "unstable_middleware": false,
       "unstable_optimizeDeps": false,
@@ -169,28 +179,34 @@
         "file": "routes/subscription-required.tsx",
         "path": "subscription-required"
       },
-      "routes/dashboard/layout": {
-        "id": "routes/dashboard/layout",
+      "routes/app-layout": {
+        "id": "routes/app-layout",
         "parentId": "root",
-        "file": "routes/dashboard/layout.tsx"
+        "file": "routes/app-layout.tsx"
       },
-      "routes/dashboard/index": {
-        "id": "routes/dashboard/index",
-        "parentId": "routes/dashboard/layout",
-        "file": "routes/dashboard/index.tsx",
-        "path": "dashboard"
+      "routes/chat": {
+        "id": "routes/chat",
+        "parentId": "routes/app-layout",
+        "file": "routes/chat.tsx",
+        "path": "chat"
       },
-      "routes/dashboard/chat": {
-        "id": "routes/dashboard/chat",
-        "parentId": "routes/dashboard/layout",
-        "file": "routes/dashboard/chat.tsx",
-        "path": "dashboard/chat"
+      "routes/diary": {
+        "id": "routes/diary",
+        "parentId": "routes/app-layout",
+        "file": "routes/diary.tsx",
+        "path": "diary"
       },
-      "routes/dashboard/settings": {
-        "id": "routes/dashboard/settings",
-        "parentId": "routes/dashboard/layout",
-        "file": "routes/dashboard/settings.tsx",
-        "path": "dashboard/settings"
+      "routes/profile": {
+        "id": "routes/profile",
+        "parentId": "routes/app-layout",
+        "file": "routes/profile.tsx",
+        "path": "profile"
+      },
+      "routes/settings": {
+        "id": "routes/settings",
+        "parentId": "routes/app-layout",
+        "file": "routes/settings.tsx",
+        "path": "settings"
       }
     },
     "routeDiscovery": {

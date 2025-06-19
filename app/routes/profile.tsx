@@ -105,14 +105,14 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="flex-1 overflow-y-auto pb-20">
+    <div className="flex flex-col bg-gray-100 dark:bg-gray-950" style={{ height: "100vh", minHeight: "-webkit-fill-available" }}>
+      <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-950" style={{ paddingBottom: "60px" }}>
         <div className="max-w-lg mx-auto px-4">
       {/* Always show sign out button at the top */}
       <div className="pt-4">
         <Button 
           variant="outline" 
-          className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-gray-200 dark:border-gray-800"
           onClick={() => signOut()}
         >
           🚀 Sign Out
@@ -123,61 +123,61 @@ export default function Profile() {
       {(!profile || !preferences) ? (
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <p className="text-gray-500 mb-4">Loading profile...</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">Loading profile...</p>
           </div>
         </div>
       ) : (
         <>
       {/* About You Section */}
-      <Card className="mt-4">
+      <Card className="mt-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">👤 About you</CardTitle>
+          <CardTitle className="text-lg text-gray-900 dark:text-gray-100">👤 About you</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Name</Label>
             <Input
               id="name"
               value={isEditing ? formData.name : profile.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={!isEditing}
-              className="mt-1"
+              className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400"
             />
           </div>
 
           <div>
-            <Label htmlFor="age">Age</Label>
+            <Label htmlFor="age" className="text-gray-700 dark:text-gray-300">Age</Label>
             <Input
               id="age"
               type="number"
               value={isEditing ? formData.age : profile.age}
               onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })}
               disabled={!isEditing}
-              className="mt-1"
+              className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400"
             />
           </div>
 
           <div>
-            <Label htmlFor="height">Height (cm)</Label>
+            <Label htmlFor="height" className="text-gray-700 dark:text-gray-300">Height (cm)</Label>
             <Input
               id="height"
               type="number"
               value={isEditing ? formData.height : profile.height}
               onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) })}
               disabled={!isEditing}
-              className="mt-1"
+              className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400"
             />
           </div>
 
           {/* Starting Weight */}
           <div>
-            <Label>Starting Weight</Label>
-            <div className="mt-1 p-2 bg-muted/30 rounded-md">
-              <div className="text-lg font-semibold font-mono">
+            <Label className="text-gray-700 dark:text-gray-300">Starting Weight</Label>
+            <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+              <div className="text-lg font-semibold font-mono text-gray-900 dark:text-gray-100">
                 🏁 {activeGoal?.startingWeight || profile?.currentWeight || "—"} {activeGoal?.startingUnit || (profile?.preferredUnits === "imperial" ? "lbs" : "kg")}
               </div>
               {activeGoal && (
-                <div className="text-xs text-muted-foreground font-mono">
+                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                   Goal started: {new Date(activeGoal.startedAt).toLocaleDateString()}
                 </div>
               )}
@@ -186,13 +186,13 @@ export default function Profile() {
 
           {/* Current Weight */}
           <div>
-            <Label>Current Weight</Label>
-            <div className="mt-1 p-2 bg-muted/30 rounded-md">
-              <div className="text-lg font-semibold font-mono">
+            <Label className="text-gray-700 dark:text-gray-300">Current Weight</Label>
+            <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+              <div className="text-lg font-semibold font-mono text-gray-900 dark:text-gray-100">
                 ⚖️ {latestWeight?.weight || profile?.currentWeight || "—"} {latestWeight?.unit || (profile?.preferredUnits === "imperial" ? "lbs" : "kg")}
               </div>
               {latestWeight && (
-                <div className="text-xs text-muted-foreground font-mono">
+                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                   Last logged: {new Date(latestWeight._creationTime).toLocaleDateString()}
                 </div>
               )}
@@ -200,7 +200,7 @@ export default function Profile() {
           </div>
 
           <div>
-            <Label htmlFor="targetWeight">Target Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
+            <Label htmlFor="targetWeight" className="text-gray-700 dark:text-gray-300">Target Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
             <Input
               id="targetWeight"
               type="number"
@@ -220,13 +220,13 @@ export default function Profile() {
                 }
               }}
               disabled={!isEditing}
-              className="mt-1"
+              className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400"
             />
           </div>
 
           <div>
-            <Label>Gender</Label>
-            <p className="text-xs text-gray-600 mb-2 font-mono">
+            <Label className="text-gray-700 dark:text-gray-300">Gender</Label>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-mono">
               Asking because this affects calorie and nutrient recommendations
             </p>
             <ToggleGroup
@@ -236,21 +236,21 @@ export default function Profile() {
               disabled={!isEditing}
               className="grid grid-cols-3 gap-2 mt-1"
             >
-              <ToggleGroupItem value="female">
+              <ToggleGroupItem value="female" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
                 Female
               </ToggleGroupItem>
-              <ToggleGroupItem value="male">
+              <ToggleGroupItem value="male" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
                 Male
               </ToggleGroupItem>
-              <ToggleGroupItem value="other">
+              <ToggleGroupItem value="other" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
                 Rather not say
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
 
           <div>
-            <Label>Activity Level</Label>
-            <p className="text-xs text-gray-600 mb-2 font-mono">
+            <Label className="text-gray-700 dark:text-gray-300">Activity Level</Label>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-mono">
               How active are you on a typical day?
             </p>
             <Select 
@@ -258,21 +258,21 @@ export default function Profile() {
               onValueChange={(value) => setFormData({ ...formData, activityLevel: value })}
               disabled={!isEditing}
             >
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sedentary">Sedentary (little to no exercise)</SelectItem>
-                <SelectItem value="light">Light (exercise 1-3 days/week)</SelectItem>
-                <SelectItem value="moderate">Moderate (exercise 3-5 days/week)</SelectItem>
-                <SelectItem value="active">Very Active (exercise 6-7 days/week)</SelectItem>
+              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <SelectItem value="sedentary" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Sedentary (little to no exercise)</SelectItem>
+                <SelectItem value="light" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Light (exercise 1-3 days/week)</SelectItem>
+                <SelectItem value="moderate" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Moderate (exercise 3-5 days/week)</SelectItem>
+                <SelectItem value="active" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Very Active (exercise 6-7 days/week)</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label>Current Goal</Label>
-            <p className="text-xs text-gray-600 mb-2 font-mono">
+            <Label className="text-gray-700 dark:text-gray-300">Current Goal</Label>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-mono">
               Your daily recommendations will change based on this selection
             </p>
             <ToggleGroup
@@ -295,13 +295,13 @@ export default function Profile() {
               disabled={!isEditing}
               className="grid grid-cols-3 gap-2 mt-1"
             >
-              <ToggleGroupItem value="gain">
+              <ToggleGroupItem value="gain" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
                 Gain
               </ToggleGroupItem>
-              <ToggleGroupItem value="cut">
+              <ToggleGroupItem value="cut" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
                 Cut
               </ToggleGroupItem>
-              <ToggleGroupItem value="maintain">
+              <ToggleGroupItem value="maintain" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
                 Maintain
               </ToggleGroupItem>
             </ToggleGroup>
@@ -309,7 +309,7 @@ export default function Profile() {
 
           {/* Validation Warning */}
           {validationWarning && (
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-2 py-1.5 rounded-md text-sm font-mono">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1.5 rounded-md text-sm font-mono">
               ⚠️ {validationWarning}
             </div>
           )}
@@ -319,7 +319,7 @@ export default function Profile() {
               <>
                 <Button 
                   onClick={handleSave}
-                  className="flex-1"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   Save Changes
                 </Button>
@@ -337,7 +337,7 @@ export default function Profile() {
                       goal: profile.goal,
                     });
                   }}
-                  className="flex-1"
+                  className="flex-1 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700"
                 >
                   Cancel
                 </Button>
@@ -346,7 +346,7 @@ export default function Profile() {
               <Button 
                 onClick={() => setIsEditing(true)}
                 variant="outline"
-                className="w-full"
+                className="w-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700"
               >
                 Edit Profile
               </Button>
@@ -356,28 +356,28 @@ export default function Profile() {
       </Card>
 
       {/* Service Preferences */}
-      <Card className="mt-4">
+      <Card className="mt-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">⚙️ Service Preferences</CardTitle>
+          <CardTitle className="text-lg text-gray-900 dark:text-gray-100">⚙️ Service Preferences</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="language">Language</Label>
+            <Label htmlFor="language" className="text-gray-700 dark:text-gray-300">Language</Label>
             <Select defaultValue={preferences.language || "en"}>
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="he">Hebrew</SelectItem>
-                <SelectItem value="es">Spanish</SelectItem>
-                <SelectItem value="fr">French</SelectItem>
+              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <SelectItem value="en" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">English</SelectItem>
+                <SelectItem value="he" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Hebrew</SelectItem>
+                <SelectItem value="es" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Spanish</SelectItem>
+                <SelectItem value="fr" className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">French</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center justify-between py-2">
-            <Label htmlFor="dark-mode">Dark mode</Label>
+            <Label htmlFor="dark-mode" className="text-gray-700 dark:text-gray-300">Dark mode</Label>
             <Switch
               id="dark-mode"
               checked={preferences.darkMode}
@@ -386,7 +386,7 @@ export default function Profile() {
           </div>
 
           <div className="flex items-center justify-between py-2">
-            <Label htmlFor="cute-mode">Cute mode</Label>
+            <Label htmlFor="cute-mode" className="text-gray-700 dark:text-gray-300">Cute mode</Label>
             <Switch
               id="cute-mode"
               checked={preferences.cuteMode}
@@ -395,11 +395,11 @@ export default function Profile() {
           </div>
 
           {/* Macro Visibility Settings */}
-          <div className="border-t pt-3 mt-3">
-            <div className="text-sm font-medium mb-3">Macro Display Settings</div>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+            <div className="text-sm font-medium mb-3 text-gray-900 dark:text-gray-100">Macro Display Settings</div>
             
             <div className="flex items-center justify-between py-2">
-              <Label htmlFor="show-all-macros">Show Macros</Label>
+              <Label htmlFor="show-all-macros" className="text-gray-700 dark:text-gray-300">Show Macros</Label>
               <Switch
                 id="show-all-macros"
                 checked={preferences.showProtein !== false && preferences.showCarbs !== false && preferences.showFats !== false}
@@ -417,7 +417,7 @@ export default function Profile() {
             {(preferences.showProtein !== false || preferences.showCarbs !== false || preferences.showFats !== false) && (
               <div className="ml-4 space-y-2 mt-2">
                 <div className="flex items-center justify-between py-1">
-                  <Label htmlFor="show-protein" className="text-sm">Protein</Label>
+                  <Label htmlFor="show-protein" className="text-sm text-gray-700 dark:text-gray-300">Protein</Label>
                   <Switch
                     id="show-protein"
                     checked={preferences.showProtein !== false}
@@ -428,7 +428,7 @@ export default function Profile() {
                 </div>
 
                 <div className="flex items-center justify-between py-1">
-                  <Label htmlFor="show-carbs" className="text-sm">Carbs</Label>
+                  <Label htmlFor="show-carbs" className="text-sm text-gray-700 dark:text-gray-300">Carbs</Label>
                   <Switch
                     id="show-carbs"
                     checked={preferences.showCarbs !== false}
@@ -439,7 +439,7 @@ export default function Profile() {
                 </div>
 
                 <div className="flex items-center justify-between py-1">
-                  <Label htmlFor="show-fats" className="text-sm">Fats</Label>
+                  <Label htmlFor="show-fats" className="text-sm text-gray-700 dark:text-gray-300">Fats</Label>
                   <Switch
                     id="show-fats"
                     checked={preferences.showFats !== false}
@@ -458,7 +458,7 @@ export default function Profile() {
       <div className="space-y-3 mb-8 mt-4">
         <Button 
           variant="outline" 
-          className="w-full"
+          className="w-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700"
           onClick={() => window.location.href = "/subscription-required"}
         >
           💳 Manage Subscription
