@@ -1,15 +1,15 @@
 "use client";
 import { useQuery, useAction } from "convex/react";
 import { useAuth } from "@clerk/react-router";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/app/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
-import { Badge } from "~/components/ui/badge";
+} from "~/app/components/ui/card";
+import { Badge } from "~/app/components/ui/badge";
 import { Calendar, CreditCard, ExternalLink, Loader2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { useState } from "react";

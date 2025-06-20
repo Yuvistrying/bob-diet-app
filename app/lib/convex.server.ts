@@ -3,10 +3,10 @@ import { api } from "../../convex/_generated/api";
 
 // Create a server-side Convex client for React Router loaders/actions
 export function getConvexClient() {
-  const convexUrl = process.env.VITE_CONVEX_URL;
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   
   if (!convexUrl) {
-    throw new Error("VITE_CONVEX_URL environment variable is not set");
+    throw new Error("NEXT_PUBLIC_CONVEX_URL environment variable is not set");
   }
   
   return new ConvexHttpClient(convexUrl);

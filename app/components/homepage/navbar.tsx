@@ -3,7 +3,7 @@ import { UserButton } from "@clerk/react-router";
 import { Github, Menu, X } from "lucide-react";
 import React, { useCallback } from "react";
 import { Link } from "react-router";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/app/components/ui/button";
 import { cn } from "~/lib/utils";
 
 const menuItems = [

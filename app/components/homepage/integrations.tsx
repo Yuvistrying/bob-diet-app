@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Link } from "react-router";
-import { LogoIcon } from "~/components/logo";
+import { LogoIcon } from "~/app/components/logo";
 import {
   Convex,
   Polar,
@@ -8,8 +8,8 @@ import {
   ReactRouter,
   TailwindIcon,
   Typescript,
-} from "~/components/logos";
-import { Button } from "~/components/ui/button";
+} from "~/app/components/logos";
+import { Button } from "~/app/components/ui/button";
 import { cn } from "~/lib/utils";
 import { Navbar } from "./navbar";
 

@@ -1,5 +1,5 @@
-import { Card, CardContent } from "~/components/ui/card";
-import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/app/components/ui/card";
+import { Button } from "~/app/components/ui/button";
 import { AlertCircle, Coffee, Sandwich, UtensilsCrossed, Cookie } from "lucide-react";
 import { cn } from "~/lib/utils";
 

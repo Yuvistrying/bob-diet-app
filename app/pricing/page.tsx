@@ -1,10 +1,10 @@
 "use client";
-import { useAuth } from "@clerk/react-router";
+import { useAuth } from "@clerk/nextjs";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { Check, Loader2 } from "lucide-react";
 import * as React from "react";
 import { useState } from "react";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/app/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
+} from "~/app/components/ui/card";
 import { api } from "../../convex/_generated/api";
 
 export default function IntegratedPricing() {
@@ -96,7 +96,7 @@ export default function IntegratedPricing() {
     }
   };
 
-  if (!plans) {
+  if (!plans || !plans.items || plans.items.length === 0) {
     return (
       <section className="flex flex-col items-center justify-center min-h-screen px-4">
         <div className="flex items-center gap-2">
@@ -109,7 +109,20 @@ export default function IntegratedPricing() {
   }
 
   return (
-    <section className="flex flex-col items-center justify-center min-h-screen px-4">
+    <section className="flex flex-col items-center justify-center min-h-screen px-4 relative">
+      {/* Back button for logged in users */}
+      {isSignedIn && (
+        <div className="absolute top-4 left-4">
+          <Button
+            variant="ghost"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2"
+          >
+            ← Back
+          </Button>
+        </div>
+      )}
+      
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Simple, transparent pricing
@@ -216,7 +229,7 @@ export default function IntegratedPricing() {
                         Setting up checkout...
                       </>
                     ) : isCurrentPlan ? (
-                      "✓ Current Plan"
+                      "Manage Subscription"
                     ) : userSubscription?.status === "active" ? (
                       (() => {
                         const currentAmount = userSubscription.amount || 0;
