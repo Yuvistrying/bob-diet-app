@@ -1,4 +1,4 @@
-import { SignUp } from "@clerk/react-router";
+import { SignUp } from "@clerk/nextjs";
 
 export default function SignUpPage() {
   return (

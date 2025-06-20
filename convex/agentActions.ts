@@ -145,8 +145,8 @@ export const chat = action({
     let actualPrompt = prompt;
     
     if (isImageMessage && storageId) {
-      // Keep the clean prompt without image data
-      actualPrompt = prompt.replace("[Image attached] ", "").trim() || "Please analyze this food photo";
+      // Emphasize this is a NEW photo in the prompt itself
+      actualPrompt = "I just uploaded a NEW food photo. Please analyze this NEW image and tell me what food you find in it.";
       // Clear context cache for photo analysis to ensure fresh data
       await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
         cacheKey: "chat_context"
@@ -178,27 +178,27 @@ REQUIRED ACTIONS:
 ${JSON.stringify(lastConfirmFoodData, null, 2)}
 Apologize briefly and log it immediately.`;
     } else if (isImageMessage && storageId) {
-      contextualInstructions += `\n\nIMAGE ANALYSIS: The user has shared a NEW food photo. 
+      contextualInstructions += `\n\nURGENT: NEW PHOTO UPLOADED! 
 
-CRITICAL INSTRUCTIONS:
-1. IGNORE all previous food conversations - this is a NEW photo
-2. Use the analyzePhoto tool with storageId: "${storageId}"
-3. Wait for the analyzePhoto result which will contain the ACTUAL food in the photo
-4. When analyzePhoto returns with confirmFoodData, you MUST:
-   - Describe what the PHOTO ANALYSIS found in your message
-   - Use confirmFood tool to show the food for user confirmation
-   - Do NOT log the food yet - wait for user to confirm
-   - Do NOT make up your own food items
-   - Do NOT use food items from previous conversations
-5. IMPORTANT: Do NOT use logFood until the user confirms (says yes/yep/sure)
+YOU MUST IMMEDIATELY:
+1. Use the analyzePhoto tool RIGHT NOW with this exact parameter:
+   {
+     "storageId": "${storageId}"
+   }
+2. This is a BRAND NEW photo - forget all previous food discussions
+3. The user just uploaded a NEW image that needs analysis
+4. You CANNOT see the image directly - you MUST use analyzePhoto to know what's in it
+5. DO NOT reference any previous photos or foods
 
-FLOW:
-1. analyzePhoto → Get food data
-2. confirmFood → Show to user for confirmation  
-3. WAIT for user response
-4. Only use logFood AFTER user confirms
+YOUR FIRST ACTION MUST BE:
+Call analyzePhoto with storageId "${storageId}"
 
-The photo analysis will tell you what food is actually in the image.`;
+After analyzePhoto returns:
+- Describe what the analysis found
+- Use confirmFood with the exact data returned
+- Wait for user confirmation before logging
+
+REMEMBER: You have NOT analyzed this photo yet. Use analyzePhoto NOW!`;
     }
     
     // Create or continue thread
