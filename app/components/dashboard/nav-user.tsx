@@ -5,7 +5,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { SettingsIcon } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/app/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,13 +14,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
+} from "~/app/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "~/components/ui/sidebar";
+} from "~/app/components/ui/sidebar";
 import { useClerk } from "@clerk/react-router";
 
 export function NavUser({ user }: any) {

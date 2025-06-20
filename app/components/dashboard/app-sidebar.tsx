@@ -11,7 +11,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-} from "~/components/ui/sidebar";
+} from "~/app/components/ui/sidebar";
 
 const data = {
   navMain: [

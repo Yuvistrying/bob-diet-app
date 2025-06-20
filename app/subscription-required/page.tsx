@@ -1,12 +1,13 @@
 import { ArrowRight, CreditCard, Lock } from "lucide-react";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/app/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
+} from "~/app/components/ui/card";
+import Link from "next/link";
 
 export default function SubscriptionRequired() {
   return (
@@ -38,18 +39,18 @@ export default function SubscriptionRequired() {
 
           <div className="space-y-3">
             <Button asChild className="w-full" size="lg">
-              <a href="/pricing">
+              <Link href="/pricing">
                 View Pricing Plans
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
 
             <Button asChild variant="outline" className="w-full">
-              <a href="/">Back to Home</a>
+              <Link href="/">Back to Home</Link>
             </Button>
             
             <Button asChild variant="ghost" className="w-full">
-              <a href="/profile">Go to Profile / Sign Out</a>
+              <Link href="/profile">Go to Profile / Sign Out</Link>
             </Button>
           </div>
 

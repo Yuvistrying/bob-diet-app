@@ -1,5 +1,5 @@
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import { Button } from "~/app/components/ui/button";
+import { Input } from "~/app/components/ui/input";
 import { useState } from "react";
 
 interface QuickResponseOption {
@@ -59,8 +59,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   // Special handling for height_age step
   if (step === "height_age") {
     return (
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-        <div className="space-y-4">
+      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+        <div className="space-y-3">
           {/* Height input with unit toggle */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Height</label>
@@ -158,7 +158,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
             }
           }}
           disabled={isLoading || !ageValue || (heightUnit === "cm" ? !heightValue : !feetValue)}
-          className="w-full h-12 text-base font-medium bg-gray-800 hover:bg-gray-700"
+          className="w-full h-10 text-sm font-medium bg-gray-800 hover:bg-gray-700"
         >
           Continue →
         </Button>
@@ -169,8 +169,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   // Special handling for weight input
   if (step === "current_weight" || step === "target_weight") {
     return (
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-        <div className="space-y-3">
+      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+        <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 block">
             {step === "current_weight" ? "Current Weight" : "Target Weight"}
           </label>
@@ -218,7 +218,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
             }
           }}
           disabled={isLoading || !weightValue}
-          className="w-full h-12 text-base font-medium bg-gray-800 hover:bg-gray-700"
+          className="w-full h-10 text-sm font-medium bg-gray-800 hover:bg-gray-700"
         >
           Continue →
         </Button>
@@ -231,7 +231,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
 
   // For other options, show as large centered buttons
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-2 p-3">
       {step === "goal" && (
         <p className="text-sm text-gray-600 text-center mb-2">
           If you're not sure, describe your situation and I'll help you figure it out!
@@ -243,9 +243,9 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
           variant="outline"
           onClick={() => onSelect(option.value)}
           disabled={isLoading}
-          className="w-full h-16 text-base font-medium hover:bg-gray-50 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-3 border-2"
+          className="w-full h-12 text-sm font-medium hover:bg-gray-50 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 border"
         >
-          {option.icon && <span className="text-2xl">{option.icon}</span>}
+          {option.icon && <span className="text-lg">{option.icon}</span>}
           <span>{option.label}</span>
         </Button>
       ))}

@@ -1,8 +1,8 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/app/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Skeleton } from "~/components/ui/skeleton";
+import { Skeleton } from "~/app/components/ui/skeleton";
 
 export function DietStatusCards() {
   const profile = useQuery(api.userProfiles.getUserProfile, {});
