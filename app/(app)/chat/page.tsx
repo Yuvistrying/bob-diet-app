@@ -10,12 +10,13 @@ import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
 import { Card, CardContent } from "~/app/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown } from "lucide-react";
+import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown, Square } from "lucide-react";
 import { ClientOnly } from "~/app/components/ClientOnly";
 import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
 import { MarkdownMessage } from "~/app/components/MarkdownMessage";
 import { ThemeToggle } from "~/app/components/ThemeToggle";
+import { useStreamingChat } from "~/app/hooks/useStreamingChat";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ interface Message {
   toolCalls?: any[];
   imageUrl?: string;
   storageId?: string;
+  isStreaming?: boolean;
 }
 
 export default function Chat() {
@@ -30,11 +32,8 @@ export default function Chat() {
   const router = useRouter();
   
   // State - Define before using in queries
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
-  const [threadId, setThreadId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -61,14 +60,34 @@ export default function Chat() {
   const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday);
   const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus);
   
-  // Convex action for Agent SDK
-  const sendMessage = useAction(api.agentActions.chat);
+  // Convex action for Agent SDK (fallback for non-streaming)
+  const sendMessageAction = useAction(api.agentActions.chat);
   
   // Convex mutations for file upload
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const storeFileId = useMutation(api.files.storeFileId);
   const resetOnboarding = useMutation(api.onboarding.resetOnboarding);
   const forceCompleteOnboarding = useMutation(api.onboardingFix.forceCompleteOnboarding);
+  
+  // Streaming chat hook first (before using messages)
+  const {
+    messages,
+    isStreaming,
+    threadId,
+    sendMessage: sendStreamingMessage,
+    stopStreaming,
+    setMessages,
+    setThreadId
+  } = useStreamingChat({
+    onComplete: async (newThreadId) => {
+      if (newThreadId && !threadId) {
+        await saveAgentThreadId({ threadId: newThreadId });
+      }
+    },
+    onToolCall: (toolCall) => {
+      console.log('Tool called:', toolCall);
+    }
+  });
   
   // Get all storage IDs from messages that need image URLs
   const storageIdsFromMessages = messages
@@ -252,7 +271,7 @@ export default function Chat() {
       if (profile && hasLoadedHistory && chatHistory !== undefined) {
         try {
           // This will create a new session if needed or return existing one
-          const session = await getOrCreateDailySession({});
+          const session = await getOrCreateDailySession({ forceKeepThread: false });
           
           // Check if this is a new session for today AND we have no messages
           const today = new Date().toISOString().split('T')[0];
@@ -384,7 +403,7 @@ export default function Chat() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if ((!input.trim() && !selectedImage) || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isStreaming) return;
 
     const userMessage = input.trim();
     const hasImage = !!selectedImage;
@@ -433,11 +452,9 @@ export default function Chat() {
       setMessages(prev => [...prev, newUserMessage]);
     }
     setInput("");
-    setIsLoading(true);
 
     try {
       let finalMessage = userMessage;
-      
       let storageId: string | null = null;
       
       // If there's an image, upload it to Convex storage
@@ -452,13 +469,6 @@ export default function Chat() {
           storageId = await uploadPhoto(selectedImage);
           console.log('Upload successful, storageId:', storageId);
           
-          // Now add the message with storageId
-          const messageWithImage: Message = {
-            ...newUserMessage,
-            storageId: storageId
-          };
-          setMessages(prev => [...prev, messageWithImage]);
-          
           finalMessage = userMessage || "Please analyze this food photo";
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
@@ -471,7 +481,6 @@ export default function Chat() {
             role: "assistant",
             content: `Sorry, I couldn't upload the image. Error: ${uploadError.message || 'Unknown error'}. Please try again.`
           }]);
-          setIsLoading(false);
           return;
         }
         
@@ -479,37 +488,16 @@ export default function Chat() {
         clearImage();
       }
       
-      // Send message using Convex Agent SDK
-      const response = await sendMessage({
-        prompt: finalMessage,
-        threadId: threadId || undefined,
-        storageId: storageId as any || undefined, // Type assertion for string -> Id conversion
-      });
+      // Use streaming message send
+      await sendStreamingMessage(
+        finalMessage,
+        threadId || undefined,
+        storageId || undefined
+      );
       
-      // Save threadId for future messages
-      if (response.threadId && !threadId) {
-        setThreadId(response.threadId);
-        // Save to database for persistence across tabs
-        await saveAgentThreadId({ threadId: response.threadId });
-      }
-
-      // Add AI response to messages with tool calls if any
-      console.log("Response from AI:", response);
-      const assistantMessage: Message = { 
-        role: "assistant", 
-        content: response.text || "",
-        toolCalls: response.toolCalls
-      };
-      setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
-      // Add error message
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again."
-      }]);
-    } finally {
-      setIsLoading(false);
+      // Error handling is done in the streaming hook
     }
   };
 
@@ -702,7 +690,7 @@ export default function Chat() {
               variant="ghost"
               size="sm"
               onClick={async () => {
-                setIsLoading(true);
+                // Loading state handled by button disable
                 try {
                   const result = await forceCompleteOnboarding();
                   if (result.error) {
@@ -714,10 +702,10 @@ export default function Chat() {
                   console.error("Error forcing completion:", error);
                   alert("Failed to force complete");
                 } finally {
-                  setIsLoading(false);
+                  // Loading state handled by button disable
                 }
               }}
-              disabled={isLoading}
+              disabled={isStreaming}
               className="text-xs text-red-500"
             >
               🚨 Force Complete
@@ -730,7 +718,7 @@ export default function Chat() {
               size="sm"
               onClick={async () => {
                 if (confirm("Reset onboarding? This will restart the setup process but keep your data.")) {
-                  setIsLoading(true);
+                  // Streaming will handle loading state
                   try {
                     await resetOnboarding();
                     // Refresh the page to restart
@@ -738,12 +726,10 @@ export default function Chat() {
                   } catch (error) {
                     console.error("Error resetting onboarding:", error);
                     alert("Failed to reset onboarding");
-                  } finally {
-                    setIsLoading(false);
                   }
                 }
               }}
-              disabled={isLoading}
+              disabled={isStreaming}
               className="text-xs text-muted-foreground"
             >
               🔄 Reset Onboarding
@@ -768,7 +754,7 @@ export default function Chat() {
               }
               
               if (confirm("Start a new chat? Your food logs will be saved.")) {
-                setIsLoading(true);
+                // Loading state handled by button disable
                 try {
                   // Start new session
                   await startNewChatSession();
@@ -782,11 +768,11 @@ export default function Chat() {
                 } catch (error) {
                   console.error("Error starting new chat:", error);
                 } finally {
-                  setIsLoading(false);
+                  // Loading state handled by button disable
                 }
               }
             }}
-            disabled={isLoading}
+            disabled={isStreaming}
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
@@ -1039,39 +1025,11 @@ export default function Chat() {
                                   setMessages(updatedMessage);
                                 }
                                 
-                                // Always just send "yes" - the backend will use the updated args
-                                const yesMessage: Message = { role: "user", content: "yes" };
-                                setMessages(prev => [...prev, yesMessage]);
-                                setIsLoading(true);
-                                
-                                try {
-                                  // Send confirmation
-                                  const response = await sendMessage({
-                                    prompt: "yes",
-                                    threadId: threadId || undefined,
-                                  });
-                                  
-                                  // Save threadId if new
-                                  if (response.threadId && !threadId) {
-                                    setThreadId(response.threadId);
-                                    await saveAgentThreadId({ threadId: response.threadId });
-                                  }
-                                  
-                                  // Add response
-                                  const assistantMessage: Message = { 
-                                    role: "assistant", 
-                                    content: response.text || "",
-                                    toolCalls: response.toolCalls
-                                  };
-                                  setMessages(prev => [...prev, assistantMessage]);
-                                } catch (error) {
-                                  console.error("Error confirming:", error);
-                                } finally {
-                                  setIsLoading(false);
-                                  setEditingFoodLog(null);
-                                }
+                                // Send confirmation using streaming
+                                await sendStreamingMessage("yes", threadId || undefined);
+                                setEditingFoodLog(null);
                               }}
-                              disabled={isLoading}
+                              disabled={isStreaming}
                             >
                               <Check className="h-4 w-4 mr-2" />
                               Yes, log it! 📝
@@ -1147,7 +1105,7 @@ export default function Chat() {
         })}
         </ClientOnly>
         
-        {isLoading && (
+        {isStreaming && messages[messages.length - 1]?.role === "assistant" && (
           <div className="flex justify-start">
             <div className="flex space-x-1 p-3">
               <div className="w-2 h-2 bg-gray-400 dark:bg-gray-600 rounded-full animate-bounce" />
@@ -1168,44 +1126,10 @@ export default function Chat() {
             step={currentOnboardingStep}
             currentInput={input}
             onSelect={async (value) => {
-              // All responses are sent directly - weight inputs already include unit
-              const userMessage: Message = { 
-                role: "user", 
-                content: value
-              };
-              
-              setMessages(prev => [...prev, userMessage]);
-              setIsLoading(true);
-
-              try {
-                const response = await sendMessage({
-                  prompt: value,
-                  threadId: threadId || undefined,
-                });
-                
-                if (response.threadId && !threadId) {
-                  setThreadId(response.threadId);
-                  // Save to database for persistence across tabs
-                  await saveAgentThreadId({ threadId: response.threadId });
-                }
-
-                const assistantMessage: Message = { 
-                  role: "assistant", 
-                  content: response.text || "",
-                  toolCalls: response.toolCalls
-                };
-                setMessages(prev => [...prev, assistantMessage]);
-              } catch (error) {
-                console.error("Error sending quick response:", error);
-                setMessages(prev => [...prev, {
-                  role: "assistant",
-                  content: "Sorry, I encountered an error. Please try again."
-                }]);
-              } finally {
-                setIsLoading(false);
-              }
+              // Use streaming for quick responses too
+              await sendStreamingMessage(value, threadId || undefined);
             }}
-            isLoading={isLoading}
+            isLoading={isStreaming}
           />
         </div>
       )}
@@ -1294,17 +1218,17 @@ export default function Chat() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask Bob anything"
                   className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 outline-none focus:outline-none focus:ring-0 text-[15px]"
-                  disabled={isLoading}
+                  disabled={isStreaming}
                   style={{ WebkitAppearance: 'none' }}
                 />
                 
                 {/* Send button */}
                 <button
                   type="submit"
-                  disabled={(!input.trim() && !selectedImage) || isLoading}
+                  disabled={(!input.trim() && !selectedImage) || isStreaming}
                   className={cn(
                     "ml-2 rounded-full p-1.5 transition-all focus:outline-none focus:ring-0",
-                    (!input.trim() && !selectedImage) || isLoading
+                    (!input.trim() && !selectedImage) || isStreaming
                       ? "bg-gray-400 dark:bg-gray-700 text-gray-600 dark:text-gray-500 cursor-not-allowed"
                       : "bg-gray-700 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100"
                   )}

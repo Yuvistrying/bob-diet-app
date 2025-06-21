@@ -5,6 +5,7 @@ import { streamText, tool } from "ai";
 import { z } from "zod";
 import { api } from "./_generated/api";
 import { paymentWebhook } from "./subscriptions";
+import { bobAgent, getBobInstructions } from "./bobAgent";
 
 // Define tools for Bob
 const tools = {
@@ -285,6 +286,201 @@ http.route({
   path: "/webhooks/polar",
   method: "POST",
   handler: paymentWebhook,
+});
+
+// New streaming endpoint for Convex Agent
+http.route({
+  path: "/api/agent/stream",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    const { prompt, threadId, storageId, streamMode } = body;
+    
+    // Get auth from header
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    
+    try {
+      // Get user identity
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error("Not authenticated");
+      }
+      const userId = identity.subject;
+      
+      // Check if this is a confirmation response
+      const isConfirmationResponse = 
+        prompt.toLowerCase() === "yes" || 
+        prompt.toLowerCase() === "yep" || 
+        prompt.toLowerCase() === "sure" ||
+        prompt.toLowerCase() === "yes awesome!" ||
+        prompt.toLowerCase().includes("correct") ||
+        prompt.toLowerCase().includes("that's right");
+      
+      // Get or create daily session
+      const session: any = await ctx.runMutation(api.chatSessions.getOrCreateDailySession, {
+        forceKeepThread: isConfirmationResponse
+      });
+      if (!session) throw new Error("Failed to create session");
+      
+      // Use session's threadId if no threadId provided
+      const finalThreadId = threadId || session.threadId;
+      
+      // Get context (simplified for streaming)
+      const [onboardingStatus, profile, hasWeighedToday, minimalContext, preferences] = await Promise.all([
+        ctx.runQuery(api.onboarding.getOnboardingStatus),
+        ctx.runQuery(api.userProfiles.getUserProfile, {}),
+        ctx.runQuery(api.weightLogs.hasLoggedWeightToday),
+        ctx.runQuery(api.chatHistory.getTodayThreadContext),
+        ctx.runQuery(api.userPreferences.getUserPreferences)
+      ]);
+      
+      // Build context
+      const context = {
+        user: {
+          name: profile?.name || "there",
+          goal: profile?.goal || "maintain",
+          currentWeight: profile?.currentWeight,
+          targetWeight: profile?.targetWeight,
+          displayMode: preferences?.displayMode || "standard",
+        },
+        todayProgress: minimalContext?.todaySummary ? {
+          calories: {
+            consumed: minimalContext.todaySummary.caloriesConsumed,
+            target: profile?.dailyCalorieTarget || 2000,
+            remaining: (profile?.dailyCalorieTarget || 2000) - minimalContext.todaySummary.caloriesConsumed,
+          },
+          meals: minimalContext.todaySummary.mealsLogged,
+          protein: {
+            consumed: minimalContext.todaySummary.proteinConsumed,
+            target: profile?.proteinTarget || 150,
+          },
+        } : null,
+      };
+      
+      // Get current time for meal type detection
+      const now = new Date();
+      const hour = now.getHours();
+      const defaultMealType = 
+        hour < 11 ? "breakfast" :
+        hour < 15 ? "lunch" :
+        hour < 18 ? "snack" :
+        "dinner";
+      
+      // Build instructions
+      const instructions = getBobInstructions(
+        context,
+        profile,
+        hasWeighedToday || false,
+        !onboardingStatus?.completed,
+        hour,
+        defaultMealType
+      );
+      
+      // Save user message
+      await ctx.runMutation(api.chatHistory.saveUserMessage, {
+        content: prompt,
+        metadata: { 
+          actionType: storageId ? "photo_analysis" : "text",
+          threadId: finalThreadId,
+          storageId: storageId || undefined
+        }
+      });
+      
+      // Create or continue thread
+      let thread;
+      let activeThreadId = finalThreadId;
+      if (activeThreadId) {
+        const threadResult: any = await bobAgent.continueThread(ctx, { threadId: activeThreadId, userId });
+        thread = threadResult.thread;
+      } else {
+        const threadResult = await bobAgent.createThread(ctx, { userId });
+        thread = threadResult.thread;
+        activeThreadId = threadResult.threadId;
+      }
+      
+      // For now, just use the existing non-streaming approach
+      // TODO: Implement actual streaming with Convex Agent when supported
+      const result: any = await thread.generateText({
+        prompt: storageId ? "I just uploaded a NEW food photo. Please analyze this NEW image." : prompt,
+        system: instructions,
+        maxSteps: 3,
+      });
+      
+      // Extract tool calls from steps
+      let toolCalls: any[] = [];
+      if (result.steps && Array.isArray(result.steps)) {
+        for (const step of result.steps) {
+          if (step.toolCalls && Array.isArray(step.toolCalls)) {
+            toolCalls = [...toolCalls, ...step.toolCalls];
+          }
+        }
+      }
+      
+      // Clean text if onboarding
+      let cleanedText = result.text || "";
+      if (!onboardingStatus?.completed && cleanedText.includes("[EXTRACT:")) {
+        const extractPattern = /\[EXTRACT:(\w+):([^\]]+)\]/g;
+        let match;
+        
+        while ((match = extractPattern.exec(cleanedText)) !== null) {
+          const [_, step, value] = match;
+          await ctx.runMutation(api.onboarding.saveOnboardingProgress, {
+            step,
+            response: value
+          });
+        }
+        
+        cleanedText = cleanedText.replace(/\[EXTRACT:[^\]]+\]/g, '');
+      }
+      
+      // Save Bob's response
+      await ctx.runMutation(api.chatHistory.saveBobMessage, {
+        content: cleanedText,
+        metadata: {
+          actionType: storageId ? "photo_analysis_response" : "general_chat",
+          threadId: activeThreadId,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        }
+      });
+      
+      // Create SSE response
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          // Send the complete response as a single event
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'complete',
+            text: cleanedText,
+            toolCalls: toolCalls,
+            threadId: activeThreadId
+          })}\n\n`));
+          
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        }
+      });
+      
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    } catch (error) {
+      console.error('HTTP action error:', error);
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+  }),
 });
 
 export default http;
