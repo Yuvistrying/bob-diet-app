@@ -41,6 +41,31 @@ export const getChatHistory = query({
   },
 });
 
+// Get messages for a specific thread
+export const getThreadMessages = query({
+  args: {
+    threadId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    
+    const limit = args.limit || 10;
+    
+    // Get messages with the specified threadId in metadata
+    const messages = await ctx.db
+      .query("chatHistory")
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.eq(q.field("metadata.threadId"), args.threadId))
+      .order("desc")
+      .take(limit);
+    
+    // Return in chronological order
+    return messages.reverse();
+  },
+});
+
 // Get today's chat messages
 export const getTodayChats = query({
   handler: async (ctx) => {

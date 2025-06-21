@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { action, internalQuery } from "./_generated/server";
+import { action } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
 // Action to search similar meals using vector embeddings
@@ -83,9 +84,21 @@ export const vectorSearchFoodLogs = internalQuery({
     limit: v.number(),
   },
   handler: async (ctx, { userId, embedding, limit }) => {
-    // For now, return empty results until vector search is properly configured
-    // In production, this would use ctx.db.query("foodLogs").withSearchIndex(...)
+    // Temporarily return empty array until vector search is properly configured
+    // TODO: Implement proper vector search when Convex supports it
     return [];
+    
+    // Original implementation for reference:
+    // const results = await ctx.db
+    //   .query("foodLogs")
+    //   .withSearchIndex("by_embedding", (q: any) => 
+    //     q
+    //       .search("embedding", embedding)
+    //       .eq("userId", userId)
+    //   )
+    //   .take(limit);
+    // 
+    // return results;
   },
 });
 
@@ -96,9 +109,21 @@ export const vectorSearchChatHistory = internalQuery({
     limit: v.number(),
   },
   handler: async (ctx, { userId, embedding, limit }) => {
-    // For now, return empty results until vector search is properly configured
-    // In production, this would use ctx.db.query("chatHistory").withSearchIndex(...)
+    // Temporarily return empty array until vector search is properly configured
+    // TODO: Implement proper vector search when Convex supports it
     return [];
+    
+    // Original implementation for reference:
+    // const results = await ctx.db
+    //   .query("chatHistory")
+    //   .withSearchIndex("by_embedding", (q: any) => 
+    //     q
+    //       .search("embedding", embedding)
+    //       .eq("userId", userId)
+    //   )
+    //   .take(limit);
+    // 
+    // return results;
   },
 });
 
@@ -109,8 +134,20 @@ export const vectorSearchPhotos = internalQuery({
     limit: v.number(),
   },
   handler: async (ctx, { userId, embedding, limit }) => {
-    // For now, return empty results until vector search is properly configured
-    // In production, this would use ctx.db.query("photoAnalyses").withSearchIndex(...)
+    // Temporarily return empty array until vector search is properly configured
+    // TODO: Implement proper vector search when Convex supports it
     return [];
+    
+    // Original implementation for reference:
+    // const results = await ctx.db
+    //   .query("photoAnalyses")
+    //   .withSearchIndex("by_embedding", (q: any) => 
+    //     q
+    //       .search("embedding", embedding)
+    //       .eq("userId", userId)
+    //   )
+    //   .take(limit);
+    // 
+    // return results;
   },
 });

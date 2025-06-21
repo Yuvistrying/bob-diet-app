@@ -24,6 +24,7 @@ export const getUserPreferences = query({
         language: "en",
         darkMode: false,
         cuteMode: false,
+        agentThreadId: undefined,
         reminderSettings: {
           weighInReminder: true,
           mealReminders: false,
