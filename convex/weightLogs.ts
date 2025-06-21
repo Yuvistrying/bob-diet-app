@@ -611,6 +611,32 @@ export const getMonthlyProgress = query({
   },
 });
 
+// Get weight logs for date range (for analytics)
+export const getWeightLogsRange = query({
+  args: {
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    
+    const logs = await ctx.db
+      .query("weightLogs")
+      .withIndex("by_user_date")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), identity.subject),
+          q.gte(q.field("date"), args.startDate),
+          q.lte(q.field("date"), args.endDate)
+        )
+      )
+      .collect();
+    
+    return logs.sort((a, b) => a.date.localeCompare(b.date));
+  },
+});
+
 // Get yearly progress
 export const getYearlyProgress = query({
   handler: async (ctx) => {

@@ -11,6 +11,19 @@ async function getUserId(ctx: any): Promise<string> {
   return identity.subject;
 }
 
+// Create a new thread
+export const createThread = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
+    
+    const { threadId } = await bobAgent.createThread(ctx, { userId });
+    return { threadId };
+  },
+});
+
 // Main chat action with agent
 export const chat = action({
   args: {

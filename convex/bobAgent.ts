@@ -261,49 +261,50 @@ export const analyzePhoto = createTool({
         };
       }
       
-      // Generate embedding from photo metadata if available
+      // Generate embedding from photo analysis data
       let enhancedEstimate = null;
-      if (analysis.metadata) {
-        const metadataText = `${analysis.metadata.visualDescription} ${analysis.metadata.platingStyle} ${analysis.metadata.portionSize}`;
-        const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
-          text: metadataText,
-        });
+      
+      // Create descriptive text for embedding even without metadata
+      const foodDescriptions = analysis.foods.map((f: any) => `${f.quantity} ${f.name}`).join(", ");
+      const embeddingText = analysis.metadata 
+        ? `${foodDescriptions} ${analysis.metadata.visualDescription} ${analysis.metadata.platingStyle} ${analysis.metadata.portionSize}`
+        : foodDescriptions;
         
-        // Search for similar past photos
-        const similarPhotos = await ctx.runQuery(api.photos.searchSimilar, {
-          userId: userId,
-          embedding: embedding,
-          limit: 3,
-        });
+      const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
+        text: embeddingText,
+      });
+      
+      // Search for similar past photos
+      const similarPhotos = await ctx.runAction(api.vectorSearch.searchSimilarPhotos, {
+        embedding: embedding,
+        limit: 3,
+      });
+      
+      // Enhance analysis with historical data
+      if (similarPhotos.length > 0) {
+        const avgCalories = Math.round(
+          similarPhotos.reduce((sum: number, p: any) => sum + p.analysis.totalCalories, 0) / similarPhotos.length
+        );
         
-        // Enhance analysis with historical data
-        if (similarPhotos.length > 0) {
-          const avgCalories = Math.round(
-            similarPhotos.reduce((sum: number, p: any) => sum + p.analysis.totalCalories, 0) / similarPhotos.length
-          );
-          
-          const confidence = 
-            analysis.overallConfidence === "low" && 
-            Math.abs(avgCalories - analysis.totalCalories) < 100 
-              ? "medium" 
-              : analysis.overallConfidence;
-          
-          enhancedEstimate = {
-            historicalAverage: avgCalories,
-            similarMealsFound: similarPhotos.length,
-            adjustedConfidence: confidence,
-            suggestion: `Based on ${similarPhotos.length} similar meals you've had before, this is likely around ${avgCalories} calories`,
-          };
-        }
+        const confidence = 
+          analysis.overallConfidence === "low" && 
+          Math.abs(avgCalories - analysis.totalCalories) < 100 
+            ? "medium" 
+            : analysis.overallConfidence;
+        
+        enhancedEstimate = {
+          historicalAverage: avgCalories,
+          similarMealsFound: similarPhotos.length,
+          adjustedConfidence: confidence,
+          suggestion: `Based on ${similarPhotos.length} similar meals you've had before, this is likely around ${avgCalories} calories`,
+        };
       }
       
-      // Save analysis with embedding
+      // Save analysis with embedding (always include embedding)
       const photoId = await ctx.runAction(api.vision.savePhotoAnalysis, {
         storageId: storageId as any, // Type assertion needed for string -> Id conversion
         analysis,
-        embedding: analysis.metadata ? await ctx.runAction(api.embeddings.generateEmbedding, {
-          text: `${analysis.metadata.visualDescription} ${analysis.metadata.platingStyle} ${analysis.metadata.portionSize}`,
-        }) : undefined,
+        embedding: embedding, // Use the embedding we already generated
       });
       
       // Track usage
@@ -505,7 +506,7 @@ const openai = createOpenAI({
 
 // Create the Bob agent
 export const bobAgent = new Agent(components.agent, {
-  chat: anthropic("claude-sonnet-4-20250514"),  // Claude for EVERYTHING!
+  chat: anthropic("claude-sonnet-4-20250514"),  // Claude 4 Sonnet
   instructions: "You are Bob, a friendly AI diet coach.", // Default, will be overridden per message
   tools: { confirmFood, logFood, logWeight, showProgress, findSimilarMeals, analyzePhoto },
   maxSteps: 5, // Allow multiple tool calls in one response
