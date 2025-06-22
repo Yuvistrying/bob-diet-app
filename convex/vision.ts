@@ -212,3 +212,15 @@ export const searchSimilarPhotos = action({
     return results;
   },
 });
+
+// Public action wrapper for analyzeFood
+export const analyzeFoodPublic = action({
+  args: {
+    storageId: v.id("_storage"),
+    context: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // Call the internal action
+    return await ctx.runAction(internal.vision.analyzeFood, args);
+  },
+});

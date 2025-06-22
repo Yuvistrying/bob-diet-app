@@ -21,15 +21,15 @@ export const generateDailySummaries = internalAction({
       endTime: yesterdayEnd,
     });
     
-    const userIds = [...new Set(messages.map(m => m.userId))];
+    const userIds = [...new Set(messages.map((m: any) => m.userId))];
     console.log(`Found ${userIds.length} users with activity on ${dateStr}`);
     
     // Generate summary for each user
     for (const userId of userIds) {
       try {
         const userMessages = messages
-          .filter(m => m.userId === userId)
-          .map(m => ({
+          .filter((m: any) => m.userId === userId)
+          .map((m: any) => ({
             role: m.role,
             content: m.content,
             metadata: m.metadata,

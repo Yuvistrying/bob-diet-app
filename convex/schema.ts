@@ -102,10 +102,16 @@ export default defineSchema({
     date: v.string(), // YYYY-MM-DD format
     time: v.string(), // HH:MM format
     notes: v.optional(v.string()),
-    createdAt: v.number()
+    createdAt: v.number(),
+    embedding: v.optional(v.array(v.float64()))
   })
   .index("by_user_date", ["userId", "date"])
-  .index("by_user_created", ["userId", "createdAt"]),
+  .index("by_user_created", ["userId", "createdAt"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 1536,
+    filterFields: ["userId"]
+  }),
 
   // Goal history tracking
   goalHistory: defineTable({
@@ -191,7 +197,12 @@ export default defineSchema({
       actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
       toolCalls: v.optional(v.any()), // Store tool calls for persistence
       threadId: v.optional(v.string()), // Agent thread ID for conversation continuity
-      storageId: v.optional(v.id("_storage")) // Image storage ID if photo was uploaded
+      storageId: v.optional(v.id("_storage")), // Image storage ID if photo was uploaded
+      usage: v.optional(v.object({ // Token usage tracking
+        promptTokens: v.number(),
+        completionTokens: v.number(),
+        totalTokens: v.number()
+      }))
     })),
     embedding: v.optional(v.array(v.float64()))
   })
@@ -318,7 +329,73 @@ export default defineSchema({
     lastMessageId: v.optional(v.id("chatHistory")),
     createdAt: v.number(),
     updatedAt: v.number(),
+    embedding: v.optional(v.array(v.float64()))
   })
   .index("by_user_date", ["userId", "date"])
-  .index("by_user_created", ["userId", "createdAt"]),
+  .index("by_user_created", ["userId", "createdAt"])
+  .vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 1536,
+    filterFields: ["userId"]
+  }),
+
+  // Context cache for performance optimization
+  contextCache: defineTable({
+    userId: v.string(),
+    cacheKey: v.string(), // "coreStats", "profile", "weightTrend", "preferences"
+    data: v.any(),
+    ttl: v.number(), // Time to live in milliseconds
+    expiresAt: v.number(), // Timestamp when cache expires
+    invalidateOn: v.array(v.string()), // Events that clear this cache
+  })
+  .index("by_user_key", ["userId", "cacheKey"])
+  .index("by_expiry", ["expiresAt"]),
+
+  // Daily thread tracking for Agent
+  dailyThreads: defineTable({
+    userId: v.string(),
+    date: v.string(), // YYYY-MM-DD
+    threadId: v.string(), // Agent thread ID
+    messageCount: v.number(),
+    firstMessageAt: v.number(),
+    lastMessageAt: v.number(),
+    summary: v.optional(v.object({
+      foodsLogged: v.number(),
+      totalCalories: v.number(),
+      weightLogged: v.boolean(),
+      keyTopics: v.array(v.string()),
+    })),
+  })
+  .index("by_user_date", ["userId", "date"])
+  .index("by_thread", ["threadId"]),
+
+  // Pending confirmations for food logging
+  pendingConfirmations: defineTable({
+    userId: v.string(),
+    threadId: v.string(),
+    toolCallId: v.string(),
+    confirmationData: v.object({
+      description: v.string(),
+      items: v.array(v.object({
+        name: v.string(),
+        quantity: v.string(),
+        calories: v.number(),
+        protein: v.number(),
+        carbs: v.number(),
+        fat: v.number(),
+      })),
+      totalCalories: v.number(),
+      totalProtein: v.number(),
+      totalCarbs: v.number(),
+      totalFat: v.number(),
+      mealType: v.string(),
+      confidence: v.string(),
+    }),
+    createdAt: v.number(),
+    expiresAt: v.number(), // Auto-cleanup after 5 minutes
+    status: v.string(), // "pending", "confirmed", "expired"
+  })
+  .index("by_user_thread", ["userId", "threadId"])
+  .index("by_expires", ["expiresAt"])
+  .index("by_status", ["status"]),
 });
