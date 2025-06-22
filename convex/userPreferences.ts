@@ -56,11 +56,10 @@ export const saveAgentThreadId = mutation({
     
     if (existing) {
       await ctx.db.patch(existing._id, {
-        agentThreadId: args.threadId,
         updatedAt: Date.now(),
       });
     } else {
-      // Create new preferences with thread ID
+      // Create new preferences
       await ctx.db.insert("userPreferences", {
         userId: identity.subject,
         displayMode: "standard",
@@ -78,7 +77,6 @@ export const saveAgentThreadId = mutation({
             weighIn: "08:00",
           }
         },
-        agentThreadId: args.threadId,
         updatedAt: Date.now(),
       });
     }
