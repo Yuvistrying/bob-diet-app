@@ -9,6 +9,7 @@
  */
 
 import type * as agentActions from "../agentActions.js";
+import type * as agentBridge from "../agentBridge.js";
 import type * as backgroundJobHandlers from "../backgroundJobHandlers.js";
 import type * as backgroundJobs from "../backgroundJobs.js";
 import type * as bob from "../bob.js";
@@ -57,6 +58,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   agentActions: typeof agentActions;
+  agentBridge: typeof agentBridge;
   backgroundJobHandlers: typeof backgroundJobHandlers;
   backgroundJobs: typeof backgroundJobs;
   bob: typeof bob;

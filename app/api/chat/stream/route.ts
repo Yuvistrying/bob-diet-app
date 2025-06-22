@@ -16,6 +16,30 @@ const MODEL_ID = 'claude-sonnet-4-20250514';
 // Create a Convex client for server-side use
 const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+// Intent detection utility
+function detectIntent(userMessage: string) {
+  const msg = userMessage.toLowerCase();
+  
+  const intents = {
+    food: /\b(ate|had|eat|eating|food|meal|breakfast|lunch|dinner|snack|pizza|chicken|salad)\b/i,
+    weight: /\b(weight|weigh|scale|kg|lbs|pounds|kilos)\b/i,
+    progress: /\b(progress|today|left|remaining|how|calories|status)\b/i,
+    photo: /\b(photo|image|picture|upload)\b/i,
+    greeting: /^(hi|hello|hey|good morning|morning)\b/i,
+    confirmation: /^(yes|yep|sure|ok|correct|right|confirm)\b/i,
+    search: /\b(similar|before|past|history|had before|eaten before|last time)\b/i,
+  };
+  
+  const detected = [];
+  for (const [intent, regex] of Object.entries(intents)) {
+    if (regex.test(msg)) {
+      detected.push(intent);
+    }
+  }
+  
+  return detected;
+}
+
 export async function POST(req: Request) {
   console.log("[Chat Stream API] Request received at:", new Date().toISOString());
   console.log("[Chat Stream API] Environment check:", {
@@ -54,12 +78,21 @@ export async function POST(req: Request) {
     const { prompt, threadId, storageId, disableTools, debugMinimal } = body;
     console.log("[Chat Stream API] Request body:", { prompt, threadId, storageId, disableTools, debugMinimal });
     
+    // Get or create Agent thread
+    const agentContext = await convexClient.action(api.agentBridge.loadAgentContext, {
+      threadId: threadId || undefined,
+      includeHistory: true,
+    });
+    
+    const activeThreadId = agentContext.threadId;
+    console.log("[Chat Stream API] Agent thread:", activeThreadId);
+    
     // Save user message first
     await convexClient.mutation(api.chatHistory.saveUserMessage, {
       content: prompt,
       metadata: { 
         actionType: storageId ? "photo_analysis" : "text",
-        threadId: threadId || undefined,
+        threadId: activeThreadId,
         storageId: storageId || undefined
       }
     });
@@ -151,14 +184,19 @@ IMPORTANT RULES:
       const shouldUseTools = !disableTools;
       console.log("[Chat Stream API] Tools enabled:", shouldUseTools);
       
-      // Create tools object
+      // Detect user intent for smart tool loading
+      const intents = detectIntent(prompt);
+      console.log("[Chat Stream API] Detected intents:", intents);
+      
+      // Create tools object based on intent
       const allTools: any = {};
       
       if (shouldUseTools) {
-        console.log("[Chat Stream API] Creating tools...");
+        console.log("[Chat Stream API] Creating tools based on intent...");
         
-        // Always include these basic tools
-        allTools.confirmFood = tool({
+        // Load food tools if food intent detected
+        if (intents.includes('food') || intents.includes('confirmation')) {
+          allTools.confirmFood = tool({
           description: "Show food understanding and ask for confirmation before logging",
           parameters: z.object({
             description: z.string().describe("Natural description of the food"),
@@ -183,7 +221,7 @@ IMPORTANT RULES:
           },
         });
         
-        allTools.logFood = tool({
+          allTools.logFood = tool({
           description: "Actually log the food after user confirmation",
           parameters: z.object({
             description: z.string(),
@@ -219,9 +257,10 @@ IMPORTANT RULES:
             }
           },
         });
+        }
         
-        // Add photo tool only if storageId is provided
-        if (storageId) {
+        // Add photo tool if photo intent or storageId provided
+        if (storageId || intents.includes('photo')) {
           allTools.analyzePhoto = tool({
             description: "Analyze a food photo to estimate calories and macros",
             parameters: z.object({
@@ -263,8 +302,9 @@ IMPORTANT RULES:
           });
         }
         
-        // Add remaining tools
-        allTools.logWeight = tool({
+        // Add weight tool if weight intent detected
+        if (intents.includes('weight')) {
+          allTools.logWeight = tool({
           description: "Log user's weight",
           parameters: z.object({
             weight: z.number().describe("Weight value"),
@@ -281,8 +321,42 @@ IMPORTANT RULES:
             }
           },
         });
+        }
         
-        allTools.showProgress = tool({
+        // Add search tool if search intent detected
+        if (intents.includes('search') || intents.includes('food')) {
+          allTools.findSimilarMeals = tool({
+            description: "Search for similar meals from user's history",
+            parameters: z.object({
+              searchText: z.string().describe("Description of the meal to search for"),
+              limit: z.number().default(3).describe("Number of similar meals to return"),
+            }),
+            execute: async (args) => {
+              try {
+                const results = await convexClient.action(
+                  api.agentBridge.searchSimilarMeals,
+                  args
+                );
+                
+                if (results.length === 0) {
+                  return { message: "No similar meals found in your history." };
+                }
+                
+                return {
+                  meals: results,
+                  message: `Found ${results.length} similar meals you've had before.`
+                };
+              } catch (error: any) {
+                console.error("[findSimilarMeals] Error:", error);
+                return { error: true, message: error.message };
+              }
+            },
+          });
+        }
+        
+        // Add progress tool if progress intent or as default
+        if (intents.includes('progress') || Object.keys(allTools).length === 0) {
+          allTools.showProgress = tool({
           description: "Show user's daily progress and remaining calories/macros",
           parameters: z.object({
             showDetailed: z.boolean().default(false).describe("Whether to show detailed macro breakdown"),
@@ -313,6 +387,7 @@ IMPORTANT RULES:
             }
           },
         });
+        }
         
         console.log("[Chat Stream API] Tools created:", Object.keys(allTools));
       }
@@ -342,14 +417,35 @@ IMPORTANT RULES:
           errorString: error.toString()
         });
       },
-      onFinish: async ({ text, toolCalls }) => {
+      onFinish: async ({ text, toolCalls, usage }) => {
         console.log("[Chat Stream API] Finished with text:", text);
-        // Save the complete message to Convex
+        console.log("[Chat Stream API] Token usage:", usage);
+        // Save to Agent thread with error handling
+        try {
+          await convexClient.action(api.agentBridge.saveStreamedMessage, {
+            threadId: activeThreadId,
+            message: {
+              role: "assistant",
+              content: text,
+            },
+            toolCalls: toolCalls || [],
+            usage: usage ? {
+              promptTokens: usage.promptTokens || 0,
+              completionTokens: usage.completionTokens || 0,
+              totalTokens: usage.totalTokens || 0,
+            } : undefined,
+          });
+        } catch (agentError: any) {
+          console.error("[Chat Stream API] Failed to save to Agent:", agentError);
+          // Don't throw - we still want to save to regular chat history
+        }
+        
+        // Also save to regular chat history for backward compatibility
         await convexClient.mutation(api.chatHistory.saveBobMessage, {
           content: text,
           metadata: {
             actionType: storageId ? "photo_analysis_response" : "general_chat",
-            threadId,
+            threadId: activeThreadId,
             toolCalls: toolCalls || undefined,
           }
         });
