@@ -358,6 +358,8 @@ export default defineSchema({
     messageCount: v.number(),
     firstMessageAt: v.number(),
     lastMessageAt: v.number(),
+    isComplete: v.optional(v.boolean()),
+    completedAt: v.optional(v.number()),
     summary: v.optional(v.object({
       foodsLogged: v.number(),
       totalCalories: v.number(),
