@@ -63,8 +63,8 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
 
     try {
       const token = await getToken();
-      console.log("[useStreamingChat] Sending request to /api/chat/stream");
-      const response = await fetch("/api/chat/stream", {
+      console.log("[useStreamingChat] Sending request to /api/chat/stream-v2");
+      const response = await fetch("/api/chat/stream-v2", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -173,8 +173,23 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
                 }
                 break;
                 
-              case '9': // Tool result
-                if (data.type === 'tool-result') {
+              case '9': // Tool call (Vercel AI SDK format)
+                // Handle tool calls with direct properties
+                if (data.toolCallId && data.toolName && data.args) {
+                  const toolCall = {
+                    toolCallId: data.toolCallId,
+                    toolName: data.toolName,
+                    args: data.args
+                  };
+                  toolCalls.push(toolCall);
+                  if (options.onToolCall) {
+                    options.onToolCall(toolCall);
+                  }
+                }
+                break;
+                
+              case 'a': // Tool result (Vercel AI SDK format)
+                if (data.toolCallId && data.result) {
                   // Update the tool call with its result
                   const toolCallIndex = toolCalls.findIndex(tc => tc.toolCallId === data.toolCallId);
                   if (toolCallIndex !== -1) {

@@ -48,6 +48,8 @@ export const saveDailySummary = mutation({
       )
       .first();
     
+    let summaryId: any;
+    
     if (existing) {
       await ctx.db.patch(existing._id, {
         summary: args.summary,
@@ -55,8 +57,9 @@ export const saveDailySummary = mutation({
         lastMessageId: args.lastMessageId,
         updatedAt: Date.now(),
       });
+      summaryId = existing._id;
     } else {
-      await ctx.db.insert("conversationSummaries", {
+      summaryId = await ctx.db.insert("conversationSummaries", {
         userId: identity.subject,
         date: args.date,
         summary: args.summary,
@@ -66,6 +69,13 @@ export const saveDailySummary = mutation({
         updatedAt: Date.now(),
       });
     }
+    
+    // Generate embedding asynchronously
+    ctx.scheduler.runAfter(0, api.embeddings.embedConversationSummary, {
+      summaryId,
+      date: args.date,
+      summary: args.summary,
+    });
   },
 });
 
