@@ -106,6 +106,7 @@ export default function Chat() {
   const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
   const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
   const getOrCreateDailySession = useMutation(api.chatSessions.getOrCreateDailySession);
+  const getOrCreateDailyThread = useMutation(api.agentBridge.getOrCreateDailyThread);
   const updateTheme = useMutation(api.userPreferences.updateTheme);
 
   // Define isOnboarding early to use in useEffects
@@ -303,6 +304,44 @@ export default function Chat() {
 
 
 
+  // Manage daily threads
+  useEffect(() => {
+    const checkDailyThread = async () => {
+      if (!isSignedIn || isOnboarding) return;
+      
+      const today = new Date().toDateString();
+      const lastThreadDate = localStorage.getItem('lastThreadDate');
+      
+      if (lastThreadDate !== today) {
+        // Create new daily thread
+        try {
+          const { threadId: newThreadId, isNew } = await getOrCreateDailyThread();
+          setThreadId(newThreadId);
+          localStorage.setItem('lastThreadDate', today);
+          localStorage.setItem('currentThreadId', newThreadId);
+          
+          if (isNew) {
+            // Clear messages for fresh start
+            setMessages([{
+              role: "assistant",
+              content: `Good morning! 🌟 Ready to make today a healthy one? What did you have for breakfast?`
+            }]);
+          }
+        } catch (error) {
+          console.error("Error creating daily thread:", error);
+        }
+      } else {
+        // Use existing thread
+        const savedThreadId = localStorage.getItem('currentThreadId');
+        if (savedThreadId && !threadId) {
+          setThreadId(savedThreadId);
+        }
+      }
+    };
+    
+    checkDailyThread();
+  }, [isSignedIn, isOnboarding, getOrCreateDailyThread, threadId, setThreadId, setMessages]);
+  
   // Load today's chat history on mount
   useEffect(() => {
     if (chatHistory && !hasLoadedHistory) {
