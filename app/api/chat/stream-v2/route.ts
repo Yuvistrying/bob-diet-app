@@ -1,45 +1,21 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { streamText, tool } from "ai";
-import { z } from "zod";
+import { streamText } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import { api, internal } from "../../../../convex/_generated/api";
-import { getBobSystemPrompt } from "../../../../convex/lib/bobPrompts";
+import { getBobSystemPrompt, buildPromptContext } from "../../../../convex/prompts";
+import { createTools, detectIntent, getToolsForIntent } from "../../../../convex/tools";
 
-// Same Anthropic setup
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
+// Log if API key is present (without exposing it)
+console.log("[stream-v2] Anthropic API key present:", !!process.env.ANTHROPIC_API_KEY);
+
 const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-// Same intent detection
-function detectIntent(userMessage: string) {
-  const msg = userMessage.toLowerCase();
-  
-  const intents = {
-    food: /\b(ate|had|eat|eating|food|meal|breakfast|lunch|dinner|snack|log|for me)\b/i,
-    weight: /\b(weight|weigh|scale|kg|lbs|pounds|kilos)\b/i,
-    progress: /\b(progress|today|left|remaining|how|calories|status)\b/i,
-    photo: /\b(photo|image|picture|upload)\b/i,
-    greeting: /^(hi|hello|hey|good morning|morning)\b/i,
-    confirmation: /^(yes|yep|sure|ok|correct|right|confirm)\b/i,
-    search: /\b(similar|before|past|history|had before|eaten before|last time)\b/i,
-  };
-  
-  const detected = [];
-  for (const [intent, regex] of Object.entries(intents)) {
-    if (regex.test(msg)) {
-      detected.push(intent);
-    }
-  }
-  
-  return detected;
-}
-
 export async function POST(req: Request) {
-  console.log("[Chat Stream V2] Request received");
-  
   try {
     const { userId, getToken } = await auth();
     if (!userId) {
@@ -54,7 +30,15 @@ export async function POST(req: Request) {
     
     convexClient.setAuth(token);
 
-    const { prompt, threadId: providedThreadId, storageId } = await req.json();
+    const body = await req.json();
+    const { prompt, threadId: providedThreadId, storageId } = body;
+    
+    console.log("[stream-v2] Request received:", {
+      promptLength: prompt?.length || 0,
+      hasPrompt: !!prompt,
+      hasStorageId: !!storageId,
+      providedThreadId
+    });
     
     // 1. Get or create thread (simplified)
     const threadResult = await convexClient.mutation(api.threads.getOrCreateDailyThread, {});
@@ -71,7 +55,7 @@ export async function POST(req: Request) {
     });
     
     // 3. Build context with direct queries
-    const [profile, todayStats, latestWeight, preferences, pendingConfirmation, threadMessages] = await Promise.all([
+    const [profile, todayStats, latestWeight, preferences, pendingConfirmation, threadMessages, calibrationData] = await Promise.all([
       // User profile
       convexClient.query(api.userProfiles.getUserProfile, {}),
       // Today's food stats
@@ -88,7 +72,9 @@ export async function POST(req: Request) {
       convexClient.query(api.threads.getThreadMessages, {
         threadId,
         limit: 10
-      })
+      }),
+      // Calibration insights
+      convexClient.query(api.calibration.getLatestCalibration)
     ]);
     
     // Build coreStats object to match expected format
@@ -107,285 +93,176 @@ export async function POST(req: Request) {
       hour < 18 ? "snack" :
       "dinner";
     
-    // 5. Build system prompt (centralized)
-    const systemPrompt = getBobSystemPrompt({
-      userName: coreStats.profile.name,
-      caloriesRemaining: coreStats.caloriesRemaining,
-      proteinConsumed: coreStats.todayStats.protein,
-      proteinTarget: coreStats.profile.proteinTarget,
-      hasWeighedToday: coreStats.hasWeighedToday,
-      isStealthMode: preferences?.displayMode === "stealth",
-      currentHour: hour,
-      mealType: defaultMealType,
-      pendingConfirmation: pendingConfirmation ? {
+    // 5. Build system prompt using centralized prompts
+    const promptContext = buildPromptContext(
+      coreStats.profile,
+      coreStats.todayStats,
+      preferences,
+      calibrationData,
+      pendingConfirmation ? {
         description: pendingConfirmation.confirmationData.description,
         totalCalories: pendingConfirmation.confirmationData.totalCalories,
         items: pendingConfirmation.confirmationData.items,
-      } : undefined,
-    });
+      } : undefined
+    );
     
-    // 6. Detect intents for smart tool loading
+    let systemPrompt = getBobSystemPrompt(promptContext);
+    
+    // Add photo analysis instruction if storageId is present
+    if (storageId) {
+      systemPrompt = `${systemPrompt}\n\nThe user has uploaded a food photo. Use the analyzePhoto tool immediately to analyze it, then use confirmFood to show what you found.`;
+      
+      console.log("[stream-v2] Photo upload detected with storageId:", storageId);
+    }
+    
+    // 6. Detect intents and create tools using centralized system
     const intents = detectIntent(prompt);
-    const isConfirmingFood = intents.includes('confirmation') && pendingConfirmation;
-    const needsFoodTools = !intents.length || 
-      intents.some(i => ['food', 'photo', 'search'].includes(i)) || 
-      isConfirmingFood;
+    const tools = createTools(
+      convexClient,
+      userId,
+      threadId,
+      storageId,
+      pendingConfirmation
+    );
     
-    // 7. Create tools (exact same as before)
-    const tools: any = {};
+    console.log("[stream-v2] Available tools:", Object.keys(tools));
     
-    // Food tools
-    if (needsFoodTools) {
-      tools.confirmFood = tool({
-        description: "Show food understanding and ask for confirmation before logging",
-        parameters: z.object({
-          description: z.string(),
-          items: z.array(z.object({
-            name: z.string(),
-            quantity: z.string(),
-            calories: z.number(),
-            protein: z.number(),
-            carbs: z.number(),
-            fat: z.number(),
-          })),
-          totalCalories: z.number(),
-          totalProtein: z.number(),
-          totalCarbs: z.number(),
-          totalFat: z.number(),
-          mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
-          confidence: z.enum(["low", "medium", "high"]),
-        }),
-        execute: async (args) => {
-          // Save pending confirmation
-          const toolCallId = `confirm_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-          await convexClient.mutation(api.pendingConfirmations.savePendingConfirmation, {
-            threadId,
-            toolCallId,
-            confirmationData: args,
+    // 7. Stream response
+    try {
+      console.log("[stream-v2] Starting stream with:", {
+        hasTools: Object.keys(tools).length > 0,
+        toolNames: Object.keys(tools),
+        messagesCount: threadMessages.length,
+        systemPromptLength: systemPrompt.length,
+        hasStorageId: !!storageId
+      });
+
+      // Log the actual messages being sent
+      console.log("[stream-v2] Thread messages:", threadMessages.map((m: any) => ({
+        role: m.role,
+        contentLength: m.content?.length || 0,
+        hasContent: !!m.content
+      })));
+
+      // Prepare messages - ensure we have valid content
+      const messages = threadMessages.length > 0 
+        ? threadMessages.map((m: any) => ({
+            role: m.role,
+            content: m.content || "",
+          }))
+        : [{
+            role: "user" as const,
+            content: prompt || "Please analyze this food photo"
+          }];
+      
+      console.log("[stream-v2] Prepared messages:", messages.length);
+
+      const result = streamText({
+        model: anthropic('claude-sonnet-4-20250514'),
+        system: systemPrompt,
+        messages,
+        tools: Object.keys(tools).length > 0 ? tools : undefined,
+        maxSteps: 5,
+        toolChoice: storageId ? { type: 'any' } : undefined, // Let the model decide
+        onToolCall: async ({ toolCall }) => {
+          console.log("[stream-v2] Tool called:", {
+            toolName: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            hasArgs: !!toolCall.args
           });
-          return args;
+        },
+        onFinish: async ({ text, toolCalls, usage }: any) => {
+          console.log("[stream-v2] Stream finished:", { 
+            hasText: !!text, 
+            textLength: text?.length,
+            toolCallsCount: toolCalls?.length 
+          });
+          
+          // Only save assistant message if there's actual content
+          if (text && text.trim().length > 0) {
+            await convexClient.mutation(api.threads.saveMessage, {
+              threadId,
+              role: "assistant",
+              content: text,
+              toolCalls: toolCalls || [],
+              metadata: {
+                usage: usage ? {
+                  promptTokens: usage.promptTokens || 0,
+                  completionTokens: usage.completionTokens || 0,
+                  totalTokens: usage.totalTokens || 0,
+                } : undefined,
+              }
+            });
+          } else {
+            console.log("[stream-v2] Skipping save of empty assistant message");
+          }
         },
       });
       
-      tools.logFood = tool({
-        description: "Actually log the food after user confirmation",
-        parameters: z.object({
-          description: z.string(),
-          items: z.array(z.object({
-            name: z.string(),
-            quantity: z.string(),
-            calories: z.number(),
-            protein: z.number(),
-            carbs: z.number(),
-            fat: z.number(),
-          })),
-          totalCalories: z.number(),
-          totalProtein: z.number(),
-          totalCarbs: z.number(),
-          totalFat: z.number(),
-          mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
-          aiEstimated: z.boolean().default(true),
-          confidence: z.string(),
-        }),
-        execute: async (args) => {
-          // Log the food
-          const logId = await convexClient.mutation(api.foodLogs.logFood, {
-            description: args.description,
-            foods: args.items,
-            meal: args.mealType,
-            aiEstimated: true,
-            confidence: args.confidence,
-          });
-          
-          // Generate embedding for vector search with rich context
-          try {
-            console.log("[logFood] Generating embedding for food log:", logId);
-            
-            // Create descriptive text for embedding
-            const foodDescriptions = args.items.map((f: any) => `${f.quantity} ${f.name}`).join(", ");
-            const embeddingText = `${args.mealType}: ${foodDescriptions} - ${args.description} (${args.totalCalories} calories, ${args.totalProtein}g protein)`;
-            
-            const embedding = await convexClient.action(api.embeddings.generateEmbedding, {
-              text: embeddingText,
-            });
-            
-            // Update food log with embedding
-            await convexClient.mutation(api.embeddings.updateFoodLogEmbedding, {
-              foodLogId: logId,
-              embedding,
-            });
-            
-            console.log("[logFood] Embedding generated and saved successfully");
-          } catch (embeddingError: any) {
-            console.error("[logFood] Failed to generate embedding:", embeddingError);
-            // Don't fail the whole operation if embedding fails
-          }
-          
-          if (pendingConfirmation) {
-            await convexClient.mutation(api.pendingConfirmations.confirmPendingConfirmation, {
-              confirmationId: pendingConfirmation._id,
-            });
-          }
-          
-          return { success: true };
+      console.log("[stream-v2] Stream created successfully");
+      console.log("[stream-v2] Result type:", typeof result);
+      console.log("[stream-v2] Result has toDataStreamResponse:", typeof result.toDataStreamResponse);
+      
+      return result.toDataStreamResponse();
+    } catch (streamError: any) {
+      console.error("[stream-v2] Stream error:", streamError);
+      console.error("[stream-v2] Stream error details:", {
+        name: streamError.name,
+        message: streamError.message,
+        stack: streamError.stack,
+        cause: streamError.cause
+      });
+      
+      // Try to provide more specific error info
+      if (streamError.message?.includes('model')) {
+        console.error("[stream-v2] Model error - check if claude-sonnet-4-20250514 is available");
+      }
+      if (streamError.response?.data) {
+        console.error("[stream-v2] API response data:", streamError.response.data);
+      }
+      
+      // Don't throw, return error response
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          const errorData = JSON.stringify("Failed to process your request. Please try again.");
+          controller.enqueue(encoder.encode(`3:${errorData}\n`));
+          controller.close();
+        }
+      });
+      
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
         },
       });
     }
-    
-    // Photo tool
-    if (storageId || intents.includes('photo')) {
-      tools.analyzePhoto = tool({
-        description: "Analyze a food photo to estimate calories and macros",
-        parameters: z.object({
-          storageId: z.string().optional(),
-          mealContext: z.string().optional(),
-        }),
-        execute: async (args) => {
-          const result = await convexClient.action(api.vision.analyzeFoodPublic, {
-            storageId: args.storageId || storageId,
-            context: args.mealContext,
-          });
-          
-          if (!result.error) {
-            await convexClient.mutation(api.photoAnalyses.savePhotoAnalysis, {
-              userId,
-              timestamp: Date.now(),
-              storageId: args.storageId || storageId,
-              analysis: {
-                foods: result.foods,
-                totalCalories: result.totalCalories,
-                totalProtein: result.totalProtein,
-                totalCarbs: result.totalCarbs,
-                totalFat: result.totalFat,
-                overallConfidence: result.confidence || result.overallConfidence,
-                metadata: result.metadata,
-              },
-              confirmed: false,
-              embedding: result.embedding,
-            });
-          }
-          
-          return result;
-        },
-      });
-    }
-    
-    // Weight tool
-    if (intents.includes('weight')) {
-      tools.logWeight = tool({
-        description: "Log user's weight",
-        parameters: z.object({
-          weight: z.number(),
-          unit: z.enum(["kg", "lbs"]),
-          notes: z.string().optional(),
-        }),
-        execute: async (args) => {
-          const logId = await convexClient.mutation(api.weightLogs.logWeight, args);
-          
-          // Note: Embedding generation for notes is handled by the mutation itself
-          // via scheduler if notes are provided
-          
-          return { success: true, logId };
-        },
-      });
-    }
-    
-    // Progress tool
-    if (intents.includes('progress') || Object.keys(tools).length === 0) {
-      tools.showProgress = tool({
-        description: "Show user's daily progress",
-        parameters: z.object({
-          showDetailed: z.boolean().default(false),
-        }),
-        execute: async (args) => {
-          const stats = await convexClient.query(api.foodLogs.getTodayStats);
-          const profile = await convexClient.query(api.userProfiles.getUserProfile, {});
-          
-          if (!stats || !profile) {
-            return { summary: "No data available yet." };
-          }
-          
-          return {
-            calories: { 
-              consumed: stats.calories, 
-              target: profile.dailyCalorieTarget, 
-              remaining: profile.dailyCalorieTarget - stats.calories 
-            },
-            protein: { 
-              consumed: stats.protein, 
-              target: profile.proteinTarget, 
-              remaining: profile.proteinTarget - stats.protein 
-            },
-            meals: stats.meals || 0,
-          };
-        },
-      });
-    }
-    
-    // Search tool
-    if (intents.includes('search') || intents.includes('food')) {
-      tools.findSimilarMeals = tool({
-        description: "Search for similar meals from history using vector search",
-        parameters: z.object({
-          searchText: z.string(),
-          limit: z.number().default(3),
-        }),
-        execute: async (args) => {
-          // Use vector search to find similar meals
-          const results = await convexClient.action(
-            api.vectorSearch.searchSimilarMeals,
-            {
-              searchText: args.searchText,
-              limit: args.limit,
-            }
-          );
-          return {
-            meals: results,
-            message: results.length ? 
-              `Found ${results.length} similar meals.` : 
-              "No similar meals found."
-          };
-        },
-      });
-    }
-    
-    // 8. Stream response
-    const result = streamText({
-      model: anthropic('claude-sonnet-4-20250514'),
-      system: systemPrompt,
-      messages: threadMessages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      tools: Object.keys(tools).length > 0 ? tools : undefined,
-      maxSteps: 5,
-      onFinish: async ({ text, toolCalls, usage }: any) => {
-        // Save assistant message
-        await convexClient.mutation(api.threads.saveMessage, {
-          threadId,
-          role: "assistant",
-          content: text,
-          toolCalls: toolCalls || [],
-          metadata: {
-            usage: usage ? {
-              promptTokens: usage.promptTokens || 0,
-              completionTokens: usage.completionTokens || 0,
-              totalTokens: usage.totalTokens || 0,
-            } : undefined,
-          }
-        });
-      },
-    });
-    
-    return result.toDataStreamResponse();
     
   } catch (error: any) {
-    console.error("[Chat Stream V2] Error:", error);
+    console.error("[Chat Stream V2] Error:", error.message);
+    console.error("[Chat Stream V2] Full error:", error);
+    console.error("[Chat Stream V2] Stack trace:", error.stack);
     
+    // Provide more specific error messages
+    let errorMessage = 'An error occurred';
+    
+    // Log specific error details
+    if (error.response) {
+      console.error("[Chat Stream V2] Response error:", error.response);
+    }
+    if (error.code) {
+      console.error("[Chat Stream V2] Error code:", error.code);
+    }
+    
+    // Return error in proper format
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
-        controller.enqueue(encoder.encode(`3:"${error.message || 'Internal server error'}"\n`));
+        // Send the error in the correct SSE format
+        const errorData = JSON.stringify(errorMessage);
+        controller.enqueue(encoder.encode(`3:${errorData}\n`));
         controller.close();
       }
     });

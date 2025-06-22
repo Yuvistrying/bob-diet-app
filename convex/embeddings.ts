@@ -14,6 +14,12 @@ export const generateEmbedding = action({
     text: v.string(),
   },
   handler: async (ctx, { text }) => {
+    // Skip embedding for empty or very short text
+    if (!text || text.trim().length < 3) {
+      console.log("[generateEmbedding] Skipping embedding for empty/short text:", text);
+      return Array(1536).fill(0); // Return zero vector for compatibility
+    }
+    
     console.log("[generateEmbedding] Generating embedding for text:", text.substring(0, 100) + "...");
     
     const model = openai.embedding("text-embedding-3-small");

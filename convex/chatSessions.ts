@@ -74,7 +74,6 @@ export const getOrCreateDailySession = mutation({
     
     if (preferences) {
       await ctx.db.patch(preferences._id, {
-        agentThreadId: undefined,
         updatedAt: Date.now(),
       });
     }
@@ -123,7 +122,6 @@ export const startNewChatSession = mutation({
     
     if (preferences) {
       await ctx.db.patch(preferences._id, {
-        agentThreadId: undefined,
         updatedAt: now,
       });
     }

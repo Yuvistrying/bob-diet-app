@@ -31,7 +31,7 @@ export const savePhotoAnalysis = mutation({
       })),
     }),
     confirmed: v.boolean(),
-    embedding: v.array(v.float64()),
+    embedding: v.optional(v.array(v.float64())),
   },
   handler: async (ctx, args) => {
     const photoId = await ctx.db.insert("photoAnalyses", args);

@@ -90,7 +90,6 @@ export default defineSchema({
         dinner: v.optional(v.string())
       })
     }),
-    agentThreadId: v.optional(v.string()), // Store the agent thread ID
     updatedAt: v.number()
   }).index("by_user", ["userId"]),
 
@@ -196,7 +195,7 @@ export default defineSchema({
       weightLogId: v.optional(v.id("weightLogs")),
       actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
       toolCalls: v.optional(v.any()), // Store tool calls for persistence
-      threadId: v.optional(v.string()), // Agent thread ID for conversation continuity
+      threadId: v.optional(v.string()), // Thread ID for conversation continuity
       storageId: v.optional(v.id("_storage")), // Image storage ID if photo was uploaded
       usage: v.optional(v.object({ // Token usage tracking
         promptTokens: v.number(),
@@ -351,11 +350,11 @@ export default defineSchema({
   .index("by_user_key", ["userId", "cacheKey"])
   .index("by_expiry", ["expiresAt"]),
 
-  // Daily thread tracking for Agent
+  // Daily thread tracking
   dailyThreads: defineTable({
     userId: v.string(),
     date: v.string(), // YYYY-MM-DD
-    threadId: v.string(), // Agent thread ID
+    threadId: v.string(), // Thread ID
     messageCount: v.number(),
     firstMessageAt: v.number(),
     lastMessageAt: v.number(),
