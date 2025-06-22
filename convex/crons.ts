@@ -14,4 +14,15 @@ crons.weekly(
   internal.calibration.runWeeklyCalibration
 );
 
+// Daily thread reset - runs every day at 5 AM local time (using UTC conversion)
+// Note: This runs at 10 AM UTC which is ~5 AM EST
+crons.daily(
+  "daily thread reset",
+  {
+    hourUTC: 10,  // 10 AM UTC = 5 AM EST
+    minuteUTC: 0
+  },
+  internal.threads.resetDailyThreads
+);
+
 export default crons;

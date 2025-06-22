@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { api } from "./_generated/api";
 
 // Simple thread management without Convex Agent
@@ -58,26 +58,36 @@ export const saveMessage = mutation({
     if (!identity) throw new Error("Not authenticated");
     
     // Save to chat history
+    const messageMetadata = args.metadata ? {
+      ...args.metadata,
+      threadId: args.threadId,
+      toolCalls: args.toolCalls,
+    } : {
+      threadId: args.threadId,
+      toolCalls: args.toolCalls,
+    };
+    
+    console.log(`[saveMessage] Saving ${args.role} message to thread ${args.threadId}: "${args.content.substring(0, 50)}..."`);
+    
     const messageId = await ctx.db.insert("chatHistory", {
       userId: identity.subject,
       role: args.role,
       content: args.content,
       timestamp: Date.now(),
-      metadata: args.metadata ? {
-        ...args.metadata,
-        threadId: args.threadId,
-        toolCalls: args.toolCalls,
-      } : {
-        threadId: args.threadId,
-        toolCalls: args.toolCalls,
-      },
+      metadata: messageMetadata,
     });
     
-    // Generate embedding asynchronously
-    ctx.scheduler.runAfter(0, api.embeddings.embedNewChatMessage, {
-      chatId: messageId,
-      content: args.content,
-    });
+    // Generate embedding asynchronously (skip for simple messages)
+    const simpleMessages = ['hi', 'hello', 'hey', 'yes', 'no', 'thanks', 'ok', 'bye'];
+    const contentLower = args.content.toLowerCase().trim();
+    const isSimple = simpleMessages.includes(contentLower) || contentLower.length < 10;
+    
+    if (!isSimple) {
+      ctx.scheduler.runAfter(0, api.embeddings.embedNewChatMessage, {
+        chatId: messageId,
+        content: args.content,
+      });
+    }
     
     // Update thread stats
     const thread = await ctx.db
@@ -108,8 +118,20 @@ export const getThreadMessages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     
-    const limit = args.limit || 20;
+    const limit = args.limit || 100;
     
+    // Get the daily thread info to find the timestamp range
+    const thread = await ctx.db
+      .query("dailyThreads")
+      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .first();
+    
+    if (!thread) {
+      console.log(`[getThreadMessages] No thread found for ${args.threadId}`);
+      return [];
+    }
+    
+    // Get ALL messages from today - both food logs AND conversation
     const messages = await ctx.db
       .query("chatHistory")
       .withIndex("by_user_timestamp", q => 
@@ -117,9 +139,21 @@ export const getThreadMessages = query({
       )
       .order("desc")
       .filter(q => 
-        q.eq(q.field("metadata.threadId"), args.threadId)
+        q.gte(q.field("timestamp"), thread.firstMessageAt)
       )
       .take(limit);
+    
+    console.log(`[getThreadMessages] Found ${messages.length} total messages for thread ${args.threadId}`);
+    
+    // Debug: Show what types of messages we have
+    const conversationMessages = messages.filter(m => m.metadata?.threadId === args.threadId);
+    const foodLogMessages = messages.filter(m => m.metadata?.foodLogId);
+    console.log(`[getThreadMessages] Breakdown: ${conversationMessages.length} conversation, ${foodLogMessages.length} food logs`);
+    
+    if (messages.length > 0) {
+      const last = messages[0];
+      console.log(`[getThreadMessages] Most recent: [${last.role}] "${last.content.substring(0, 50)}..."`);
+    }
     
     return messages.reverse(); // Return in chronological order
   },
@@ -203,5 +237,52 @@ export const cleanupOldThreads = mutation({
     }
     
     return { deleted };
+  },
+});
+
+// Daily thread reset - called by cron job
+export const resetDailyThreads = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // This runs at 5 AM to prepare for the new day
+    // We don't actually delete threads, just mark yesterday as complete
+    // The getOrCreateDailyThread will handle creating new threads
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Mark yesterday's threads as complete
+    const yesterdayThreads = await ctx.db
+      .query("dailyThreads")
+      .filter(q => q.eq(q.field("date"), yesterdayStr))
+      .collect();
+    
+    for (const thread of yesterdayThreads) {
+      await ctx.db.patch(thread._id, {
+        isComplete: true,
+        completedAt: Date.now()
+      });
+    }
+    
+    // Clear any stale pending confirmations from yesterday
+    const stalePendingConfirmations = await ctx.db
+      .query("pendingConfirmations")
+      .filter(q => 
+        q.and(
+          q.eq(q.field("status"), "pending"),
+          q.lt(q.field("_creationTime"), Date.now() - 24 * 60 * 60 * 1000)
+        )
+      )
+      .collect();
+    
+    for (const confirmation of stalePendingConfirmations) {
+      await ctx.db.delete(confirmation._id);
+    }
+    
+    return {
+      threadsCompleted: yesterdayThreads.length,
+      confirmationsCleared: stalePendingConfirmations.length
+    };
   },
 });

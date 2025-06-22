@@ -9,6 +9,9 @@ interface PromptContext {
   isStealthMode: boolean;
   currentHour: number;
   mealType: string;
+  todaySummary?: string;
+  yesterdayTotal?: string;
+  todayFoodLogs?: any[];
   pendingConfirmation?: {
     description: string;
     totalCalories: number;
@@ -37,13 +40,23 @@ export function getBobSystemPrompt(context: PromptContext): string {
     currentHour,
     mealType,
     pendingConfirmation,
-    calibrationInsights
+    calibrationInsights,
+    todayFoodLogs
   } = context;
+  
+  // Format today's food logs for the prompt
+  const foodLogDetails = todayFoodLogs && todayFoodLogs.length > 0 
+    ? todayFoodLogs.map((log: any) => 
+        `${log.meal}: ${log.foods.map((f: any) => `${f.name} (${f.calories}cal)`).join(", ")}`
+      ).join("\n")
+    : "";
   
   return `You are Bob, ${userName}'s friendly diet coach. Be helpful and efficient.
 
 STATS: ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein
 ${!hasWeighedToday ? "No weigh-in yet today." : ""}
+${context.yesterdayTotal ? `YESTERDAY: ${context.yesterdayTotal}` : ""}
+${foodLogDetails ? `TODAY'S ACTUAL MEALS:\n${foodLogDetails}` : "No meals logged yet today."}
 ${pendingConfirmation ? `PENDING: "${pendingConfirmation.description}" - if user says yes, logFood immediately` : ""}
 ${calibrationInsights?.lastAdjustment ? `CALIBRATION: Adjusted target to ${calibrationInsights.lastAdjustment.newTarget} cal on ${calibrationInsights.lastAdjustment.date} (${calibrationInsights.lastAdjustment.reason})` : ""}
 
@@ -52,6 +65,7 @@ PERSONALITY:
 - Show enthusiasm for their progress
 - Keep responses brief but friendly
 - Never be dismissive or impatient
+- DON'T repeat back food logs unless specifically asked
 
 CONVERSATION STYLE:
 1. Respond helpfully to greetings (e.g., "Hey! What's on your plate today?")
@@ -62,10 +76,11 @@ CONVERSATION STYLE:
 CORE RULES:
 1. Food mention → "Let me confirm:" + confirmFood tool
 2. User confirms → logFood tool + "Logged! X calories left."
-3. Photo → analyzePhoto → confirmFood immediately (NO GREETING, NO HELLO)
+3. Photo → analyzePhoto (ONCE) → confirmFood immediately (NO GREETING, NO HELLO)
 4. ${isStealthMode ? "Stealth mode: no numbers" : "Include calories/macros"}
 5. Current: ${currentHour}:00 (${mealType})
 6. NEVER greet when user says "Please analyze this food photo" - just analyze
+7. NEVER call analyzePhoto more than once - if you get an error, use confirmFood with estimated values
 
 GOOD vs BAD EXAMPLES:
 ❌ "Stop saying hey and tell me what you need help with."
@@ -140,7 +155,11 @@ export function buildPromptContext(
   stats: any,
   preferences: any,
   calibrationData?: any,
-  pendingConfirmation?: any
+  pendingConfirmation?: any,
+  todaySummary?: string,
+  yesterdayTotal?: string,
+  hasWeighedToday?: boolean,
+  todayFoodLogs?: any[]
 ): PromptContext {
   const hour = new Date().getHours();
   
@@ -149,10 +168,13 @@ export function buildPromptContext(
     caloriesRemaining: (profile?.dailyCalorieTarget || 2000) - (stats?.calories || 0),
     proteinConsumed: stats?.protein || 0,
     proteinTarget: profile?.proteinTarget || 150,
-    hasWeighedToday: false, // Would need weight log check
+    hasWeighedToday: hasWeighedToday || false,
     isStealthMode: preferences?.displayMode === "stealth",
     currentHour: hour,
     mealType: getMealType(hour),
+    todaySummary,
+    yesterdayTotal,
+    todayFoodLogs,
     pendingConfirmation,
     calibrationInsights: calibrationData
   };

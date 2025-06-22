@@ -105,17 +105,27 @@ export function createTools(
 
   // Photo analysis tool (only if storageId provided)
   if (storageId) {
+    let hasAnalyzed = false; // Track if we've already analyzed this photo
+    
     tools.analyzePhoto = tool({
-      description: "Analyze a food photo to estimate calories and macros",
+      description: "Analyze a food photo to estimate calories and macros. Only call this ONCE per photo.",
       parameters: z.object({
         mealContext: z.string().optional().describe("Additional context about the meal type"),
       }),
       execute: async (args) => {
         console.log("[analyzePhoto tool] Execute called with storageId:", storageId);
         
+        // Prevent multiple analyses of the same photo
+        if (hasAnalyzed) {
+          console.warn("[analyzePhoto tool] Already analyzed this photo, returning cached result");
+          return { error: "Photo already analyzed. Use confirmFood to show the results." };
+        }
+        
         if (!storageId) {
           return { error: "No image uploaded. Please upload an image first." };
         }
+        
+        hasAnalyzed = true; // Mark as analyzed
         
         try {
           console.log("[analyzePhoto tool] Calling vision.analyzeFoodPublic");
