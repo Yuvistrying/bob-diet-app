@@ -63,8 +63,11 @@ export const saveMessage = mutation({
       role: args.role,
       content: args.content,
       timestamp: Date.now(),
-      metadata: {
+      metadata: args.metadata ? {
         ...args.metadata,
+        threadId: args.threadId,
+        toolCalls: args.toolCalls,
+      } : {
         threadId: args.threadId,
         toolCalls: args.toolCalls,
       },

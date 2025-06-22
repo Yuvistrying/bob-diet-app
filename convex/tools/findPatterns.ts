@@ -1,6 +1,7 @@
 import { createTool } from "@convex-dev/agent";
 import { z } from "zod";
 import { api } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel";
 
 export const findPatterns = createTool({
   description: "Analyze user's eating patterns and find correlations with weight changes",
@@ -87,7 +88,7 @@ export const findPatterns = createTool({
           prevDate.setDate(prevDate.getDate() - 1);
           const prevDateStr = prevDate.toISOString().split('T')[0];
           
-          const dayFoods = foodLogs.filter(f => f.date === prevDateStr);
+          const dayFoods = foodLogs.filter((f: Doc<"foodLogs">) => f.date === prevDateStr);
           for (const log of dayFoods) {
             for (const food of log.foods) {
               const key = food.name.toLowerCase();
@@ -183,11 +184,11 @@ export const findPatterns = createTool({
         const successfulDays = [];
         
         for (const [date, calories] of Object.entries(
-          foodLogs.reduce((acc: any, log) => {
+          foodLogs.reduce((acc: any, log: Doc<"foodLogs">) => {
             acc[log.date] = (acc[log.date] || { calories: 0, protein: 0, foods: [] });
             acc[log.date].calories += log.totalCalories;
             acc[log.date].protein += log.totalProtein;
-            acc[log.date].foods.push(...log.foods.map(f => f.name));
+            acc[log.date].foods.push(...log.foods.map((f: any) => f.name));
             return acc;
           }, {})
         )) {

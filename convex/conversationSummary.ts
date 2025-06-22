@@ -219,10 +219,10 @@ export const compressHistoricalContext = query({
     const allPatterns = new Set<string>();
     const allGoals = new Set<string>();
     
-    summaries.forEach(summary => {
-      summary?.summary.keyPoints.forEach(p => allKeyPoints.add(p));
-      summary?.summary.foodPatterns.forEach(p => allPatterns.add(p));
-      summary?.summary.goals.forEach(g => allGoals.add(g));
+    summaries.forEach((summary: Doc<"conversationSummaries"> | null) => {
+      summary?.summary.keyPoints.forEach((p: string) => allKeyPoints.add(p));
+      summary?.summary.foodPatterns.forEach((p: string) => allPatterns.add(p));
+      summary?.summary.goals.forEach((g: string) => allGoals.add(g));
     });
     
     compressed.establishedFacts = Array.from(allKeyPoints);
