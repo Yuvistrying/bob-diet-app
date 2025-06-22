@@ -16,6 +16,7 @@ import type * as chatHistory from "../chatHistory.js";
 import type * as chatSessions from "../chatSessions.js";
 import type * as conversationSummary from "../conversationSummary.js";
 import type * as crons from "../crons.js";
+import type * as dailySummary from "../dailySummary.js";
 import type * as debugSubscription from "../debugSubscription.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   chatSessions: typeof chatSessions;
   conversationSummary: typeof conversationSummary;
   crons: typeof crons;
+  dailySummary: typeof dailySummary;
   debugSubscription: typeof debugSubscription;
   embeddings: typeof embeddings;
   files: typeof files;

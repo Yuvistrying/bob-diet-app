@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { logger } from "~/app/utils/logger";
 
 interface StreamingMessage {
   role: "user" | "assistant";
@@ -113,6 +114,8 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
         for (const line of lines) {
           if (line.trim() === '') continue;
           
+          logger.debug('[useStreamingChat] Processing line:', line);
+          
           // Parse SSE format: "TYPE:DATA"
           if (line.startsWith('0:')) {
             // Text delta (type 0)
@@ -127,7 +130,7 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
                   : msg
               ));
             } catch (e) {
-              console.error('Failed to parse text delta:', e);
+              logger.error('Failed to parse text delta:', e);
             }
           } else if (line.startsWith('9:')) {
             // Tool call (type 9)
@@ -143,20 +146,35 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
                 options.onToolCall(toolCall);
               }
             } catch (e) {
-              console.error('Failed to parse tool call:', e);
+              logger.error('Failed to parse tool call:', e);
             }
           } else if (line.startsWith('3:')) {
             // Error (type 3)
+            logger.error('[useStreamingChat] Received error line from server:', line);
             try {
               const errorMessage = JSON.parse(line.slice(2));
-              console.error('[useStreamingChat] Received error from server:', errorMessage);
+              logger.error('[useStreamingChat] Parsed error message:', errorMessage);
               throw new Error(errorMessage);
             } catch (e) {
-              console.error('[useStreamingChat] Failed to parse error:', line, e);
+              logger.error('[useStreamingChat] Failed to parse error:', e);
+              logger.error('[useStreamingChat] Original line was:', line);
               throw new Error('Stream error');
             }
+          } else if (line.startsWith('f:')) {
+            // Metadata/frame info (type f) - contains messageId
+            // We can safely ignore this for now
+          } else if (line.startsWith('e:')) {
+            // End event (type e) - contains finish reason and usage stats
+            // We can safely ignore this for now
+          } else if (line.startsWith('d:')) {
+            // Done event (type d) - final usage stats
+            // We can safely ignore this for now
+          } else if (line.startsWith('a:')) {
+            // Tool result (type a) - tool execution results
+            // We can safely ignore this for now
           } else {
-            console.log('[useStreamingChat] Unknown SSE line type:', line);
+            // Only log truly unknown types
+            logger.warn('[useStreamingChat] Unknown SSE line type:', line.substring(0, 2));
           }
         }
       }
@@ -181,7 +199,7 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
         }
       }
     } catch (error: any) {
-      console.error("[useStreamingChat] Error:", error);
+      logger.error("[useStreamingChat] Error:", error);
       
       // Update assistant message with error
       setMessages(prev => prev.map((msg, idx) => 

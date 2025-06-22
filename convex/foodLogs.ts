@@ -47,6 +47,26 @@ export const getTodayFoodLogs = query({
   },
 });
 
+// Get today's logs (alias for streaming route)
+export const getTodayLogs = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    const logs = await ctx.db
+      .query("foodLogs")
+      .withIndex("by_user_date", (q) => 
+        q.eq("userId", identity.subject).eq("date", today)
+      )
+      .order("asc")
+      .collect();
+    
+    return logs;
+  },
+});
+
 // Get food logs for a specific date
 export const getFoodLogsByDate = query({
   args: { 

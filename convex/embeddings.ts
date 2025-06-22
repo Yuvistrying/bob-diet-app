@@ -136,7 +136,37 @@ export const embedNewChatMessage = action({
     content: v.string(),
   },
   handler: async (ctx, { chatId, content }) => {
-    // Generate embedding
+    // Skip embeddings for simple messages
+    const simpleMessages = [
+      'hi', 'hello', 'hey', 'yes', 'no', 'thanks', 'thank you', 
+      'ok', 'okay', 'sure', 'yep', 'nope', 'yeah', 'good morning',
+      'good afternoon', 'good evening', 'bye', 'goodbye', 'please'
+    ];
+    
+    const contentLower = content.toLowerCase().trim();
+    
+    // Skip if it's a simple message or too short
+    if (simpleMessages.includes(contentLower) || contentLower.length < 10) {
+      console.log("[embedNewChatMessage] Skipping embedding for simple message:", content);
+      // Store zero vector for compatibility
+      await ctx.runMutation(api.embeddings.updateChatEmbedding, {
+        chatId,
+        embedding: Array(1536).fill(0),
+      });
+      return;
+    }
+    
+    // Skip embeddings for confirmation responses
+    if (contentLower.match(/^(yes|no|correct|wrong|right|confirm|cancel)/)) {
+      console.log("[embedNewChatMessage] Skipping embedding for confirmation:", content);
+      await ctx.runMutation(api.embeddings.updateChatEmbedding, {
+        chatId,
+        embedding: Array(1536).fill(0),
+      });
+      return;
+    }
+    
+    // Generate embedding for meaningful messages
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: content,
     });
