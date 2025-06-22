@@ -112,6 +112,17 @@ export const logWeight = mutation({
       });
     }
     
+    // Generate embedding if notes are provided
+    if (args.notes) {
+      ctx.scheduler.runAfter(0, api.embeddings.embedWeightLogNote, {
+        weightLogId: logId,
+        weight: args.weight,
+        unit: args.unit,
+        date,
+        notes: args.notes,
+      });
+    }
+    
     // Clear cached context since weight data has changed
     // Clear cached context when weight is logged
     await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {

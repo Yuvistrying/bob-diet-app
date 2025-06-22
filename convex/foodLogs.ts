@@ -27,6 +27,26 @@ export const getTodayStats = query({
   },
 });
 
+// Get today's food logs (used by cache)
+export const getTodayFoodLogs = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    const logs = await ctx.db
+      .query("foodLogs")
+      .withIndex("by_user_date", (q) => 
+        q.eq("userId", identity.subject).eq("date", today)
+      )
+      .collect();
+    
+    // Sort by time
+    return logs.sort((a, b) => a.time.localeCompare(b.time));
+  },
+});
+
 // Get food logs for a specific date
 export const getFoodLogsByDate = query({
   args: { 
@@ -158,17 +178,10 @@ export const logFood = mutation({
       createdAt: Date.now(),
     });
     
-    // Generate embedding for the food log asynchronously
-    ctx.scheduler.runAfter(0, api.embeddings.embedNewFoodLog, {
-      foodLogId,
-      description: args.description,
-    });
+    // Note: Embedding is generated in the streaming route with richer context
+    // Removed duplicate embedding generation here
     
-    // Clear cached context since food data has changed
-    // Clear cached context when food is logged
-    await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
-      cacheKey: "chat_context"
-    });
+    // Note: No cache invalidation needed - stream-v2 uses direct queries
     
     return foodLogId;
   },

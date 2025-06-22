@@ -10,7 +10,7 @@ import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
 import { Card, CardContent } from "~/app/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown, Square } from "lucide-react";
+import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown } from "lucide-react";
 import { ClientOnly } from "~/app/components/ClientOnly";
 import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
@@ -34,6 +34,8 @@ export default function Chat() {
   // State - Define before using in queries
   const [input, setInput] = useState("");
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const loadingRef = useRef(false); // Prevent double loads in StrictMode
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -60,7 +62,7 @@ export default function Chat() {
   const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday);
   const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus);
   
-  // Convex action for Agent SDK (fallback for non-streaming)
+  // Convex action for Agent SDK (not used with streaming)
   const sendMessageAction = useAction(api.agentActions.chat);
   
   // Convex mutations for file upload
@@ -68,8 +70,13 @@ export default function Chat() {
   const storeFileId = useMutation(api.files.storeFileId);
   const resetOnboarding = useMutation(api.onboarding.resetOnboarding);
   const forceCompleteOnboarding = useMutation(api.onboardingFix.forceCompleteOnboarding);
+  const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
+  const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
+  const getOrCreateDailySession = useMutation(api.chatSessions.getOrCreateDailySession);
+  const updateTheme = useMutation(api.userPreferences.updateTheme);
+  const getOrCreateDailyThread = useMutation(api.threads.getOrCreateDailyThread);
   
-  // Streaming chat hook first (before using messages)
+  // Streaming chat hook - this provides messages, threadId, setMessages, etc.
   const {
     messages,
     isStreaming,
@@ -101,13 +108,6 @@ export default function Chat() {
       ? { storageIds: storageIdsFromMessages }
       : "skip"
   );
-  
-  // Convex mutation to save thread ID
-  const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
-  const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
-  const getOrCreateDailySession = useMutation(api.chatSessions.getOrCreateDailySession);
-  const getOrCreateDailyThread = useMutation(api.agentBridge.getOrCreateDailyThread);
-  const updateTheme = useMutation(api.userPreferences.updateTheme);
 
   // Define isOnboarding early to use in useEffects
   const isOnboarding = !onboardingStatus?.completed;
@@ -222,40 +222,55 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Save confirmation state to localStorage whenever it changes
+  // Save confirmation state to localStorage whenever it changes (debounced)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Get all current confirmations from messages
-      const currentConfirmations = messages
-        .map((msg, idx) => {
-          const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood");
-          if (confirmCall) {
-            return {
-              index: idx,
-              content: msg.content,
-              args: confirmCall.args,
-              triggerContent: messages[idx - 1]?.content || ""
-            };
-          }
-          return null;
-        })
-        .filter(Boolean);
-      
-      // Only save if there are confirmations to save
-      if (currentConfirmations.length > 0 || confirmedFoodLogs.size > 0) {
-        const persistData = {
-          date: today,
-          confirmations: currentConfirmations,
-          confirmed: Array.from(confirmedFoodLogs),
-          editedItems: editedFoodItems
-        };
-        
-        console.log('Saving confirmed bubbles to localStorage:', Array.from(confirmedFoodLogs));
-        localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
-      }
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+    
+    // Set a new timeout to save after 500ms of no changes
+    saveTimeoutRef.current = setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Get all current confirmations from messages
+        const currentConfirmations = messages
+          .map((msg, idx) => {
+            const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood");
+            if (confirmCall) {
+              return {
+                index: idx,
+                content: msg.content,
+                args: confirmCall.args,
+                triggerContent: messages[idx - 1]?.content || ""
+              };
+            }
+            return null;
+          })
+          .filter(Boolean);
+        
+        // Only save if there are confirmations to save
+        if (currentConfirmations.length > 0 || confirmedFoodLogs.size > 0) {
+          const persistData = {
+            date: today,
+            confirmations: currentConfirmations,
+            confirmed: Array.from(confirmedFoodLogs),
+            editedItems: editedFoodItems
+          };
+          
+          console.log('Saving confirmed bubbles to localStorage:', Array.from(confirmedFoodLogs));
+          localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
+        }
+      }
+    }, 500);
+    
+    // Cleanup on unmount
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [confirmedFoodLogs, editedFoodItems, messages]);
 
   // Load thread ID from preferences
@@ -272,7 +287,7 @@ export default function Chat() {
       if (profile && hasLoadedHistory && chatHistory !== undefined) {
         try {
           // This will create a new session if needed or return existing one
-          const session = await getOrCreateDailySession({ forceKeepThread: false });
+          const session = await getOrCreateDailySession({});
           
           // Check if this is a new session for today AND we have no messages
           const today = new Date().toISOString().split('T')[0];
@@ -304,47 +319,13 @@ export default function Chat() {
 
 
 
-  // Manage daily threads
-  useEffect(() => {
-    const checkDailyThread = async () => {
-      if (!isSignedIn || isOnboarding) return;
-      
-      const today = new Date().toDateString();
-      const lastThreadDate = localStorage.getItem('lastThreadDate');
-      
-      if (lastThreadDate !== today) {
-        // Create new daily thread
-        try {
-          const { threadId: newThreadId, isNew } = await getOrCreateDailyThread();
-          setThreadId(newThreadId);
-          localStorage.setItem('lastThreadDate', today);
-          localStorage.setItem('currentThreadId', newThreadId);
-          
-          if (isNew) {
-            // Clear messages for fresh start
-            setMessages([{
-              role: "assistant",
-              content: `Good morning! 🌟 Ready to make today a healthy one? What did you have for breakfast?`
-            }]);
-          }
-        } catch (error) {
-          console.error("Error creating daily thread:", error);
-        }
-      } else {
-        // Use existing thread
-        const savedThreadId = localStorage.getItem('currentThreadId');
-        if (savedThreadId && !threadId) {
-          setThreadId(savedThreadId);
-        }
-      }
-    };
-    
-    checkDailyThread();
-  }, [isSignedIn, isOnboarding, getOrCreateDailyThread, threadId, setThreadId, setMessages]);
-  
   // Load today's chat history on mount
   useEffect(() => {
-    if (chatHistory && !hasLoadedHistory) {
+    // Use ref to prevent double execution in StrictMode
+    if (loadingRef.current) return;
+    
+    if (chatHistory && !hasLoadedHistory && messages.length === 0) {
+      loadingRef.current = true;
       const formattedHistory: Message[] = chatHistory.map((msg: any) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
@@ -388,7 +369,15 @@ export default function Chat() {
       }
       
       // Set messages from database history first
-      setMessages(formattedHistory);
+      console.log('[Chat] Loading history:', formattedHistory.length, 'messages');
+      // Only set if we don't have messages already (prevent duplicates)
+      setMessages(prev => {
+        if (prev.length > 0) {
+          console.log('[Chat] Already have messages, skipping history load');
+          return prev;
+        }
+        return formattedHistory;
+      });
       
       // Then restore confirmed state from localStorage after messages are set
       // This ensures bubbles stay minimized after refresh
@@ -418,6 +407,11 @@ export default function Chat() {
         // Don't show a generic welcome back message - let the daily session handle it
       }
       setHasLoadedHistory(true);
+      
+      // Reset loading ref after a small delay
+      setTimeout(() => {
+        loadingRef.current = false;
+      }, 100);
     }
   }, [chatHistory, onboardingStatus, hasLoadedHistory, persistedConfirmations]);
 
@@ -486,14 +480,12 @@ export default function Chat() {
       }));
     }
     
-    // Don't add message yet - wait until we have storageId if there's an image
-    if (!selectedImage) {
-      setMessages(prev => [...prev, newUserMessage]);
-    }
+    // Don't add message here - the streaming hook will add it
     setInput("");
 
     try {
       let finalMessage = userMessage;
+      
       let storageId: string | null = null;
       
       // If there's an image, upload it to Convex storage
@@ -508,6 +500,8 @@ export default function Chat() {
           storageId = await uploadPhoto(selectedImage);
           console.log('Upload successful, storageId:', storageId);
           
+          // Don't add message here - streaming hook will handle it
+          
           finalMessage = userMessage || "Please analyze this food photo";
         } catch (uploadError) {
           console.error("Failed to upload image:", uploadError);
@@ -520,6 +514,7 @@ export default function Chat() {
             role: "assistant",
             content: `Sorry, I couldn't upload the image. Error: ${uploadError.message || 'Unknown error'}. Please try again.`
           }]);
+          setIsLoading(false);
           return;
         }
         
@@ -527,16 +522,19 @@ export default function Chat() {
         clearImage();
       }
       
-      // Use streaming message send
+      // Send message using streaming
       await sendStreamingMessage(
         finalMessage,
         threadId || undefined,
         storageId || undefined
       );
-      
     } catch (error) {
       console.error("Error sending message:", error);
-      // Error handling is done in the streaming hook
+      // Add error message
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please try again."
+      }]);
     }
   };
 
@@ -729,7 +727,7 @@ export default function Chat() {
               variant="ghost"
               size="sm"
               onClick={async () => {
-                // Loading state handled by button disable
+                setIsLoading(true);
                 try {
                   const result = await forceCompleteOnboarding();
                   if (result.error) {
@@ -741,7 +739,7 @@ export default function Chat() {
                   console.error("Error forcing completion:", error);
                   alert("Failed to force complete");
                 } finally {
-                  // Loading state handled by button disable
+                  setIsLoading(false);
                 }
               }}
               disabled={isStreaming}
@@ -757,7 +755,7 @@ export default function Chat() {
               size="sm"
               onClick={async () => {
                 if (confirm("Reset onboarding? This will restart the setup process but keep your data.")) {
-                  // Streaming will handle loading state
+                  setIsLoading(true);
                   try {
                     await resetOnboarding();
                     // Refresh the page to restart
@@ -765,6 +763,8 @@ export default function Chat() {
                   } catch (error) {
                     console.error("Error resetting onboarding:", error);
                     alert("Failed to reset onboarding");
+                  } finally {
+                    setIsLoading(false);
                   }
                 }
               }}
@@ -793,7 +793,7 @@ export default function Chat() {
               }
               
               if (confirm("Start a new chat? Your food logs will be saved.")) {
-                // Loading state handled by button disable
+                setIsLoading(true);
                 try {
                   // Start new session
                   await startNewChatSession();
@@ -807,7 +807,7 @@ export default function Chat() {
                 } catch (error) {
                   console.error("Error starting new chat:", error);
                 } finally {
-                  // Loading state handled by button disable
+                  setIsLoading(false);
                 }
               }
             }}
@@ -1064,9 +1064,23 @@ export default function Chat() {
                                   setMessages(updatedMessage);
                                 }
                                 
-                                // Send confirmation using streaming
-                                await sendStreamingMessage("yes", threadId || undefined);
-                                setEditingFoodLog(null);
+                                // Always just send "yes" - the backend will use the updated args
+                                const yesMessage: Message = { role: "user", content: "yes" };
+                                setMessages(prev => [...prev, yesMessage]);
+                                setIsLoading(true);
+                                
+                                try {
+                                  // Send confirmation using streaming
+                                  await sendStreamingMessage(
+                                    "yes",
+                                    threadId || undefined
+                                  );
+                                } catch (error) {
+                                  console.error("Error confirming:", error);
+                                } finally {
+                                  setIsLoading(false);
+                                  setEditingFoodLog(null);
+                                }
                               }}
                               disabled={isStreaming}
                             >
@@ -1144,7 +1158,7 @@ export default function Chat() {
         })}
         </ClientOnly>
         
-        {isStreaming && messages[messages.length - 1]?.role === "assistant" && (
+        {isStreaming && (
           <div className="flex justify-start">
             <div className="flex space-x-1 p-3">
               <div className="w-2 h-2 bg-gray-400 dark:bg-gray-600 rounded-full animate-bounce" />
@@ -1165,10 +1179,32 @@ export default function Chat() {
             step={currentOnboardingStep}
             currentInput={input}
             onSelect={async (value) => {
-              // Use streaming for quick responses too
-              await sendStreamingMessage(value, threadId || undefined);
+              // All responses are sent directly - weight inputs already include unit
+              const userMessage: Message = { 
+                role: "user", 
+                content: value
+              };
+              
+              setMessages(prev => [...prev, userMessage]);
+              setIsLoading(true);
+
+              try {
+                // Send using streaming
+                await sendStreamingMessage(
+                  value,
+                  threadId || undefined
+                );
+              } catch (error) {
+                console.error("Error sending quick response:", error);
+                setMessages(prev => [...prev, {
+                  role: "assistant",
+                  content: "Sorry, I encountered an error. Please try again."
+                }]);
+              } finally {
+                setIsLoading(false);
+              }
             }}
-            isLoading={isStreaming}
+            isStreaming={isStreaming}
           />
         </div>
       )}

@@ -21,7 +21,7 @@ function detectIntent(userMessage: string) {
   const msg = userMessage.toLowerCase();
   
   const intents = {
-    food: /\b(ate|had|eat|eating|food|meal|breakfast|lunch|dinner|snack|pizza|chicken|salad)\b/i,
+    food: /\b(ate|had|eat|eating|food|meal|breakfast|lunch|dinner|snack|log|for me)\b/i,
     weight: /\b(weight|weigh|scale|kg|lbs|pounds|kilos)\b/i,
     progress: /\b(progress|today|left|remaining|how|calories|status)\b/i,
     photo: /\b(photo|image|picture|upload)\b/i,
@@ -97,35 +97,75 @@ export async function POST(req: Request) {
       }
     });
     
-    // Get context from Convex
-    let profile, todayStats, preferences, chatHistory;
+    // Get context from Convex with caching
+    let coreStats: any, preferences: any, threadContext: any, pendingConfirmation: any;
     
     try {
-      console.log("[Chat Stream API] Fetching Convex data...");
-      [profile, todayStats, preferences, chatHistory] = await Promise.all([
-        convexClient.query(api.userProfiles.getUserProfile, {}),
-        convexClient.query(api.foodLogs.getTodayStats),
-        convexClient.query(api.userPreferences.getUserPreferences),
-        threadId ? convexClient.query(api.chatHistory.getThreadMessages, { threadId, limit: 10 }) : Promise.resolve([])
-      ]);
-      console.log("[Chat Stream API] Convex data fetched successfully");
+      console.log("[Chat Stream API] Fetching cached context...");
+      
+      // 1. Get cached core stats (5min cache) - ~100 tokens
+      coreStats = await convexClient.mutation(api.agentBridge.getCachedContext, {
+        cacheKey: "coreStats"
+      });
+      
+      // 2. Get preferences (30 day cache) - ~10 tokens
+      preferences = await convexClient.mutation(api.agentBridge.getCachedContext, {
+        cacheKey: "preferences"
+      });
+      
+      // 3. Load thread context if we have an active thread - ~300 tokens when included
+      if (activeThreadId) {
+        try {
+          threadContext = await convexClient.action(api.agentBridge.buildStreamingContext, {
+            threadId: activeThreadId,
+            userId
+          });
+          console.log("[Chat Stream API] Thread context loaded with:", {
+            messageCount: threadContext.threadContext?.messageCount,
+            establishedFacts: threadContext.historicalContext?.establishedFacts?.length,
+            keyTopics: threadContext.keyTopics?.length
+          });
+        } catch (contextError: any) {
+          console.log("[Chat Stream API] Could not load thread context:", contextError.message);
+          threadContext = null;
+        }
+      }
+      
+      // 4. Check for pending confirmations
+      try {
+        pendingConfirmation = await convexClient.query(api.pendingConfirmations.getLatestPendingConfirmation, {
+          threadId: activeThreadId
+        });
+        if (pendingConfirmation) {
+          console.log("[Chat Stream API] Found pending confirmation:", {
+            description: pendingConfirmation.confirmationData.description,
+            totalCalories: pendingConfirmation.confirmationData.totalCalories
+          });
+        }
+      } catch (error: any) {
+        console.log("[Chat Stream API] Could not load pending confirmation:", error.message);
+        pendingConfirmation = null;
+      }
+      
+      console.log("[Chat Stream API] Context fetched successfully (cached)");
     } catch (convexError: any) {
-      console.error("[Chat Stream API] Convex query error:", {
+      console.error("[Chat Stream API] Context fetch error:", {
         message: convexError.message,
         stack: convexError.stack
       });
-      // Use default values if Convex queries fail
-      profile = null;
-      todayStats = null;
+      // Use default values if queries fail
+      coreStats = {
+        profile: { name: "there", dailyCalorieTarget: 2000, proteinTarget: 150 },
+        todayStats: { calories: 0, protein: 0, carbs: 0, fat: 0, mealsLogged: 0 },
+        hasWeighedToday: false,
+        caloriesRemaining: 2000
+      };
       preferences = null;
-      chatHistory = [];
+      threadContext = null;
     }
     
-    // Build messages array
-    const messages = chatHistory?.map((msg: any) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content
-    })) || [];
+    // Build messages array - empty since context is in system prompt
+    const messages = [];
     
     // Current message is already saved, just add to context
     messages.push({ role: 'user', content: prompt });
@@ -142,32 +182,10 @@ export async function POST(req: Request) {
     // Build system prompt
     const isStealthMode = preferences?.displayMode === "stealth";
     
-    // Use minimal prompt if debugging
-    const useMinimalPrompt = body.debugMinimal || false;
-    const systemPrompt = useMinimalPrompt 
-      ? "You are Bob, a helpful AI assistant." 
-      : `You are Bob, a friendly and encouraging AI diet coach helping ${profile?.name || "there"}.
-
-USER CONTEXT:
-- Name: ${profile?.name}
-- Goal: ${profile?.goal === "cut" ? "lose weight" : profile?.goal === "gain" ? "gain muscle" : "maintain weight"}
-- Current weight: ${profile?.currentWeight || "unknown"}kg
-- Target weight: ${profile?.targetWeight || "unknown"}kg  
-- Display mode: ${isStealthMode ? "stealth (no numbers)" : "standard (show numbers)"}
-
-TODAY'S PROGRESS:
-- Calories: ${todayStats?.calories || 0}/${profile?.dailyCalorieTarget || 2000} (${(profile?.dailyCalorieTarget || 2000) - (todayStats?.calories || 0)} remaining)
-- Protein: ${todayStats?.protein || 0}/${profile?.proteinTarget || 150}g
-- Meals logged: ${todayStats?.mealsLogged || 0}
-
-IMPORTANT RULES:
-1. ALWAYS ask for confirmation before logging food using the confirmFood tool
-2. Parse natural language for food mentions and estimate calories/macros
-3. Only use the logFood tool AFTER user explicitly confirms
-4. ${isStealthMode ? "In stealth mode: Focus on habits and encouragement, avoid showing numbers" : "Show calories and macro counts"}
-5. Detect meal type based on time of day (current time: ${hour}:00, likely ${defaultMealType})
-6. Be encouraging and supportive, like a gym buddy
-7. Keep responses concise and friendly`;
+    // Use thread context if available, otherwise minimal context
+    const systemPrompt = threadContext 
+      ? buildFullPrompt(threadContext, coreStats, hour, defaultMealType, pendingConfirmation)
+      : buildMinimalPrompt(coreStats, preferences, hour, defaultMealType, pendingConfirmation);
     
     // Stream the response using Vercel AI SDK
     console.log("[Chat Stream API] Starting stream with:", {
@@ -180,6 +198,9 @@ IMPORTANT RULES:
     
     let result;
     try {
+      // Get profile if not already loaded (for showProgress tool)
+      const profile = coreStats?.profile || null;
+      
       // Test without tools first if disableTools is set
       const shouldUseTools = !disableTools;
       console.log("[Chat Stream API] Tools enabled:", shouldUseTools);
@@ -194,8 +215,16 @@ IMPORTANT RULES:
       if (shouldUseTools) {
         console.log("[Chat Stream API] Creating tools based on intent...");
         
-        // Load food tools if food intent detected
-        if (intents.includes('food') || intents.includes('confirmation')) {
+        // Check if user is confirming a pending food log
+        const isConfirmingFood = intents.includes('confirmation') && pendingConfirmation;
+        
+        // Always load food tools since that's Bob's primary function
+        // Unless it's clearly only about weight or progress
+        const isOnlyWeightOrProgress = intents.length > 0 && 
+          intents.every(intent => ['weight', 'progress'].includes(intent)) &&
+          !isConfirmingFood;
+        
+        if (!isOnlyWeightOrProgress || isConfirmingFood) {
           allTools.confirmFood = tool({
           description: "Show food understanding and ask for confirmation before logging",
           parameters: z.object({
@@ -217,6 +246,20 @@ IMPORTANT RULES:
           }),
           execute: async (args) => {
             console.log("[confirmFood] Called with:", args);
+            
+            // Save pending confirmation to database
+            try {
+              const toolCallId = `confirm_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+              await convexClient.mutation(api.pendingConfirmations.savePendingConfirmation, {
+                threadId: activeThreadId,
+                toolCallId,
+                confirmationData: args,
+              });
+              console.log("[confirmFood] Saved pending confirmation with ID:", toolCallId);
+            } catch (error: any) {
+              console.error("[confirmFood] Failed to save pending confirmation:", error);
+            }
+            
             return args;
           },
         });
@@ -243,14 +286,50 @@ IMPORTANT RULES:
           }),
           execute: async (args) => {
             try {
-              await convexClient.mutation(api.foodLogs.logFood, {
+              const logId = await convexClient.mutation(api.foodLogs.logFood, {
                 description: args.description,
                 foods: args.items,
                 meal: args.mealType,
                 aiEstimated: true,
                 confidence: args.confidence,
               });
-              return { success: true };
+              
+              // Generate embedding for the food log
+              try {
+                console.log("[logFood] Generating embedding for food log:", logId);
+                
+                // Create descriptive text for embedding
+                const foodDescriptions = args.items.map(f => `${f.quantity} ${f.name}`).join(", ");
+                const embeddingText = `${args.mealType}: ${foodDescriptions} - ${args.description} (${args.totalCalories} calories, ${args.totalProtein}g protein)`;
+                
+                const embedding = await convexClient.action(api.embeddings.generateEmbedding, {
+                  text: embeddingText,
+                });
+                
+                await convexClient.mutation(api.embeddings.updateFoodLogEmbedding, {
+                  foodLogId: logId,
+                  embedding,
+                });
+                
+                console.log("[logFood] Embedding generated and saved successfully");
+              } catch (embeddingError: any) {
+                console.error("[logFood] Failed to generate embedding:", embeddingError);
+                // Don't fail the whole operation if embedding fails
+              }
+              
+              // Mark pending confirmation as confirmed if it exists
+              if (pendingConfirmation) {
+                try {
+                  await convexClient.mutation(api.pendingConfirmations.confirmPendingConfirmation, {
+                    confirmationId: pendingConfirmation._id,
+                  });
+                  console.log("[logFood] Marked pending confirmation as confirmed");
+                } catch (error: any) {
+                  console.log("[logFood] Could not mark confirmation as confirmed:", error.message);
+                }
+              }
+              
+              return { success: true, logId };
             } catch (error: any) {
               console.error("[logFood] Error:", error);
               return { success: false, error: error.message };
@@ -313,8 +392,12 @@ IMPORTANT RULES:
           }),
           execute: async (args) => {
             try {
-              await convexClient.mutation(api.weightLogs.logWeight, args);
-              return { success: true };
+              const logId = await convexClient.mutation(api.weightLogs.logWeight, args);
+              
+              // Note: Embedding generation for notes is handled by the mutation itself
+              // via scheduler if notes are provided
+              
+              return { success: true, logId };
             } catch (error: any) {
               console.error("[logWeight] Error:", error);
               return { success: false, error: error.message };
@@ -390,6 +473,7 @@ IMPORTANT RULES:
         }
         
         console.log("[Chat Stream API] Tools created:", Object.keys(allTools));
+        console.log("[Chat Stream API] Tool count:", Object.keys(allTools).length);
       }
       
       const streamConfig: any = {
@@ -400,14 +484,14 @@ IMPORTANT RULES:
           isEnabled: false,
         },
         maxSteps: 5,
-        onChunk: ({ chunk }) => {
+        onChunk: ({ chunk }: any) => {
         console.log("[Chat Stream API] Chunk received:", {
           type: chunk.type,
           timestamp: new Date().toISOString(),
           chunkData: chunk.type === 'text-delta' ? chunk : 'non-text chunk'
         });
       },
-      onError: (error) => {
+      onError: (error: any) => {
         console.error("[Chat Stream API] Stream error caught in onError:", {
           name: error.name,
           message: error.message,
@@ -417,7 +501,7 @@ IMPORTANT RULES:
           errorString: error.toString()
         });
       },
-      onFinish: async ({ text, toolCalls, usage }) => {
+      onFinish: async ({ text, toolCalls, usage }: any) => {
         console.log("[Chat Stream API] Finished with text:", text);
         console.log("[Chat Stream API] Token usage:", usage);
         // Save to Agent thread with error handling
@@ -536,4 +620,115 @@ IMPORTANT RULES:
       },
     });
   }
+}
+
+// Build minimal prompt when no thread context
+function buildMinimalPrompt(
+  coreStats: any, 
+  preferences: any, 
+  hour: number, 
+  defaultMealType: string,
+  pendingConfirmation: any
+): string {
+  const isStealthMode = preferences?.displayMode === "stealth";
+  
+  return `You are Bob, ${coreStats.profile.name}'s diet coach. Be direct and concise.
+Stats: ${coreStats.caloriesRemaining} cal left, ${coreStats.todayStats.protein}/${coreStats.profile.proteinTarget}g protein
+${pendingConfirmation ? `PENDING: "${pendingConfirmation.confirmationData.description}" - if user says yes, logFood immediately` : ""}
+
+STYLE: Answer directly. 1-2 sentences max. Only give details if asked.
+TOOLS: Food→confirmFood→logFood. Photos→analyzePhoto→confirmFood.
+${!coreStats.hasWeighedToday ? "No weigh-in yet today." : ""}`;
+}
+
+// Build full prompt with thread context
+function buildFullPrompt(
+  context: any,
+  coreStats: any,
+  hour: number,
+  defaultMealType: string,
+  pendingConfirmation: any
+): string {
+  const isStealthMode = context?.user?.displayMode === "stealth";
+  
+  // Build historical context summary
+  let historicalNotes = "";
+  if (context?.historicalContext) {
+    const { establishedFacts, recentPatterns, ongoingGoals } = context.historicalContext;
+    if (establishedFacts?.length > 0) {
+      historicalNotes += `\n\nESTABLISHED FACTS:\n${establishedFacts.slice(0, 3).map((f: string) => `- ${f}`).join('\n')}`;
+    }
+    if (recentPatterns?.length > 0) {
+      historicalNotes += `\n\nRECENT PATTERNS:\n${recentPatterns.slice(0, 3).map((p: string) => `- ${p}`).join('\n')}`;
+    }
+    if (ongoingGoals?.length > 0) {
+      historicalNotes += `\n\nUSER'S GOALS:\n${ongoingGoals.slice(0, 2).map((g: string) => `- ${g}`).join('\n')}`;
+    }
+  }
+  
+  return `You are Bob, a friendly and encouraging AI diet coach helping ${context?.user?.name || "there"}.
+
+USER CONTEXT:
+- Name: ${context?.user?.name}
+- Goal: ${context?.user?.goal === "cut" ? "lose weight" : context?.user?.goal === "gain" ? "gain muscle" : "maintain weight"}
+- Current weight: ${context?.user?.currentWeight || "unknown"}kg
+- Target weight: ${context?.user?.targetWeight || "unknown"}kg  
+- Display mode: ${isStealthMode ? "stealth (no numbers)" : "standard (show numbers)"}
+
+TODAY'S PROGRESS:
+- Calories: ${context?.todayProgress?.calories.consumed}/${context?.todayProgress?.calories.target} (${context?.todayProgress?.calories.remaining} remaining)
+- Protein: ${context?.todayProgress?.protein?.consumed}/${context?.todayProgress?.protein?.target}g
+- Meals logged: ${context?.todayProgress?.meals || 0}
+- Daily weigh-in: ${coreStats.hasWeighedToday ? "✅ Completed" : "❌ Not yet logged"}
+
+${context?.todaySummary?.entries?.length > 0 ? `TODAY'S FOOD LOG:\n${context.todaySummary.entries.map((e: any) => `- ${e.time} ${e.meal}: ${e.description} (${e.calories}cal, ${e.protein}g protein)`).join('\n')}` : ''}
+
+${context?.conversationSummary ? `\nTODAY'S CONVERSATION SO FAR:\n${context.conversationSummary}` : ''}
+${context?.keyTopics?.length > 0 ? `\nFOODS DISCUSSED TODAY: ${context.keyTopics.join(', ')}` : ''}
+${historicalNotes}
+
+${pendingConfirmation ? `PENDING CONFIRMATION:
+You just showed the user a confirmation card for: "${pendingConfirmation.confirmationData.description}"
+- Total: ${pendingConfirmation.confirmationData.totalCalories} calories, ${pendingConfirmation.confirmationData.totalProtein}g protein
+- Items: ${pendingConfirmation.confirmationData.items.map((i: any) => `${i.quantity} ${i.name}`).join(', ')}
+- Meal type: ${pendingConfirmation.confirmationData.mealType}
+
+If the user responds with yes/yep/sure/correct/okay/that's right, IMMEDIATELY use the logFood tool with this exact data.
+DO NOT ask for confirmation again - you already showed it!` : ''}
+
+CONVERSATION STYLE:
+1. Answer the user's question DIRECTLY first - no preamble
+2. Keep responses to 1-2 sentences unless they ask for details
+3. Only mention calories/macros when relevant to their question
+4. Save encouragement for actual achievements, not every message
+5. When asked for meal ideas, give 2-3 specific options immediately
+
+CORE RULES:
+1. ALWAYS ask for confirmation before logging food using the confirmFood tool
+2. When using confirmFood, say "Let me confirm:" (nothing more)
+3. Only use the logFood tool AFTER user confirms (yes, sure, yep, etc.)
+4. ${isStealthMode ? "Stealth mode: no numbers" : "Include calories/macros"}
+5. Current time: ${hour}:00 (likely ${defaultMealType})
+6. ${!coreStats.hasWeighedToday ? "User hasn't weighed in today - ask once if appropriate" : ""}
+
+TOOL USAGE:
+- Food mention → "Let me confirm:" + confirmFood tool
+- User confirms → logFood tool + "Logged! X calories left."
+- Photo shared → analyzePhoto → confirmFood immediately
+- Progress question → showProgress tool
+
+GOOD vs BAD EXAMPLES:
+❌ BAD: "Hey! Great to hear you're planning lunch! That's awesome for staying on track! What are you thinking..."
+✅ GOOD: "What are you thinking for lunch?"
+
+❌ BAD: "Looking at your goals to lose weight and track consistently, here are some ideas..."
+✅ GOOD: "Here are 3 lunch options:
+- Chicken salad (350 cal, 30g protein)
+- Turkey wrap (400 cal, 25g protein)
+- Greek yogurt bowl (300 cal, 20g protein)"
+
+RELIABILITY:
+1. ALWAYS complete logging when user confirms
+2. NEVER say "logged" without using logFood tool
+3. Use exact data from confirmFood/analyzePhoto`;
 }
