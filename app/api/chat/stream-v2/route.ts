@@ -6,6 +6,7 @@ import { api, internal } from "../../../../convex/_generated/api";
 import { getBobSystemPrompt, buildPromptContext, buildMinimalPrompt } from "../../../../convex/prompts";
 import { createTools, detectIntent, getToolsForIntent } from "../../../../convex/tools";
 import { StreamDebugger } from "./debug";
+import { getCached, CACHE_KEYS, CACHE_TTL } from "../../../utils/queryCache";
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -96,26 +97,34 @@ export async function POST(req: Request) {
     
     try {
       [dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs] = await Promise.all([
-      // Daily summary (includes profile, stats, yesterday summary)
-      convexClient.query(api.dailySummary.getDailySummary, {}),
-      // User preferences
-      convexClient.query(api.userPreferences.getUserPreferences, {}),
-      // Pending confirmations
+      // Daily summary (includes profile, stats, yesterday summary) - CACHED
+      getCached(
+        CACHE_KEYS.dailySummary(userId),
+        () => convexClient.query(api.dailySummary.getDailySummary, {}),
+        CACHE_TTL.dailySummary
+      ),
+      // User preferences - CACHED
+      getCached(
+        CACHE_KEYS.preferences(userId),
+        () => convexClient.query(api.userPreferences.getUserPreferences, {}),
+        CACHE_TTL.preferences
+      ),
+      // Pending confirmations - NOT CACHED (needs to be real-time)
       convexClient.query(api.pendingConfirmations.getLatestPendingConfirmation, {
         threadId
       }),
-      // Get recent messages (not all - we'll use summaries for older ones)
+      // Get recent messages - NOT CACHED (needs to be real-time)
       convexClient.query(api.threads.getThreadMessages, {
         threadId,
         limit: 20  // Only recent messages, summaries will provide older context
       }),
-      // Get thread summaries for compressed context
+      // Get thread summaries - NOT CACHED (needs to be real-time)
       convexClient.query(api.threads.getThreadSummaries, {
         threadId
       }),
-      // Calibration insights
+      // Calibration insights - NOT CACHED (updated infrequently)
       convexClient.query(api.calibration.getLatestCalibration, {}),
-      // Get today's actual food logs
+      // Get today's actual food logs - NOT CACHED (needs to be real-time for confirmations)
       convexClient.query(api.foodLogs.getTodayLogs, {})
     ]);
     } catch (queryError: any) {
@@ -242,20 +251,17 @@ export async function POST(req: Request) {
         hasContent: !!m.content
       })));
 
-      // Prepare messages with summaries for context compression
-      let messages = [];
-      
-      // Add summaries as system context if they exist
+      // Add summaries to system prompt if they exist
       if (threadSummaries && threadSummaries.length > 0) {
         const summaryContext = threadSummaries.map((s: any) => 
-          `Previous conversation summary: ${s.summary} (${s.foodsLogged} foods logged, ${s.caloriesTotal} calories)`
-        ).join("\n");
+          `${s.summary} (${s.foodsLogged} foods, ${s.caloriesTotal}cal)`
+        ).join("; ");
         
-        messages.push({
-          role: "system" as const,
-          content: `Context from earlier today:\n${summaryContext}`
-        });
+        systemPrompt = `${systemPrompt}\n\nPrevious context: ${summaryContext}`;
       }
+      
+      // Prepare messages - only recent messages, NO system messages
+      let messages = [];
       
       // Add recent messages
       if (threadMessages.length > 0) {
@@ -265,21 +271,24 @@ export async function POST(req: Request) {
             role: m.role as "user" | "assistant",
             content: m.content.trim(),
           }));
-        messages.push(...recentMessages);
+        messages = recentMessages;
       }
       
       // Ensure we have at least one message
-      if (messages.length === 0 || messages.every(m => m.role === "system")) {
-        messages.push({
+      if (messages.length === 0) {
+        messages = [{
           role: "user" as const,
           content: prompt || "Hello"
-        });
+        }];
       }
       
       console.log("[stream-v2] Prepared messages:", {
         total: messages.length,
         summaries: threadSummaries?.length || 0,
-        recent: threadMessages.length
+        recent: threadMessages.length,
+        systemPromptLength: systemPrompt.length,
+        firstMessage: messages[0]?.content?.substring(0, 100),
+        lastMessage: messages[messages.length - 1]?.content?.substring(0, 100)
       });
 
       let result;

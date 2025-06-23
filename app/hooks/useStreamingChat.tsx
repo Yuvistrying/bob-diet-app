@@ -196,6 +196,54 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
               logger.error('[useStreamingChat] Original line was:', line);
               throw new Error('Stream error');
             }
+          } else if (line.startsWith('9:')) {
+            // Tool call (type 9) - same as type 1
+            try {
+              const toolCallData = JSON.parse(line.slice(2));
+              // Show tool is being called
+              setMessages(prev => prev.map((msg, idx) => 
+                idx === assistantIndex! 
+                  ? { 
+                      ...msg, 
+                      activeToolCall: {
+                        name: toolCallData.toolName,
+                        status: 'calling'
+                      }
+                    }
+                  : msg
+              ));
+              
+              toolCalls.push({
+                toolCallId: toolCallData.toolCallId,
+                toolName: toolCallData.toolName,
+                args: toolCallData.args
+              });
+              
+              if (options.onToolCall) {
+                options.onToolCall(toolCallData);
+              }
+            } catch (e) {
+              logger.error('Failed to parse tool call:', e);
+            }
+          } else if (line.startsWith('a:')) {
+            // Tool result (type a) - same as type 2
+            try {
+              const toolResult = JSON.parse(line.slice(2));
+              // Mark tool as complete
+              setMessages(prev => prev.map((msg, idx) => 
+                idx === assistantIndex! && msg.activeToolCall
+                  ? { 
+                      ...msg, 
+                      activeToolCall: {
+                        ...msg.activeToolCall,
+                        status: 'complete'
+                      }
+                    }
+                  : msg
+              ));
+            } catch (e) {
+              logger.error('Failed to parse tool result:', e);
+            }
           } else if (line.startsWith('f:')) {
             // Metadata/frame info (type f) - contains messageId
             // We can safely ignore this for now
@@ -204,9 +252,6 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
             // We can safely ignore this for now
           } else if (line.startsWith('d:')) {
             // Done event (type d) - final usage stats
-            // We can safely ignore this for now
-          } else if (line.startsWith('a:')) {
-            // Tool result (type a) - tool execution results
             // We can safely ignore this for now
           } else {
             // Only log truly unknown types
