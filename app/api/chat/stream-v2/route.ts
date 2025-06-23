@@ -176,14 +176,20 @@ export async function POST(req: Request) {
     // 6. Detect intents and determine prompt type
     const intents = detectIntent(prompt);
     
-    // Smart prompt selection
+    // Smart prompt selection - greetings should use full prompt for better personality
     const isSimpleQuery = 
       (prompt.toLowerCase().trim().length < 20 && 
        ['yes', 'no', 'ok', 'thanks', 'yeah', 'yep', 'sure', 'correct'].includes(prompt.toLowerCase().trim())) ||
       (intents.includes('confirmation') && pendingConfirmation);
     
+    // Override: greetings should always use full prompt for personality
+    const isGreeting = intents.includes('greeting') || 
+                      ['hi', 'hey', 'hello', 'morning', 'evening'].includes(prompt.toLowerCase().trim());
+    
+    const useMinimalPrompt = isSimpleQuery && !isGreeting;
+    
     // Use minimal prompt for simple queries, full prompt for complex ones
-    let systemPrompt = isSimpleQuery 
+    let systemPrompt = useMinimalPrompt 
       ? buildMinimalPrompt(promptContext)
       : getBobSystemPrompt(promptContext);
     
@@ -196,9 +202,12 @@ export async function POST(req: Request) {
     
     console.log("[stream-v2] Prompt selection:", {
       isSimpleQuery,
-      promptType: isSimpleQuery ? "minimal" : "full",
+      isGreeting,
+      useMinimalPrompt,
+      promptType: useMinimalPrompt ? "minimal" : "full",
       promptLength: systemPrompt.length,
-      intents
+      intents,
+      userPrompt: prompt
     });
     
     // 7. Create tools based on intent
@@ -210,11 +219,13 @@ export async function POST(req: Request) {
       const toolsNeeded = getToolsForIntent(intents, !!pendingConfirmation);
       
       // For simple confirmations with pending food, only load logFood tool
-      if (isSimpleQuery && pendingConfirmation) {
+      if (useMinimalPrompt && pendingConfirmation) {
         tools = {
           logFood: createTools(convexClient, userId, threadId, storageId, pendingConfirmation).logFood
         };
-      } else if (!isSimpleQuery || toolsNeeded.needsFoodTools || toolsNeeded.needsWeightTool || toolsNeeded.needsProgressTool) {
+      } else if (useMinimalPrompt && !pendingConfirmation) {
+        tools = {}; // No tools for simple non-confirmation queries
+      } else if (!useMinimalPrompt || toolsNeeded.needsFoodTools || toolsNeeded.needsWeightTool || toolsNeeded.needsProgressTool) {
         tools = createTools(
           convexClient,
           userId,
@@ -223,7 +234,7 @@ export async function POST(req: Request) {
           pendingConfirmation
         );
       } else {
-        tools = {}; // No tools needed for simple queries
+        tools = {}; // No tools needed
       }
       
       debug.log("TOOLS_CREATE_SUCCESS", { toolNames: Object.keys(tools) });
@@ -239,17 +250,22 @@ export async function POST(req: Request) {
       console.log("[stream-v2] Starting stream with:", {
         hasTools: Object.keys(tools).length > 0,
         toolNames: Object.keys(tools),
-        messagesCount: threadMessages.length,
+        messagesCount: messages.length,
         systemPromptLength: systemPrompt.length,
-        hasStorageId: !!storageId
+        hasStorageId: !!storageId,
+        useMinimalPrompt,
+        promptType: useMinimalPrompt ? "minimal" : "full"
       });
 
       // Log the actual messages being sent
-      console.log("[stream-v2] Thread messages:", threadMessages.map((m: any) => ({
-        role: m.role,
-        contentLength: m.content?.length || 0,
-        hasContent: !!m.content
-      })));
+      console.log("[stream-v2] Thread messages from query:", {
+        totalFromQuery: threadMessages.length,
+        afterFilter: messages.length,
+        preview: threadMessages.slice(-3).map((m: any) => ({
+          role: m.role,
+          contentPreview: m.content?.substring(0, 50) + '...'
+        }))
+      });
 
       // Add summaries to system prompt if they exist
       if (threadSummaries && threadSummaries.length > 0) {
@@ -263,10 +279,11 @@ export async function POST(req: Request) {
       // Prepare messages - only recent messages, NO system messages
       let messages = [];
       
-      // Add recent messages
+      // Add recent messages - LIMIT TO LAST 10 to prevent token explosion
       if (threadMessages.length > 0) {
         const recentMessages = threadMessages
           .filter((m: any) => m.content && m.content.trim())
+          .slice(-10) // Take only last 10 messages
           .map((m: any) => ({
             role: m.role as "user" | "assistant",
             content: m.content.trim(),
@@ -289,6 +306,25 @@ export async function POST(req: Request) {
         systemPromptLength: systemPrompt.length,
         firstMessage: messages[0]?.content?.substring(0, 100),
         lastMessage: messages[messages.length - 1]?.content?.substring(0, 100)
+      });
+
+      // Rough token estimation (1 token ≈ 4 characters)
+      const estimatedTokens = {
+        systemPrompt: Math.ceil(systemPrompt.length / 4),
+        messages: messages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0),
+        tools: Object.keys(tools).length * 100, // Rough estimate per tool
+        total: 0
+      };
+      estimatedTokens.total = estimatedTokens.systemPrompt + estimatedTokens.messages + estimatedTokens.tools;
+
+      console.log("[stream-v2] Final request config:", {
+        model: 'claude-sonnet-4-20250514',
+        systemPromptLength: systemPrompt.length,
+        systemPromptPreview: systemPrompt.substring(0, 200) + '...',
+        messageCount: messages.length,
+        hasTools: Object.keys(tools).length > 0,
+        messages: messages.slice(-3).map(m => ({ role: m.role, preview: m.content.substring(0, 50) })),
+        estimatedTokens
       });
 
       let result;
