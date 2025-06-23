@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AppLayout } from "./AppLayout";
+import { ChatProvider } from "~/app/providers/ChatProvider";
 
 export default async function Layout({
   children,
@@ -15,8 +16,10 @@ export default async function Layout({
   }
   
   return (
-    <AppLayout>
-      {children}
-    </AppLayout>
+    <ChatProvider>
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </ChatProvider>
   );
 }

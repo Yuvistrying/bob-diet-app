@@ -16,7 +16,7 @@ import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickRespon
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
 import { MarkdownMessage } from "~/app/components/MarkdownMessage";
 import { ThemeToggle } from "~/app/components/ThemeToggle";
-import { useStreamingChat } from "~/app/hooks/useStreamingChat";
+import { useChat } from "~/app/providers/ChatProvider";
 import { logger } from "~/app/utils/logger";
 
 interface Message {
@@ -79,7 +79,7 @@ export default function Chat() {
   const updateTheme = useMutation(api.userPreferences.updateTheme);
   const getOrCreateDailyThread = useMutation(api.threads.getOrCreateDailyThread);
   
-  // Streaming chat hook - this provides messages, threadId, setMessages, etc.
+  // Use shared chat context that persists across tab switches
   const {
     messages,
     isStreaming,
@@ -87,17 +87,9 @@ export default function Chat() {
     sendMessage: sendStreamingMessage,
     stopStreaming,
     setMessages,
-    setThreadId
-  } = useStreamingChat({
-    onComplete: async (newThreadId) => {
-      if (newThreadId && !threadId) {
-        await saveAgentThreadId({ threadId: newThreadId });
-      }
-    },
-    onToolCall: (toolCall) => {
-      logger.info('Tool called:', toolCall);
-    }
-  });
+    setThreadId,
+    setOnCompleteCallback
+  } = useChat();
   
   // Query for thread messages
   const threadMessages = useQuery(api.threads.getThreadMessages, 
@@ -159,6 +151,20 @@ export default function Chat() {
       router.push("/sign-in");
     }
   }, [isSignedIn, router]);
+
+  // Set up callback for thread ID saving
+  useEffect(() => {
+    setOnCompleteCallback(async (newThreadId: string) => {
+      if (newThreadId && !threadId) {
+        await saveAgentThreadId({ threadId: newThreadId });
+      }
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      setOnCompleteCallback(null);
+    };
+  }, [threadId, saveAgentThreadId, setOnCompleteCallback]);
 
   // For new users (no profile), check subscription immediately
   useEffect(() => {
@@ -228,10 +234,17 @@ export default function Chat() {
     }
   }, []);
   
-  // Load thread messages from Convex when available
+  // Track if we've synced messages for this thread
+  const [syncedThreadId, setSyncedThreadId] = useState<string | null>(null);
+  
+  // Load thread messages from Convex when available or thread changes
   useEffect(() => {
-    if (threadMessages && threadMessages.length > 0 && messages.length === 0) {
-      logger.info(`[Chat] Loading ${threadMessages.length} messages from Convex`);
+    // Load messages if:
+    // 1. We have thread messages from Convex
+    // 2. Either we have no messages OR the thread has changed
+    if (threadMessages && threadMessages.length > 0 && 
+        (messages.length === 0 || syncedThreadId !== threadId)) {
+      logger.info(`[Chat] Loading ${threadMessages.length} messages from Convex for thread ${threadId}`);
       
       // Convert Convex messages to the format expected by the chat UI
       const loadedMessages = threadMessages.map((msg: any) => ({
@@ -244,8 +257,9 @@ export default function Chat() {
       
       setMessages(loadedMessages);
       setHasLoadedHistory(true);
+      setSyncedThreadId(threadId);
     }
-  }, [threadMessages, messages.length, setMessages]);
+  }, [threadMessages, messages.length, setMessages, threadId, syncedThreadId]);
   
   // Apply theme from preferences
   useEffect(() => {
@@ -382,15 +396,14 @@ export default function Chat() {
     // Use ref to prevent double execution in StrictMode
     if (loadingRef.current) return;
     
-    if (dailySummary && !hasLoadedHistory) {
+    // Only initialize if we haven't loaded from Convex yet
+    if (dailySummary && !hasLoadedHistory && messages.length === 0) {
       loadingRef.current = true;
-      logger.info('[Chat] Loading conversation history from Convex');
+      logger.info('[Chat] Initializing chat - no existing messages');
       
-      // First, load any existing messages from today's thread
-      if (threadId && messages.length === 0) {
-        // The messages should be loaded via threadMessages query
-        // For now, let's just prevent the greeting from showing if we have messages
-        setHasLoadedHistory(true);
+      // If we have a threadId, wait for messages to load from Convex
+      if (threadId) {
+        logger.info('[Chat] Have threadId, waiting for Convex messages');
         return;
       }
       
@@ -467,15 +480,19 @@ export default function Chat() {
           }
         }
       } else {
-        // Onboarding welcome message
-        initialMessages.push({
-          role: "assistant",
-          content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?"
-        });
+        // Onboarding welcome message - ONLY if we don't already have messages
+        if (messages.length === 0) {
+          initialMessages.push({
+            role: "assistant",
+            content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?"
+          });
+        }
       }
       
-      // Set all messages at once
-      setMessages(initialMessages);
+      // Set all messages at once - ONLY if we have new messages to set
+      if (initialMessages.length > 0 && messages.length === 0) {
+        setMessages(initialMessages);
+      }
       setHasLoadedHistory(true);
       
       // Reset loading ref
@@ -483,7 +500,7 @@ export default function Chat() {
         loadingRef.current = false;
       }, 100);
     }
-  }, [dailySummary, onboardingStatus, hasLoadedHistory, persistedConfirmations]);
+  }, [dailySummary, onboardingStatus, hasLoadedHistory, persistedConfirmations, messages.length, threadId, isOnboarding]);
 
   // Measure onboarding container height
   useEffect(() => {
@@ -1126,19 +1143,21 @@ export default function Chat() {
                                   setMessages(updatedMessage);
                                 }
                                 
-                                // Always just send "yes" - the backend will use the updated args
-                                const yesMessage: Message = { role: "user", content: "yes" };
-                                setMessages(prev => [...prev, yesMessage]);
+                                // Send "yes" using streaming (it will add the user message)
                                 setIsLoading(true);
                                 
                                 try {
-                                  // Send confirmation using streaming
                                   await sendStreamingMessage(
                                     "yes",
                                     threadId || undefined
                                   );
                                 } catch (error) {
                                   logger.error("Error confirming:", error);
+                                  // On error, add an error message
+                                  setMessages(prev => [...prev, {
+                                    role: "assistant",
+                                    content: "Sorry, I couldn't log that. Please try again."
+                                  }]);
                                 } finally {
                                   setIsLoading(false);
                                   setEditingFoodLog(null);
@@ -1241,17 +1260,10 @@ export default function Chat() {
             step={currentOnboardingStep}
             currentInput={input}
             onSelect={async (value) => {
-              // All responses are sent directly - weight inputs already include unit
-              const userMessage: Message = { 
-                role: "user", 
-                content: value
-              };
-              
-              setMessages(prev => [...prev, userMessage]);
+              // Send using streaming (it will add the user message)
               setIsLoading(true);
 
               try {
-                // Send using streaming
                 await sendStreamingMessage(
                   value,
                   threadId || undefined
