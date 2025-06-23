@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
-import { api } from "./_generated/api";
+import { mutation, query, internalMutation, action } from "./_generated/server";
+import { api, internal } from "./_generated/api";
+import { shouldSummarizeMessages, extractProtectedContext } from "./summarizer";
 
 // Simple thread management without Convex Agent
 
@@ -284,5 +285,124 @@ export const resetDailyThreads = internalMutation({
       threadsCompleted: yesterdayThreads.length,
       confirmationsCleared: stalePendingConfirmations.length
     };
+  },
+});
+
+// Store message summaries
+export const storeSummary = internalMutation({
+  args: {
+    threadId: v.string(),
+    summary: v.object({
+      summary: v.string(),
+      keyPoints: v.array(v.string()),
+      foodsLogged: v.number(),
+      caloriesTotal: v.number(),
+    }),
+    messageRange: v.object({
+      startIndex: v.number(),
+      endIndex: v.number(),
+      startTimestamp: v.number(),
+      endTimestamp: v.number(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("messageSummaries", {
+      threadId: args.threadId,
+      summary: args.summary.summary,
+      keyPoints: args.summary.keyPoints,
+      foodsLogged: args.summary.foodsLogged,
+      caloriesTotal: args.summary.caloriesTotal,
+      messageRange: args.messageRange,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+// Trigger summarization when appropriate
+export const checkAndSummarize = action({
+  args: {
+    threadId: v.string(),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // Get thread messages
+    const messages = await ctx.runQuery(api.threads.getThreadMessages, {
+      threadId: args.threadId,
+      limit: 50,
+    });
+    
+    if (messages.length < 5) return null;
+    
+    // Get existing summaries for this thread
+    const summaries = await ctx.runQuery(api.threads.getThreadSummaries, {
+      threadId: args.threadId,
+    });
+    
+    // Find the last summarized message index
+    const lastSummaryIndex = summaries.length > 0 
+      ? summaries[summaries.length - 1].messageRange.endIndex 
+      : 0;
+    
+    // Check if we should summarize
+    const messagesToCheck = messages.map((m: any, idx: number) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+      timestamp: m.timestamp,
+    }));
+    
+    if (!shouldSummarizeMessages(messagesToCheck, lastSummaryIndex)) {
+      return null;
+    }
+    
+    // Get messages to summarize (from last summary to 5 messages ago)
+    const endIndex = messages.length - 5;
+    const messagesToSummarize = messages.slice(lastSummaryIndex, endIndex);
+    
+    if (messagesToSummarize.length === 0) return null;
+    
+    // Get previous summary for context
+    const previousSummary = summaries.length > 0 
+      ? summaries[summaries.length - 1].summary 
+      : undefined;
+    
+    // Summarize the messages
+    const summary = await ctx.runAction(internal.summarizer.summarizeMessages, {
+      messages: messagesToSummarize.map((m: any) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: m.timestamp,
+      })),
+      previousSummary,
+    });
+    
+    // Store the summary
+    await ctx.runMutation(internal.threads.storeSummary, {
+      threadId: args.threadId,
+      summary,
+      messageRange: {
+        startIndex: lastSummaryIndex,
+        endIndex: endIndex,
+        startTimestamp: messagesToSummarize[0].timestamp,
+        endTimestamp: messagesToSummarize[messagesToSummarize.length - 1].timestamp,
+      },
+    });
+    
+    return summary;
+  },
+});
+
+// Get thread summaries
+export const getThreadSummaries = query({
+  args: {
+    threadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    
+    return await ctx.db
+      .query("messageSummaries")
+      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .order("asc")
+      .collect();
   },
 });

@@ -399,4 +399,21 @@ export default defineSchema({
   .index("by_user_thread", ["userId", "threadId"])
   .index("by_expires", ["expiresAt"])
   .index("by_status", ["status"]),
+
+  // Message summaries for context compression
+  messageSummaries: defineTable({
+    threadId: v.string(),
+    summary: v.string(),
+    keyPoints: v.array(v.string()),
+    foodsLogged: v.number(),
+    caloriesTotal: v.number(),
+    messageRange: v.object({
+      startIndex: v.number(),
+      endIndex: v.number(),
+      startTimestamp: v.number(),
+      endTimestamp: v.number(),
+    }),
+    createdAt: v.number(),
+  })
+  .index("by_thread", ["threadId"]),
 });

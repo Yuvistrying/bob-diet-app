@@ -9,6 +9,10 @@ interface StreamingMessage {
   imageUrl?: string;
   storageId?: string;
   isStreaming?: boolean;
+  activeToolCall?: {
+    name: string;
+    status: 'calling' | 'complete';
+  };
 }
 
 interface UseStreamingChatOptions {
@@ -132,21 +136,53 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
             } catch (e) {
               logger.error('Failed to parse text delta:', e);
             }
-          } else if (line.startsWith('9:')) {
-            // Tool call (type 9)
+          } else if (line.startsWith('1:')) {
+            // Tool call start (type 1)
             try {
               const toolCallData = JSON.parse(line.slice(2));
-              const toolCall = {
+              // Show tool is being called
+              setMessages(prev => prev.map((msg, idx) => 
+                idx === assistantIndex! 
+                  ? { 
+                      ...msg, 
+                      activeToolCall: {
+                        name: toolCallData.toolName,
+                        status: 'calling'
+                      }
+                    }
+                  : msg
+              ));
+              
+              toolCalls.push({
                 toolCallId: toolCallData.toolCallId,
                 toolName: toolCallData.toolName,
                 args: toolCallData.args
-              };
-              toolCalls.push(toolCall);
+              });
+              
               if (options.onToolCall) {
-                options.onToolCall(toolCall);
+                options.onToolCall(toolCallData);
               }
             } catch (e) {
               logger.error('Failed to parse tool call:', e);
+            }
+          } else if (line.startsWith('2:')) {
+            // Tool result (type 2)
+            try {
+              const toolResult = JSON.parse(line.slice(2));
+              // Mark tool as complete
+              setMessages(prev => prev.map((msg, idx) => 
+                idx === assistantIndex! && msg.activeToolCall
+                  ? { 
+                      ...msg, 
+                      activeToolCall: {
+                        ...msg.activeToolCall,
+                        status: 'complete'
+                      }
+                    }
+                  : msg
+              ));
+            } catch (e) {
+              logger.error('Failed to parse tool result:', e);
             }
           } else if (line.startsWith('3:')) {
             // Error (type 3)
