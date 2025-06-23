@@ -165,6 +165,90 @@ export function createTools(
         }
       },
     });
+    
+    // Combined analyze and confirm tool for photos
+    tools.analyzeAndConfirmPhoto = tool({
+      description: "Analyze a food photo and immediately ask for confirmation - combines analyzePhoto and confirmFood in one step",
+      parameters: z.object({
+        mealContext: z.string().optional().describe("Additional context about the meal type"),
+      }),
+      execute: async (args) => {
+        console.log("[analyzeAndConfirmPhoto tool] Execute called with storageId:", storageId);
+        
+        if (!storageId) {
+          return { error: "No image uploaded. Please upload an image first." };
+        }
+        
+        try {
+          // Step 1: Analyze the photo
+          console.log("[analyzeAndConfirmPhoto tool] Analyzing photo");
+          const analysisResult = await convexClient.action(api.vision.analyzeFoodPublic, {
+            storageId: storageId as Id<"_storage">,
+            context: args.mealContext,
+          });
+          
+          if (analysisResult.error || !analysisResult.foods) {
+            return { error: analysisResult.error || "Failed to analyze photo" };
+          }
+          
+          // Save photo analysis
+          await convexClient.mutation(api.photoAnalyses.savePhotoAnalysis, {
+            userId,
+            timestamp: Date.now(),
+            storageId: storageId as Id<"_storage">,
+            analysis: {
+              foods: analysisResult.foods,
+              totalCalories: analysisResult.totalCalories,
+              totalProtein: analysisResult.totalProtein,
+              totalCarbs: analysisResult.totalCarbs,
+              totalFat: analysisResult.totalFat,
+              overallConfidence: analysisResult.confidence || analysisResult.overallConfidence,
+              metadata: analysisResult.metadata,
+            },
+            confirmed: false,
+            embedding: analysisResult.embedding,
+          });
+          
+          // Step 2: Create confirmation data
+          const hour = new Date().getHours();
+          const mealType = 
+            hour < 11 ? "breakfast" :
+            hour < 15 ? "lunch" :
+            hour < 18 ? "snack" :
+            "dinner";
+          
+          const confirmationData = {
+            description: analysisResult.foods.map((f: any) => f.name).join(", "),
+            items: analysisResult.foods,
+            totalCalories: analysisResult.totalCalories,
+            totalProtein: analysisResult.totalProtein,
+            totalCarbs: analysisResult.totalCarbs,
+            totalFat: analysisResult.totalFat,
+            mealType,
+            confidence: analysisResult.confidence || "medium",
+          };
+          
+          // Save pending confirmation
+          const toolCallId = `confirm_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          await convexClient.mutation(api.pendingConfirmations.savePendingConfirmation, {
+            threadId,
+            toolCallId,
+            confirmationData,
+          });
+          
+          // Return combined result
+          return {
+            analysisComplete: true,
+            ...confirmationData,
+          };
+        } catch (error: any) {
+          console.error("[analyzeAndConfirmPhoto tool] Error:", error);
+          return { 
+            error: `Failed to analyze photo: ${error.message || 'Unknown error'}`,
+          };
+        }
+      },
+    });
   }
 
   // Weight logging tool

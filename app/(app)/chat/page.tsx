@@ -26,6 +26,10 @@ interface Message {
   imageUrl?: string;
   storageId?: string;
   isStreaming?: boolean;
+  activeToolCall?: {
+    name: string;
+    status: 'calling' | 'complete';
+  };
 }
 
 export default function Chat() {
@@ -66,7 +70,7 @@ export default function Chat() {
   const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus, {});
   
   // Convex action for Agent SDK (not used with streaming)
-  const sendMessageAction = useAction(api.agentActions.chat);
+  // const sendMessageAction = useAction(api.agentActions.chat);
   
   // Convex mutations for file upload
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
@@ -197,7 +201,7 @@ export default function Chat() {
     if (typeof window !== 'undefined') {
       // Clear old localStorage items that might contain other users' data
       // Don't clear chatMessages - we'll load from Convex instead
-      localStorage.removeItem('agentThreadId');
+      // localStorage.removeItem('agentThreadId');
       
       // Load persisted confirmations for today only
       const savedConfirmations = localStorage.getItem('foodConfirmations');
@@ -347,10 +351,10 @@ export default function Chat() {
 
   // Load thread ID from preferences
   useEffect(() => {
-    if (preferences?.agentThreadId && !threadId) {
-      setThreadId(preferences.agentThreadId);
-    }
-  }, [preferences?.agentThreadId]);
+    // if (preferences?.agentThreadId && !threadId) {
+    //   setThreadId(preferences.agentThreadId);
+    // }
+  }, []);
 
   // Create or check daily session on mount
   useEffect(() => {
@@ -1209,7 +1213,7 @@ export default function Chat() {
                       <img 
                         src={message.storageId && imageUrls?.[message.storageId] 
                           ? imageUrls[message.storageId] 
-                          : message.imageUrl} 
+                          : message.imageUrl || ''} 
                         alt="Uploaded food" 
                         className="rounded-lg"
                         style={{ maxHeight: '120px', maxWidth: '120px', objectFit: 'cover' }}
@@ -1230,8 +1234,26 @@ export default function Chat() {
                   )}
                 </>
               ) : (
-                <div className="max-w-[70%] text-gray-800 dark:text-gray-200">
-                  <MarkdownMessage content={message.content} className="text-[15px]" />
+                <div className="max-w-[70%] space-y-2">
+                  {/* Show tool call indicator if active */}
+                  {message.activeToolCall && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      {message.activeToolCall.status === 'calling' ? (
+                        <>
+                          <div className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full" />
+                          <span>Running {message.activeToolCall.name}...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-3 w-3 text-green-500" />
+                          <span>Completed {message.activeToolCall.name}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className="text-gray-800 dark:text-gray-200">
+                    <MarkdownMessage content={message.content} className="text-[15px]" />
+                  </div>
                 </div>
               )}
             </div>

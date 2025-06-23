@@ -3,7 +3,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import { api, internal } from "../../../../convex/_generated/api";
-import { getBobSystemPrompt, buildPromptContext } from "../../../../convex/prompts";
+import { getBobSystemPrompt, buildPromptContext, buildMinimalPrompt } from "../../../../convex/prompts";
 import { createTools, detectIntent, getToolsForIntent } from "../../../../convex/tools";
 import { StreamDebugger } from "./debug";
 
@@ -92,10 +92,10 @@ export async function POST(req: Request) {
     // 3. Get daily summary and other context in parallel
     console.log("[stream-v2] Fetching context data for thread:", threadId);
     
-    let dailySummary, preferences, pendingConfirmation, threadMessages, calibrationData, todayFoodLogs;
+    let dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs;
     
     try {
-      [dailySummary, preferences, pendingConfirmation, threadMessages, calibrationData, todayFoodLogs] = await Promise.all([
+      [dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs] = await Promise.all([
       // Daily summary (includes profile, stats, yesterday summary)
       convexClient.query(api.dailySummary.getDailySummary, {}),
       // User preferences
@@ -104,10 +104,14 @@ export async function POST(req: Request) {
       convexClient.query(api.pendingConfirmations.getLatestPendingConfirmation, {
         threadId
       }),
-      // Get ALL messages from today's thread for full context
+      // Get recent messages (not all - we'll use summaries for older ones)
       convexClient.query(api.threads.getThreadMessages, {
         threadId,
-        limit: 100  // Should cover a full day's conversation
+        limit: 20  // Only recent messages, summaries will provide older context
+      }),
+      // Get thread summaries for compressed context
+      convexClient.query(api.threads.getThreadSummaries, {
+        threadId
       }),
       // Calibration insights
       convexClient.query(api.calibration.getLatestCalibration, {}),
@@ -160,33 +164,59 @@ export async function POST(req: Request) {
       todayFoodLogs
     );
     
-    let systemPrompt = getBobSystemPrompt(promptContext);
+    // 6. Detect intents and determine prompt type
+    const intents = detectIntent(prompt);
+    
+    // Smart prompt selection
+    const isSimpleQuery = 
+      (prompt.toLowerCase().trim().length < 20 && 
+       ['yes', 'no', 'ok', 'thanks', 'yeah', 'yep', 'sure', 'correct'].includes(prompt.toLowerCase().trim())) ||
+      (intents.includes('confirmation') && pendingConfirmation);
+    
+    // Use minimal prompt for simple queries, full prompt for complex ones
+    let systemPrompt = isSimpleQuery 
+      ? buildMinimalPrompt(promptContext)
+      : getBobSystemPrompt(promptContext);
     
     // Add photo analysis instruction if storageId is present
     if (storageId) {
-      systemPrompt = `${systemPrompt}\n\nThe user has uploaded a food photo with ID ${storageId}. You MUST:
-1. Call analyzePhoto EXACTLY ONCE
-2. Wait for the result
-3. Then call confirmFood with the analysis results
-4. Do NOT call analyzePhoto again - you already have the results!`;
+      systemPrompt = `${systemPrompt}\n\nThe user has uploaded a food photo. Use the analyzeAndConfirmPhoto tool to analyze it and ask for confirmation in one step. This is faster and more efficient than calling separate tools.`;
       
       console.log("[stream-v2] Photo upload detected with storageId:", storageId);
     }
     
-    // 6. Detect intents and create tools using centralized system
-    const intents = detectIntent(prompt);
+    console.log("[stream-v2] Prompt selection:", {
+      isSimpleQuery,
+      promptType: isSimpleQuery ? "minimal" : "full",
+      promptLength: systemPrompt.length,
+      intents
+    });
     
+    // 7. Create tools based on intent
     debug.log("TOOLS_CREATE_START", { intents });
     
     let tools;
     try {
-      tools = createTools(
-        convexClient,
-        userId,
-        threadId,
-        storageId,
-        pendingConfirmation
-      );
+      // Only load tools if needed
+      const toolsNeeded = getToolsForIntent(intents, !!pendingConfirmation);
+      
+      // For simple confirmations with pending food, only load logFood tool
+      if (isSimpleQuery && pendingConfirmation) {
+        tools = {
+          logFood: createTools(convexClient, userId, threadId, storageId, pendingConfirmation).logFood
+        };
+      } else if (!isSimpleQuery || toolsNeeded.needsFoodTools || toolsNeeded.needsWeightTool || toolsNeeded.needsProgressTool) {
+        tools = createTools(
+          convexClient,
+          userId,
+          threadId,
+          storageId,
+          pendingConfirmation
+        );
+      } else {
+        tools = {}; // No tools needed for simple queries
+      }
+      
       debug.log("TOOLS_CREATE_SUCCESS", { toolNames: Object.keys(tools) });
     } catch (error: any) {
       debug.error("TOOLS_CREATE_ERROR", { error: error.message });
@@ -212,28 +242,45 @@ export async function POST(req: Request) {
         hasContent: !!m.content
       })));
 
-      // Prepare messages - ensure we have valid content
-      const messages = threadMessages.length > 0 
-        ? threadMessages
-            .filter((m: any) => m.content && m.content.trim()) // Filter out empty messages
-            .map((m: any) => ({
-              role: m.role as "user" | "assistant",
-              content: m.content.trim(),
-            }))
-        : [{
-            role: "user" as const,
-            content: prompt || "Hello"
-          }];
+      // Prepare messages with summaries for context compression
+      let messages = [];
+      
+      // Add summaries as system context if they exist
+      if (threadSummaries && threadSummaries.length > 0) {
+        const summaryContext = threadSummaries.map((s: any) => 
+          `Previous conversation summary: ${s.summary} (${s.foodsLogged} foods logged, ${s.caloriesTotal} calories)`
+        ).join("\n");
+        
+        messages.push({
+          role: "system" as const,
+          content: `Context from earlier today:\n${summaryContext}`
+        });
+      }
+      
+      // Add recent messages
+      if (threadMessages.length > 0) {
+        const recentMessages = threadMessages
+          .filter((m: any) => m.content && m.content.trim())
+          .map((m: any) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content.trim(),
+          }));
+        messages.push(...recentMessages);
+      }
       
       // Ensure we have at least one message
-      if (messages.length === 0) {
+      if (messages.length === 0 || messages.every(m => m.role === "system")) {
         messages.push({
           role: "user" as const,
           content: prompt || "Hello"
         });
       }
       
-      console.log("[stream-v2] Prepared messages:", messages.length);
+      console.log("[stream-v2] Prepared messages:", {
+        total: messages.length,
+        summaries: threadSummaries?.length || 0,
+        recent: threadMessages.length
+      });
 
       let result;
       try {
@@ -247,7 +294,7 @@ export async function POST(req: Request) {
         onChunk: ({ chunk }) => {
           debug.log("CHUNK", { 
             type: chunk.type,
-            content: chunk.type === 'text' ? chunk.text?.substring(0, 50) : undefined
+            content: chunk.type === 'text-delta' ? (chunk as any).text?.substring(0, 50) : undefined
           });
           
           if (chunk.type === 'error') {
@@ -304,6 +351,10 @@ export async function POST(req: Request) {
                   } : undefined,
                 }
               });
+              
+              // Trigger summarization check (async, don't wait)
+              convexClient.action(api.threads.checkAndSummarize, { threadId })
+                .catch(error => console.error("[stream-v2] Summarization check failed:", error));
             } else if (!toolCalls || toolCalls.length === 0) {
               // No text and no tool calls - this might be why we get errors
               console.warn("[stream-v2] Stream finished with no content or tool calls");
@@ -380,30 +431,51 @@ export async function POST(req: Request) {
                 buffer = lines.pop() || '';
                 
                 for (const line of lines) {
-                  // Debug log every line
-                  if (line.trim()) {
-                    console.log('[stream-v2] Stream line:', line.substring(0, 100));
-                  }
+                  // Skip empty lines in the middle of processing
+                  if (!line && buffer) continue;
                   
-                  // Filter out error chunks (type 3) but ONLY if they contain generic errors
-                  if (line.startsWith('3:')) {
+                  // Parse SSE format more robustly
+                  if (line.startsWith('0:')) {
+                    // Text chunk - always pass through
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.startsWith('1:')) {
+                    // Function call chunk - pass through
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.startsWith('2:')) {
+                    // Function result chunk - pass through
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.startsWith('3:')) {
+                    // Error chunk - filter carefully
                     const errorContent = line.substring(2);
-                    // Only filter out the generic "An error occurred" messages
-                    if (errorContent.includes('"An error occurred"') || 
-                        errorContent.includes('"An error occurred."') ||
-                        errorContent === '""' ||
-                        errorContent === 'null') {
-                      console.log('[stream-v2] Filtering out generic error chunk');
-                      continue;
+                    try {
+                      const errorData = JSON.parse(errorContent);
+                      // Only filter out empty or generic errors
+                      if (!errorData || 
+                          errorData === "An error occurred" || 
+                          errorData === "An error occurred." ||
+                          errorData === "") {
+                        console.log('[stream-v2] Filtering out generic error');
+                        continue;
+                      }
+                    } catch (e) {
+                      // If we can't parse it, it might be a real error
                     }
-                    // Let real errors through
-                    console.log('[stream-v2] Allowing specific error through:', line);
-                  }
-                  
-                  // Pass through all other lines
-                  if (line.trim() !== '') {
+                    // Pass through real errors
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.startsWith('4:') || line.startsWith('5:') || line.startsWith('6:')) {
+                    // Tool-related chunks - pass through
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.startsWith('7:')) {
+                    // Roundtrip info - pass through
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.startsWith('8:')) {
+                    // Finish chunk - pass through
+                    controller.enqueue(encoder.encode(line + '\n'));
+                  } else if (line.trim()) {
+                    // Any other non-empty line - pass through
                     controller.enqueue(encoder.encode(line + '\n'));
                   } else {
+                    // Empty line - preserve for SSE format
                     controller.enqueue(encoder.encode('\n'));
                   }
                 }

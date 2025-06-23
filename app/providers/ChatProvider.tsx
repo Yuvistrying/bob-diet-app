@@ -11,6 +11,10 @@ interface ChatMessage {
   imageUrl?: string;
   storageId?: string;
   isStreaming?: boolean;
+  activeToolCall?: {
+    name: string;
+    status: 'calling' | 'complete';
+  };
 }
 
 interface ChatContextType {

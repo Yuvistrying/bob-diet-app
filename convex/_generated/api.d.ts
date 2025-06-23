@@ -34,6 +34,7 @@ import type * as photos from "../photos.js";
 import type * as prompts from "../prompts.js";
 import type * as sessionCache from "../sessionCache.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as summarizer from "../summarizer.js";
 import type * as testUtils from "../testUtils.js";
 import type * as threads from "../threads.js";
 import type * as tools_findPatterns from "../tools/findPatterns.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   prompts: typeof prompts;
   sessionCache: typeof sessionCache;
   subscriptions: typeof subscriptions;
+  summarizer: typeof summarizer;
   testUtils: typeof testUtils;
   threads: typeof threads;
   "tools/findPatterns": typeof tools_findPatterns;
