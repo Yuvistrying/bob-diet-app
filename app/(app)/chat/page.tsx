@@ -10,7 +10,7 @@ import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
 import { Card, CardContent } from "~/app/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown } from "lucide-react";
+import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown, Target, Scale, Flame, Dumbbell, Wheat, Droplet, RefreshCw, Sparkles, HelpCircle, FileText, LogOut } from "lucide-react";
 import { ClientOnly } from "~/app/components/ClientOnly";
 import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
@@ -61,9 +61,10 @@ const ChatMessage = memo(({
         {(message.content && message.content !== "[Photo uploaded]") && (
           <div className={cn(
             "relative max-w-[70%] px-4 py-2.5",
-            "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100",
+            "bg-muted text-foreground",
             "rounded-2xl rounded-br-sm",
-            "shadow-sm"
+            "shadow-sm border border-border",
+            message.content.length < 20 && "min-w-[80px] text-center"
           )}>
             <div className="text-[15px] leading-relaxed">{message.content}</div>
           </div>
@@ -76,10 +77,10 @@ const ChatMessage = memo(({
     <div className="flex justify-start">
       <div className="max-w-[70%] space-y-2">
         {message.activeToolCall && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {message.activeToolCall.status === 'calling' ? (
               <>
-                <div className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full" />
+                <div className="animate-spin h-3 w-3 border-2 border-muted border-t-primary rounded-full" />
                 <span>Running {message.activeToolCall.name}...</span>
               </>
             ) : (
@@ -90,7 +91,7 @@ const ChatMessage = memo(({
             )}
           </div>
         )}
-        <div className="text-gray-800 dark:text-gray-200">
+        <div className="text-foreground">
           <MarkdownMessage content={message.content} className="text-[15px]" />
         </div>
       </div>
@@ -118,7 +119,7 @@ const ConfirmationBubble = memo(({
   const editedItems = editedFoodItems instanceof Map ? editedFoodItems : new Map();
   if (isConfirmed) {
     return (
-      <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
+      <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
         <div className="flex items-center gap-2">
           <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
           <span className="font-medium text-green-800 dark:text-green-200">
@@ -138,9 +139,12 @@ const ConfirmationBubble = memo(({
   }
 
   return (
-    <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
+    <div className="max-w-[80%] px-4 py-3 rounded-2xl border border-border">
       <div className="flex justify-between items-start mb-2">
-        <div className="font-medium text-gray-900 dark:text-gray-100">Got it! Let me confirm what you had: 📝</div>
+        <div className="font-medium text-card-foreground flex items-center gap-1">
+          Got it! Let me confirm what you had:
+          <FileText className="h-4 w-4" />
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -152,26 +156,26 @@ const ConfirmationBubble = memo(({
       </div>
       <div className="space-y-1">
         {(editedItems.get(confirmId) || args.items).map((item: any, i: number) => (
-          <div key={i} className="text-sm font-mono text-gray-800 dark:text-gray-200">
+          <div key={i} className="text-sm text-foreground">
             {editingFoodLog === confirmId ? (
               <div className="flex items-center gap-2">
                 <span>•</span>
                 <Input
                   value={item.name}
                   onChange={(e) => onEditChange(confirmId, i, 'name', e.target.value)}
-                  className="h-6 px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800"
+                  className="h-6 px-2 py-1 text-sm bg-input"
                 />
                 <Input
                   value={item.quantity}
                   onChange={(e) => onEditChange(confirmId, i, 'quantity', e.target.value)}
-                  className="h-6 px-2 py-1 text-sm w-24 bg-gray-50 dark:bg-gray-800"
+                  className="h-6 px-2 py-1 text-sm w-24 bg-input"
                 />
                 <span>-</span>
                 <Input
                   type="number"
                   value={item.calories}
                   onChange={(e) => onEditChange(confirmId, i, 'calories', parseInt(e.target.value) || 0)}
-                  className="h-6 px-2 py-1 text-sm w-20 bg-gray-50 dark:bg-gray-800"
+                  className="h-6 px-2 py-1 text-sm w-20 bg-input"
                 />
                 <span>cal</span>
               </div>
@@ -181,37 +185,38 @@ const ConfirmationBubble = memo(({
           </div>
         ))}
       </div>
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <div className="font-medium font-mono text-gray-900 dark:text-gray-100">
+      <div className="mt-3 pt-3 border-t border-border">
+        <div className="font-medium text-foreground">
           Total: {editedItems.get(confirmId) ? 
             editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
             args.totalCalories} calories
         </div>
         {!isStealthMode && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+          <div className="text-xs text-muted-foreground mt-1">
             {args.totalProtein}g protein • {args.totalCarbs}g carbs • {args.totalFat}g fat
           </div>
         )}
       </div>
       <div className="mt-4 space-y-3">
-        <div className="text-sm text-gray-800 dark:text-gray-200">
-          Should I log this as your {args.mealType}? 🤔
+        <div className="text-sm text-foreground">
+          Should I log this as your {args.mealType}?
         </div>
         <div className="flex gap-2">
           <Button
-            className="flex-1"
+            className="flex-1 transition-opacity hover:opacity-80"
             variant="default"
             onClick={onConfirm}
             disabled={isStreaming}
           >
             <Check className="h-4 w-4 mr-2" />
-            Yes, log it! 📝
+            Yes, log it!
           </Button>
           {editingFoodLog === confirmId && (
             <Button
               variant="outline"
               onClick={onReject}
               disabled={isStreaming}
+              className="transition-opacity hover:opacity-80"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel
@@ -1042,9 +1047,9 @@ export default function Chat() {
   // Helper functions
   const getProgressColor = (value: number, target: number) => {
     const percentage = (value / target) * 100;
-    if (percentage < 80) return "text-gray-600 dark:text-gray-400";
-    if (percentage <= 100) return "text-gray-600 dark:text-gray-400";
-    return "text-gray-600 dark:text-gray-400";
+    if (percentage < 80) return "text-muted-foreground";
+    if (percentage <= 100) return "text-foreground";
+    return "text-destructive";
   };
   
   // Generate a stable ID for a confirmation
@@ -1185,7 +1190,7 @@ export default function Chat() {
   if (isSignedIn === undefined) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground font-mono">Loading...</div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -1196,13 +1201,17 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col" style={{ height: "100vh", minHeight: "-webkit-fill-available" }}>
+    <div className="flex flex-col bg-background fixed inset-0 overflow-hidden">
       {/* Fixed Header Container */}
-      <div className="flex-shrink-0 bg-white dark:bg-black">
+      <div className="flex-shrink-0">
         {/* Header */}
-        <div className="border-b border-gray-200 dark:border-gray-800 p-4 flex justify-between items-center">
+        <div className="border-b border-border">
+          <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Bob - Diet Coach</h1>
+            <h1 className="font-semibold text-lg text-foreground flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Bob - Diet Coach
+            </h1>
           </div>
           <div className="flex items-center gap-2">
           {/* DEV ONLY: Emergency Complete Button */}
@@ -1255,7 +1264,8 @@ export default function Chat() {
               disabled={isStreaming}
               className="text-xs text-muted-foreground"
             >
-              🔄 Reset Onboarding
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Reset Onboarding
             </Button>
           )}
           <ThemeToggle 
@@ -1284,7 +1294,7 @@ export default function Chat() {
                   // Clear messages
                   setMessages([{
                     role: "assistant",
-                    content: `Hey ${profile?.name || "there"}! 🌟 Fresh chat started! What can I help you with?`,
+                    content: `Hey ${profile?.name || "there"}! Fresh chat started! What can I help you with?`,
                   }]);
                   // Clear thread ID
                   setThreadId(null);
@@ -1298,52 +1308,66 @@ export default function Chat() {
             disabled={isStreaming}
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+            className="h-9 w-9 text-muted-foreground transition-opacity hover:opacity-70"
           >
             <PenSquare className="h-5 w-5" />
             <span className="sr-only">New Chat</span>
           </Button>
         </div>
         </div>
+        </div>
 
         {/* Status Cards - Only show after onboarding */}
         {!isOnboarding && (
-          <div className="p-2 border-b border-gray-200 dark:border-gray-800 space-y-1.5">
+          <div className="border-b border-border">
+            <div className="max-w-lg mx-auto px-4 py-2 space-y-1.5">
           {/* Weight Cards Row */}
           <div className="grid grid-cols-2 gap-1.5">
             {/* Goal Card */}
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-2 text-center shadow-sm">
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">🎯 Goal</div>
-              <div className="text-lg font-bold font-mono text-gray-900 dark:text-gray-100">
+            <div className="border border-border rounded-lg p-2 text-center">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Target className="h-3 w-3" />
+                Goal
+              </div>
+              <div className="text-lg font-bold text-card-foreground">
                 {profile?.goal === "cut" ? "Cut" : profile?.goal === "gain" ? "Gain" : "Maintain"}
               </div>
               {profile?.targetWeight && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                <div className="text-xs text-muted-foreground">
                   {profile.targetWeight} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
                 </div>
               )}
             </div>
 
             {/* Current Weight Card */}
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-2 text-center shadow-sm">
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">⚖️ Current</div>
-              <div className="text-lg font-bold font-mono text-gray-900 dark:text-gray-100">
+            <div className="border border-border rounded-lg p-2 text-center">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Scale className="h-3 w-3" />
+                Current
+              </div>
+              <div className="text-lg font-bold text-card-foreground">
                 {latestWeight?.weight || profile?.currentWeight || "—"}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              <div className="text-xs text-muted-foreground">
                 {latestWeight?.unit || (profile?.preferredUnits === "imperial" ? "lbs" : "kg")}
               </div>
             </div>
           </div>
 
           {/* Nutrition Card - Full Width */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-2 shadow-sm">
-            <div className="text-xs text-gray-500 dark:text-gray-400 font-mono text-center mb-1">🔥 Nutrition</div>
+          <div className="border border-border rounded-lg p-2">
+            <div className="text-xs text-muted-foreground text-center mb-1 flex items-center justify-center gap-1">
+              <Flame className="h-3 w-3" />
+              Nutrition
+            </div>
             <div className="space-y-0.5">
                 {/* Calories - Always show */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-700 dark:text-gray-300">🔥 Cals</span>
-                  <span className={cn("text-xs font-semibold font-mono", todayStats && profile ? getProgressColor(todayStats.calories, profile.dailyCalorieTarget) : "")}>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Flame className="h-3 w-3" />
+                    Cals
+                  </span>
+                  <span className={cn("text-xs font-semibold", todayStats && profile ? getProgressColor(todayStats.calories, profile.dailyCalorieTarget) : "")}>
                     {isStealthMode ? (
                       todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "OK"
                     ) : (
@@ -1355,8 +1379,11 @@ export default function Chat() {
                 {/* Protein - Show based on preference */}
                 {preferences?.showProtein !== false && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-gray-700 dark:text-gray-300">💪 Protein</span>
-                    <span className={cn("text-xs font-semibold font-mono", todayStats && profile?.proteinTarget ? getProgressColor(todayStats.protein, profile.proteinTarget) : "text-gray-600 dark:text-gray-400")}>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Dumbbell className="h-3 w-3" />
+                      Protein
+                    </span>
+                    <span className={cn("text-xs font-semibold", todayStats && profile?.proteinTarget ? getProgressColor(todayStats.protein, profile.proteinTarget) : "text-muted-foreground")}>
                       {isStealthMode ? (
                         todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Low" : "OK"
                       ) : (
@@ -1369,8 +1396,11 @@ export default function Chat() {
                 {/* Carbs - Show based on preference */}
                 {!isStealthMode && preferences?.showCarbs !== false && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-gray-700 dark:text-gray-300">🍞 Carbs</span>
-                    <span className={cn("text-xs font-semibold font-mono", todayStats && profile?.carbsTarget ? getProgressColor(todayStats.carbs, profile.carbsTarget) : "text-gray-600 dark:text-gray-400")}>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Wheat className="h-3 w-3" />
+                      Carbs
+                    </span>
+                    <span className={cn("text-xs font-semibold", todayStats && profile?.carbsTarget ? getProgressColor(todayStats.carbs, profile.carbsTarget) : "text-muted-foreground")}>
                       {todayStats?.carbs || 0}g/{profile?.carbsTarget || 200}g
                     </span>
                   </div>
@@ -1379,11 +1409,14 @@ export default function Chat() {
                 {/* Fats - Show based on preference */}
                 {!isStealthMode && preferences?.showFats !== false && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-gray-700 dark:text-gray-300">🥑 Fats</span>
-                    <span className={cn("text-xs font-semibold font-mono", 
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Droplet className="h-3 w-3" />
+                      Fats
+                    </span>
+                    <span className={cn("text-xs font-semibold", 
                       todayStats && (profile?.fatTarget || profile?.fatTarget === 0) 
                         ? getProgressColor(todayStats.fat, profile.fatTarget || 65) 
-                        : "text-gray-600 dark:text-gray-400"
+                        : "text-muted-foreground"
                     )}>
                       {todayStats?.fat || 0}g/{profile?.fatTarget || 65}g
                     </span>
@@ -1391,13 +1424,15 @@ export default function Chat() {
                 )}
             </div>
           </div>
+          </div>
         </div>
         )}
       </div>
 
       {/* Chat Messages - Scrollable area */}
-      <div className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-950">
-        <div ref={chatContainerRef} className="h-full overflow-y-auto px-4 py-4 space-y-4" style={{ minHeight: 0, paddingBottom: isOnboarding && currentOnboardingStep ? `${onboardingHeight + 180}px` : "140px" }}>
+      <div className="flex-1 relative overflow-hidden">
+        <div ref={chatContainerRef} className="h-full overflow-y-auto overflow-x-hidden space-y-4" style={{ minHeight: 0, paddingBottom: isOnboarding && currentOnboardingStep ? `${onboardingHeight + 180}px` : "140px" }}>
+          <div className="max-w-lg mx-auto px-4 pt-4">
         <ClientOnly>
           
           {messages.map((message, index) => {
@@ -1437,7 +1472,7 @@ export default function Chat() {
                 <div key={index} className="space-y-4">
                   {/* Bob's message */}
                   <div className="flex justify-start">
-                    <div className="max-w-[70%] text-gray-800 dark:text-gray-200">
+                    <div className="max-w-[70%] text-foreground">
                       <MarkdownMessage content={message.content} className="text-[15px]" />
                     </div>
                   </div>
@@ -1606,20 +1641,22 @@ export default function Chat() {
         {isStreaming && (
           <div className="flex justify-start">
             <div className="flex space-x-1 p-3">
-              <div className="w-2 h-2 bg-gray-400 dark:bg-gray-600 rounded-full animate-bounce" />
-              <div className="w-2 h-2 bg-gray-400 dark:bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-              <div className="w-2 h-2 bg-gray-400 dark:bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
+              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
             </div>
           </div>
         )}
           <div ref={messagesEndRef} />
+          </div>
         </div>
       </div>
       
 
       {/* Quick Responses for Onboarding */}
       {isOnboarding && currentOnboardingStep && (
-        <div ref={onboardingRef} className="fixed left-0 right-0 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm px-2 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_10px_rgba(255,255,255,0.05)] z-20" style={{ bottom: "calc(76px + 4rem + 2.5rem)" }}>
+        <div ref={onboardingRef} className="fixed left-0 right-0 bg-background/90 backdrop-blur-sm shadow-lg z-20" style={{ bottom: "calc(76px + 4rem + 2.5rem)" }}>
+          <div className="max-w-lg mx-auto px-2 py-2">
           <OnboardingQuickResponses
             step={currentOnboardingStep}
             currentInput={input}
@@ -1644,6 +1681,7 @@ export default function Chat() {
             }}
             isLoading={isLoading || isStreaming}
           />
+          </div>
         </div>
       )}
 
@@ -1651,21 +1689,21 @@ export default function Chat() {
       {showScrollToBottom && (
         <button
           onClick={scrollToBottom}
-          className="fixed bottom-36 right-8 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-full p-2 shadow-lg transition-all duration-200 transform hover:scale-110 focus:outline-none focus:ring-0 border border-gray-200 dark:border-gray-700"
-          style={{ zIndex: 10 }}
+          className="fixed right-1/2 translate-x-1/2 bg-muted text-foreground rounded-full p-2.5 shadow-sm transition-all duration-200 focus:outline-none focus:ring-0 border border-border"
+          style={{ zIndex: 10, bottom: "calc(76px + 5rem + 2rem)" }}
         >
           <ChevronDown className="h-5 w-5" />
         </button>
       )}
       
       {/* Input Area - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-50 dark:bg-gray-950" style={{ paddingBottom: "76px" }}>
-        <div className="mx-auto w-full">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border" style={{ paddingBottom: "76px" }}>
+        <div className="max-w-lg mx-auto px-4 py-4">
           <form
             onSubmit={handleSubmit}
             className="relative focus:outline-none"
           >
-            <div className="relative bg-gray-200 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-3xl shadow-lg px-5 py-4 w-full">
+            <div className="relative bg-card border border-border rounded-3xl shadow-sm px-5 py-4 w-full">
               {/* Image Preview at top */}
               {imagePreview && (
                 <div className="relative mb-3">
@@ -1677,7 +1715,7 @@ export default function Chat() {
                   <button
                     type="button"
                     onClick={clearImage}
-                    className="absolute -top-2 -right-2 bg-gray-700 dark:bg-gray-600 text-white rounded-full p-1 shadow-md hover:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none focus:ring-0"
+                    className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-1 shadow-md bg-primary focus:outline-none focus:ring-0"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -1698,14 +1736,14 @@ export default function Chat() {
                   />
                   <button
                     type="button"
-                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors p-1 focus:outline-none focus:ring-0"
+                    className="text-muted-foreground transition-opacity p-1 focus:outline-none focus:ring-0 hover:opacity-70"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Camera className="h-5 w-5" />
                   </button>
                   <button
                     type="button"
-                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors p-1 focus:outline-none focus:ring-0"
+                    className="text-muted-foreground transition-opacity p-1 focus:outline-none focus:ring-0 hover:opacity-70"
                     onClick={() => {
                       // Create a temporary input without capture attribute for gallery
                       const input = document.createElement('input');
@@ -1730,7 +1768,7 @@ export default function Chat() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask Bob anything"
-                  className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 outline-none focus:outline-none focus:ring-0 text-[15px]"
+                  className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none focus:outline-none focus:ring-0 text-[15px]"
                   disabled={isStreaming}
                   style={{ WebkitAppearance: 'none' }}
                 />
@@ -1740,14 +1778,14 @@ export default function Chat() {
                   type="submit"
                   disabled={(!input.trim() && !selectedImage) || isStreaming || isUploading}
                   className={cn(
-                    "ml-2 rounded-full p-1.5 transition-all focus:outline-none focus:ring-0",
+                    "ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80",
                     (!input.trim() && !selectedImage) || isStreaming || isUploading
-                      ? "bg-gray-400 dark:bg-gray-700 text-gray-600 dark:text-gray-500 cursor-not-allowed"
-                      : "bg-gray-700 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100"
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : "bg-foreground text-background"
                   )}
                 >
                   {isUploading ? (
-                    <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    <div className="h-4 w-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
                   ) : (
                     <ArrowUp className="h-4 w-4" />
                   )}
