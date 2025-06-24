@@ -59,11 +59,11 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   // Special handling for height_age step
   if (step === "height_age") {
     return (
-      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+      <div className="space-y-3 p-3 bg-muted rounded-lg">
         <div className="space-y-3">
           {/* Height input with unit toggle */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Height</label>
+            <label className="text-sm font-medium text-foreground mb-2 block">Height</label>
             <div className="flex gap-2">
               {heightUnit === "cm" ? (
                 <Input
@@ -86,7 +86,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
                     min="3"
                     max="8"
                   />
-                  <span className="self-center text-gray-600">ft</span>
+                  <span className="self-center text-muted-foreground">ft</span>
                   <Input
                     type="number"
                     placeholder="10"
@@ -96,7 +96,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
                     min="0"
                     max="11"
                   />
-                  <span className="self-center text-gray-600">in</span>
+                  <span className="self-center text-muted-foreground">in</span>
                 </div>
               )}
               <div className="flex rounded-md shadow-sm" role="group">
@@ -105,8 +105,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
                   onClick={() => setHeightUnit("cm")}
                   className={`px-3 py-2 text-sm font-medium rounded-l-md border ${
                     heightUnit === "cm"
-                      ? "bg-gray-800 text-white border-gray-800"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-card-foreground border-border"
                   }`}
                 >
                   cm
@@ -116,8 +116,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
                   onClick={() => setHeightUnit("ft")}
                   className={`px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
                     heightUnit === "ft"
-                      ? "bg-gray-800 text-white border-gray-800"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-card-foreground border-border"
                   }`}
                 >
                   ft
@@ -128,7 +128,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
           
           {/* Age input */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Age</label>
+            <label className="text-sm font-medium text-foreground mb-2 block">Age</label>
             <Input
               type="number"
               placeholder="25"
@@ -158,7 +158,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
             }
           }}
           disabled={isLoading || !ageValue || (heightUnit === "cm" ? !heightValue : !feetValue)}
-          className="w-full h-10 text-sm font-medium bg-gray-800 hover:bg-gray-700"
+          className="w-full h-10 text-sm font-medium bg-primary text-primary-foreground"
         >
           Continue →
         </Button>
@@ -169,9 +169,9 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   // Special handling for weight input
   if (step === "current_weight" || step === "target_weight") {
     return (
-      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+      <div className="space-y-3 p-3 bg-muted rounded-lg">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 block">
+          <label className="text-sm font-medium text-foreground block">
             {step === "current_weight" ? "Current Weight" : "Target Weight"}
           </label>
           <div className="flex gap-2">
@@ -191,8 +191,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
                 onClick={() => setWeightUnit("kg")}
                 className={`px-4 py-2 text-sm font-medium rounded-l-md border ${
                   weightUnit === "kg"
-                    ? "bg-gray-800 text-white border-gray-800"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-card-foreground border-border"
                 }`}
               >
                 kg
@@ -202,8 +202,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
                 onClick={() => setWeightUnit("lbs")}
                 className={`px-4 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
                   weightUnit === "lbs"
-                    ? "bg-gray-800 text-white border-gray-800"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-card-foreground border-border"
                 }`}
               >
                 lbs
@@ -218,7 +218,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
             }
           }}
           disabled={isLoading || !weightValue}
-          className="w-full h-10 text-sm font-medium bg-gray-800 hover:bg-gray-700"
+          className="w-full h-10 text-sm font-medium bg-primary text-primary-foreground"
         >
           Continue →
         </Button>
@@ -233,7 +233,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   return (
     <div className="space-y-2 p-3">
       {step === "goal" && (
-        <p className="text-sm text-gray-600 text-center mb-2">
+        <p className="text-sm text-muted-foreground text-center mb-2">
           If you're not sure, describe your situation and I'll help you figure it out!
         </p>
       )}
@@ -243,10 +243,10 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
           variant="outline"
           onClick={() => onSelect(option.value)}
           disabled={isLoading}
-          className="w-full h-12 text-sm font-medium hover:bg-gray-50 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 border"
+          className="w-full h-12 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 border"
         >
-          {option.icon && <span className="text-lg">{option.icon}</span>}
-          <span>{option.label}</span>
+          {option.icon && <span className="text-base">{option.icon}</span>}
+          <span className="font-medium">{option.label}</span>
         </Button>
       ))}
     </div>
