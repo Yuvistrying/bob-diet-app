@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,199 @@ interface Message {
   };
 }
 
+// Memoized message component to prevent unnecessary re-renders
+const ChatMessage = memo(({ 
+  message, 
+  index,
+  imageUrl,
+  onToolAction
+}: { 
+  message: Message; 
+  index: number;
+  imageUrl?: string | null;
+  onToolAction?: (action: string, data: any) => void;
+}) => {
+  if (message.role === "user") {
+    return (
+      <div className="flex flex-col items-end gap-2">
+        {imageUrl && (
+          <div>
+            <img
+              src={imageUrl}
+              alt="User uploaded"
+              className="rounded-xl shadow-sm"
+              style={{ maxHeight: '120px', maxWidth: '120px', objectFit: 'cover' }}
+            />
+          </div>
+        )}
+        
+        {(message.content && message.content !== "[Photo uploaded]") && (
+          <div className={cn(
+            "relative max-w-[70%] px-4 py-2.5",
+            "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100",
+            "rounded-2xl rounded-br-sm",
+            "shadow-sm"
+          )}>
+            <div className="text-[15px] leading-relaxed">{message.content}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[70%] space-y-2">
+        {message.activeToolCall && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            {message.activeToolCall.status === 'calling' ? (
+              <>
+                <div className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full" />
+                <span>Running {message.activeToolCall.name}...</span>
+              </>
+            ) : (
+              <>
+                <Check className="h-3 w-3 text-green-500" />
+                <span>Completed {message.activeToolCall.name}</span>
+              </>
+            )}
+          </div>
+        )}
+        <div className="text-gray-800 dark:text-gray-200">
+          <MarkdownMessage content={message.content} className="text-[15px]" />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ChatMessage.displayName = 'ChatMessage';
+
+// Memoized confirmation bubble component
+const ConfirmationBubble = memo(({ 
+  args, 
+  confirmId,
+  isConfirmed,
+  editingFoodLog,
+  editedFoodItems,
+  isStealthMode,
+  onConfirm,
+  onEdit,
+  onEditChange,
+  onReject,
+  isStreaming
+}: any) => {
+  // Ensure editedFoodItems is a Map
+  const editedItems = editedFoodItems instanceof Map ? editedFoodItems : new Map();
+  if (isConfirmed) {
+    return (
+      <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <span className="font-medium text-green-800 dark:text-green-200">
+            Logged {args.mealType}
+          </span>
+          <span className="text-sm text-green-700 dark:text-green-300">
+            • {editedItems.get(confirmId) ? 
+                editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
+                args.totalCalories} calories
+          </span>
+          <span className="text-sm text-green-600 dark:text-green-400">
+            • {editedItems.get(confirmId)?.length || args.items.length} items
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="flex justify-between items-start mb-2">
+        <div className="font-medium text-gray-900 dark:text-gray-100">Got it! Let me confirm what you had: 📝</div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 -mt-1 -mr-1"
+          onClick={onEdit}
+        >
+          <PenSquare className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="space-y-1">
+        {(editedItems.get(confirmId) || args.items).map((item: any, i: number) => (
+          <div key={i} className="text-sm font-mono text-gray-800 dark:text-gray-200">
+            {editingFoodLog === confirmId ? (
+              <div className="flex items-center gap-2">
+                <span>•</span>
+                <Input
+                  value={item.name}
+                  onChange={(e) => onEditChange(confirmId, i, 'name', e.target.value)}
+                  className="h-6 px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800"
+                />
+                <Input
+                  value={item.quantity}
+                  onChange={(e) => onEditChange(confirmId, i, 'quantity', e.target.value)}
+                  className="h-6 px-2 py-1 text-sm w-24 bg-gray-50 dark:bg-gray-800"
+                />
+                <span>-</span>
+                <Input
+                  type="number"
+                  value={item.calories}
+                  onChange={(e) => onEditChange(confirmId, i, 'calories', parseInt(e.target.value) || 0)}
+                  className="h-6 px-2 py-1 text-sm w-20 bg-gray-50 dark:bg-gray-800"
+                />
+                <span>cal</span>
+              </div>
+            ) : (
+              <span>• {item.name} {item.quantity} - {item.calories} cal</span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="font-medium font-mono text-gray-900 dark:text-gray-100">
+          Total: {editedItems.get(confirmId) ? 
+            editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
+            args.totalCalories} calories
+        </div>
+        {!isStealthMode && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+            {args.totalProtein}g protein • {args.totalCarbs}g carbs • {args.totalFat}g fat
+          </div>
+        )}
+      </div>
+      <div className="mt-4 space-y-3">
+        <div className="text-sm text-gray-800 dark:text-gray-200">
+          Should I log this as your {args.mealType}? 🤔
+        </div>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1"
+            variant="default"
+            onClick={onConfirm}
+            disabled={isStreaming}
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Yes, log it! 📝
+          </Button>
+          {editingFoodLog === confirmId && (
+            <Button
+              variant="outline"
+              onClick={onReject}
+              disabled={isStreaming}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ConfirmationBubble.displayName = 'ConfirmationBubble';
+
 export default function Chat() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
@@ -45,18 +238,43 @@ export default function Chat() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(new Set());
-  const [editingFoodLog, setEditingFoodLog] = useState<string | null>(null);
-  const [editedFoodItems, setEditedFoodItems] = useState<any>({});
+  // Removed - now using ChatProvider state
   const [persistedConfirmations, setPersistedConfirmations] = useState<any[]>([]);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [onboardingHeight, setOnboardingHeight] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Duplicate prevention tracking
+  const [activeLogRequests, setActiveLogRequests] = useState<Set<string>>(new Set());
+  const [recentLogs, setRecentLogs] = useState<Map<string, number>>(new Map()); // logKey -> timestamp
+  const [activeUploadId, setActiveUploadId] = useState<string | null>(null); // Track active upload
+  const [recentMessageHashes, setRecentMessageHashes] = useState<Set<string>>(new Set()); // Track recent messages
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const onboardingRef = useRef<HTMLDivElement>(null);
+  const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
+  
+  // Use shared chat context that persists across tab switches (moved up to use threadId)
+  const {
+    messages,
+    isStreaming,
+    threadId,
+    sendMessage: sendStreamingMessage,
+    stopStreaming,
+    setMessages,
+    setThreadId,
+    setOnCompleteCallback,
+    // Confirmation bubble state from ChatProvider
+    confirmedFoodLogs,
+    setConfirmedFoodLogs,
+    editedFoodItems,
+    setEditedFoodItems,
+    editingFoodLog,
+    setEditingFoodLog
+  } = useChat();
   
   // Convex queries
   const profile = useQuery(api.userProfiles.getUserProfile, {});
@@ -68,6 +286,9 @@ export default function Chat() {
   const sessionStats = useQuery(api.chatSessions.getSessionStats);
   const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday);
   const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus, {});
+  const pendingConfirmations = useQuery(api.pendingConfirmations.getLatestPendingConfirmation, 
+    threadId ? { threadId } : "skip"
+  );
   
   // Convex action for Agent SDK (not used with streaming)
   // const sendMessageAction = useAction(api.agentActions.chat);
@@ -82,18 +303,9 @@ export default function Chat() {
   const getOrCreateDailySession = useMutation(api.chatSessions.getOrCreateDailySession);
   const updateTheme = useMutation(api.userPreferences.updateTheme);
   const getOrCreateDailyThread = useMutation(api.threads.getOrCreateDailyThread);
-  
-  // Use shared chat context that persists across tab switches
-  const {
-    messages,
-    isStreaming,
-    threadId,
-    sendMessage: sendStreamingMessage,
-    stopStreaming,
-    setMessages,
-    setThreadId,
-    setOnCompleteCallback
-  } = useChat();
+  const logFood = useMutation(api.foodLogs.logFood);
+  const saveMessage = useMutation(api.threads.saveMessage);
+  const confirmPendingConfirmation = useMutation(api.pendingConfirmations.confirmPendingConfirmation);
   
   // Query for thread messages
   const threadMessages = useQuery(api.threads.getThreadMessages, 
@@ -212,23 +424,16 @@ export default function Chat() {
           // Only load confirmations from today
           if (parsed.date === today) {
             setPersistedConfirmations(parsed.confirmations || []);
-            // Check if we need to migrate old format IDs (without message index)
+            // Restore confirmed state for already-logged items
             if (parsed.confirmed && parsed.confirmed.length > 0) {
-              const needsMigration = parsed.confirmed.some((id: string) => !id.match(/-\d+$/));
-              if (needsMigration) {
-                logger.info('Old confirmation format detected, clearing for fresh start');
-                localStorage.removeItem('foodConfirmations');
-              } else {
-                // IMPORTANT: Restore confirmed state to maintain minimized bubbles
-                logger.info('Loading confirmed bubbles from localStorage:', parsed.confirmed);
-                setConfirmedFoodLogs(new Set(parsed.confirmed));
-                if (parsed.editedItems) {
-                  setEditedFoodItems(parsed.editedItems);
-                }
+              logger.info('Restoring confirmed states:', parsed.confirmed);
+              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+              if (parsed.editedItems) {
+                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
               }
             }
           } else {
-            // Clear old confirmations
+            // Clear old confirmations from previous days
             localStorage.removeItem('foodConfirmations');
           }
         } catch (e) {
@@ -251,17 +456,48 @@ export default function Chat() {
       logger.info(`[Chat] Loading ${threadMessages.length} messages from Convex for thread ${threadId}`);
       
       // Convert Convex messages to the format expected by the chat UI
-      const loadedMessages = threadMessages.map((msg: any) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-        toolCalls: msg.metadata?.toolCalls,
-        imageUrl: msg.metadata?.storageId ? `/api/files/${msg.metadata.storageId}` : undefined,
-        storageId: msg.metadata?.storageId
-      }));
+      const loadedMessages = threadMessages.map((msg: any) => {
+        // Log if we have toolCalls
+        if (msg.toolCalls && msg.toolCalls.length > 0) {
+          logger.info(`[Chat] Loading message with toolCalls:`, {
+            messageContent: msg.content.substring(0, 50),
+            toolCallCount: msg.toolCalls.length,
+            toolNames: msg.toolCalls.map((tc: any) => tc.toolName)
+          });
+        }
+        
+        return {
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+          toolCalls: msg.toolCalls || undefined, // Don't fallback to metadata.toolCalls
+          // Don't set imageUrl here - let the imageUrls query handle it
+          storageId: msg.metadata?.storageId
+        };
+      });
       
       setMessages(loadedMessages);
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
+      
+      // Restore confirmed states from localStorage if available
+      const savedConfirmations = localStorage.getItem('foodConfirmations');
+      if (savedConfirmations) {
+        try {
+          const parsed = JSON.parse(savedConfirmations);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
+            logger.info('[Chat] Restoring confirmed states for loaded messages:', parsed.confirmed);
+            setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+            if (parsed.editedItems) {
+              // Convert the plain object back to a Map
+              const itemsMap = new Map(Object.entries(parsed.editedItems));
+              setEditedFoodItems(itemsMap);
+            }
+          }
+        } catch (e) {
+          logger.error('Error restoring confirmation states:', e);
+        }
+      }
     }
   }, [threadMessages, messages.length, setMessages, threadId, syncedThreadId]);
   
@@ -308,7 +544,7 @@ export default function Chat() {
         // Get all current confirmations from messages
         const currentConfirmations = messages
           .map((msg, idx) => {
-            const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood");
+            const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
             if (confirmCall) {
               return {
                 index: idx,
@@ -321,13 +557,21 @@ export default function Chat() {
           })
           .filter(Boolean);
         
-        // Only save if there are confirmations to save
-        if (currentConfirmations.length > 0 || confirmedFoodLogs.size > 0) {
+        // Check if we have any messages with toolCalls
+        const hasToolCallsInMessages = messages.some(msg => msg.toolCalls && msg.toolCalls.length > 0);
+        
+        // Only save if:
+        // 1. We have confirmations in the current messages (with toolCalls), OR
+        // 2. We have confirmed food logs but NO toolCalls in messages (meaning messages were loaded from DB without toolCalls)
+        // This prevents clearing confirmations when messages are reloaded without toolCalls
+        if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
           const persistData = {
             date: today,
             confirmations: currentConfirmations,
             confirmed: Array.from(confirmedFoodLogs),
-            editedItems: editedFoodItems
+            editedItems: editedFoodItems instanceof Map 
+              ? Object.fromEntries(Array.from(editedFoodItems.entries()))
+              : editedFoodItems
           };
           
           // Check if the state has actually changed
@@ -337,7 +581,14 @@ export default function Chat() {
             localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
             lastSavedStateRef.current = stateString;
           }
+        } else if (hasToolCallsInMessages && currentConfirmations.length === 0 && confirmedFoodLogs.size === 0) {
+          // Only clear if we have toolCalls in messages but no confirmations
+          // This means the user rejected all confirmations
+          logger.debug('Clearing food confirmations - no active confirmations');
+          localStorage.removeItem('foodConfirmations');
+          lastSavedStateRef.current = "";
         }
+        // If no toolCalls in messages and no confirmed logs, do nothing (preserve existing localStorage)
       }
     }, 1500);
     
@@ -473,10 +724,10 @@ export default function Chat() {
               
               // Restore confirmed states
               if (parsed.confirmed?.length > 0) {
-                setConfirmedFoodLogs(new Set(parsed.confirmed));
+                setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
               }
               if (parsed.editedItems) {
-                setEditedFoodItems(parsed.editedItems);
+                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
               }
             }
           } catch (e) {
@@ -527,10 +778,16 @@ export default function Chat() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if ((!input.trim() && !selectedImage) || isStreaming) return;
+    if ((!input.trim() && !selectedImage) || isStreaming || isUploading) return;
 
     const userMessage = input.trim();
     const hasImage = !!selectedImage;
+    
+    // Prevent double submissions
+    if (hasImage && activeUploadId) {
+      logger.warn('[Chat] Upload already in progress, ignoring submission');
+      return;
+    }
     
     // Create user message
     let messageContent = userMessage;
@@ -548,7 +805,7 @@ export default function Chat() {
     // Check if there are any unconfirmed food logs that should be removed
     // This happens when user types something else instead of confirming
     const hasUnconfirmedFoodLogs = messages.some((msg, idx) => {
-      const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood");
+      const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
       if (confirmCall) {
         const confirmId = getConfirmationId(confirmCall.args, idx);
         return !confirmedFoodLogs.has(confirmId);
@@ -559,8 +816,18 @@ export default function Chat() {
     // Keep confirmation bubbles visible - don't remove them
     // They should only be removed when explicitly confirmed or rejected
     
+    // Check for duplicate message submission (within 2 seconds)
+    const now = Date.now();
+    if (lastSentMessageRef.current && 
+        lastSentMessageRef.current.content === messageContent && 
+        now - lastSentMessageRef.current.timestamp < 2000) {
+      logger.warn('[Chat] Duplicate message submission prevented:', messageContent);
+      return;
+    }
+    
     // Don't add message here - the streaming hook will add it
     setInput("");
+    lastSentMessageRef.current = { content: messageContent, timestamp: now };
 
     try {
       let finalMessage = userMessage;
@@ -569,17 +836,25 @@ export default function Chat() {
       
       // If there's an image, upload it to Convex storage
       if (selectedImage && imagePreview) {
+        // Generate a unique upload ID to track this upload
+        const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        setActiveUploadId(uploadId);
+        setIsUploading(true);
+        
         try {
           logger.info('Starting image upload...', {
+            uploadId,
             fileName: selectedImage.name,
             fileSize: selectedImage.size,
             fileType: selectedImage.type
           });
           
-          storageId = await uploadPhoto(selectedImage);
-          logger.info('Upload successful, storageId:', storageId);
+          // Clear the image immediately to prevent re-uploads
+          const imageToUpload = selectedImage;
+          clearImage();
           
-          // Don't add message here - streaming hook will handle it
+          storageId = await uploadPhoto(imageToUpload);
+          logger.info('Upload successful, storageId:', storageId);
           
           finalMessage = userMessage || "Please analyze this food photo";
         } catch (uploadError) {
@@ -597,11 +872,13 @@ export default function Chat() {
             content: `Sorry, I couldn't upload the image. Error: ${errorMessage}. Please try again.`
           }]);
           setIsLoading(false);
+          setIsUploading(false);
+          setActiveUploadId(null);
           return;
+        } finally {
+          setIsUploading(false);
+          setActiveUploadId(null);
         }
-        
-        // Clear the image after sending
-        clearImage();
       }
       
       // Send message using streaming
@@ -620,11 +897,6 @@ export default function Chat() {
     }
   };
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-  
   // Handle scroll position to show/hide scroll to bottom button
   useEffect(() => {
     const handleScroll = () => {
@@ -642,39 +914,42 @@ export default function Chat() {
     }
   }, []);
   
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-  
-  // Persist confirmation states
-  useEffect(() => {
-    if (typeof window !== 'undefined' && messages.length > 0) {
-      // Find all confirmation messages with their IDs
-      const confirmations = messages
-        .map((msg, idx) => ({ msg, idx }))
-        .filter(({ msg }) => msg.toolCalls?.some(tc => tc.toolName === "confirmFood"))
-        .map(({ msg, idx }) => {
-          const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood");
-          const confirmId = getConfirmationId(confirmCall?.args, idx);
-          return {
-            index: idx,
-            confirmId: confirmId,
-            content: msg.content,
-            args: confirmCall?.args,
-            triggerContent: messages[idx - 1]?.content || "",
-            isConfirmed: confirmedFoodLogs.has(confirmId)
-          };
-        });
-      
-      // Save to localStorage
-      localStorage.setItem('foodConfirmations', JSON.stringify({
-        date: new Date().toISOString().split('T')[0],
-        confirmations: confirmations,
-        confirmed: Array.from(confirmedFoodLogs),
-        editedItems: editedFoodItems
-      }));
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current && messagesEndRef.current) {
+      const container = chatContainerRef.current;
+      // Use scrollTop instead of scrollIntoView for better control
+      container.scrollTop = container.scrollHeight;
     }
-  }, [messages, confirmedFoodLogs, editedFoodItems]);
+  }, []);
+  
+  // Smart auto-scroll - only when appropriate
+  useEffect(() => {
+    if (!chatContainerRef.current || messages.length === 0) return;
+    
+    const container = chatContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200; // More generous threshold
+    
+    // Don't auto-scroll if we're loading initial messages
+    const isLoadingInitialMessages = hasLoadedHistory && messages.length > 5;
+    if (isLoadingInitialMessages && !isStreaming) {
+      return;
+    }
+    
+    // Conditions for auto-scroll:
+    // 1. User is streaming a message (always scroll)
+    // 2. User just sent a message (scroll to see their message)
+    // 3. User is already near bottom when new message arrives
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage?.role === 'user';
+    
+    if (isStreaming || isUserMessage || isNearBottom) {
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    }
+  }, [messages, isStreaming, scrollToBottom, hasLoadedHistory]);
 
   // Handle file processing
   const processImageFile = (file: File) => {
@@ -772,13 +1047,139 @@ export default function Chat() {
     return "text-gray-600 dark:text-gray-400";
   };
   
-  // Generate a stable ID for a confirmation based on its content and index
-  const getConfirmationId = (args: any, messageIndex: number) => {
-    // Create a stable ID based on the content and message index
+  // Generate a stable ID for a confirmation
+  const getConfirmationId = useCallback((args: any, messageIndex: number, messageContent?: string) => {
+    // Create a stable ID based on food content and a hash of the message
     const foodNames = args.items?.map((item: any) => item.name).join('-') || '';
-    // Include message index to make each confirmation unique within a session
-    return `${args.mealType}-${args.totalCalories}-${foodNames}-${messageIndex}`;
+    // Use a combination of food details to create a unique but stable ID
+    const contentHash = `${args.mealType}-${args.totalCalories}-${foodNames}`.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    // Remove messageIndex from the ID to make it truly stable across reloads
+    return `confirm-${Math.abs(contentHash)}`;
+  }, []);
+  
+  // Clean up old entries from recentLogs (older than 30 seconds)
+  const cleanupRecentLogs = () => {
+    const now = Date.now();
+    const thirtySecondsAgo = now - 30000;
+    
+    setRecentLogs(prev => {
+      const newMap = new Map(prev);
+      for (const [key, timestamp] of newMap) {
+        if (timestamp < thirtySecondsAgo) {
+          newMap.delete(key);
+        }
+      }
+      return newMap;
+    });
+    
+    // Also clean up message hashes older than 30 seconds
+    setRecentMessageHashes(prev => {
+      const newSet = new Set<string>();
+      const cutoffTime = now - 30000;
+      prev.forEach(hash => {
+        const [, timestamp] = hash.split('_');
+        if (parseInt(timestamp) > cutoffTime) {
+          newSet.add(hash);
+        }
+      });
+      return newSet;
+    });
   };
+  
+  // Check if this food log is a duplicate
+  const isDuplicateLog = (args: any): boolean => {
+    const logKey = `${args.mealType}-${args.totalCalories}-${Date.now() / 1000 | 0}`; // 1-second precision
+    const now = Date.now();
+    
+    // Clean up old entries
+    cleanupRecentLogs();
+    
+    // Check if we logged something very similar in the last 30 seconds
+    for (const [key, timestamp] of recentLogs) {
+      if (key.startsWith(`${args.mealType}-${args.totalCalories}`) && 
+          now - timestamp < 30000) {
+        logger.warn('[Chat] Duplicate log detected:', { key, timeSince: now - timestamp });
+        return true;
+      }
+    }
+    
+    return false;
+  };
+  
+  // Callbacks for confirmation bubble
+  const handleEditChange = useCallback((confirmId: string, itemIndex: number, field: string, value: any) => {
+    setEditedFoodItems(prev => {
+      const newMap = new Map(prev);
+      const items = newMap.get(confirmId) || [];
+      const updatedItems = [...items];
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], [field]: value };
+      newMap.set(confirmId, updatedItems);
+      return newMap;
+    });
+  }, [setEditedFoodItems]);
+  
+  const handleEditToggle = useCallback((confirmId: string, args: any) => {
+    if (editingFoodLog === confirmId) {
+      setEditingFoodLog(null);
+    } else {
+      setEditingFoodLog(confirmId);
+      if (!editedFoodItems.get(confirmId)) {
+        setEditedFoodItems(prev => {
+          const newMap = new Map(prev);
+          newMap.set(confirmId, [...args.items]);
+          return newMap;
+        });
+      }
+    }
+  }, [editingFoodLog, editedFoodItems, setEditingFoodLog, setEditedFoodItems]);
+
+  // Persist confirmation states to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      // Debounce the localStorage save
+      const timeoutId = setTimeout(() => {
+        // Find all confirmation messages with their IDs
+        const confirmations = messages
+          .map((msg, idx) => ({ msg, idx }))
+          .filter(({ msg }) => msg.toolCalls?.some(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"))
+          .map(({ msg, idx }) => {
+            const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
+            
+            // Extract args properly for both tool types
+            let args = confirmCall?.args;
+            if (confirmCall?.toolName === "analyzeAndConfirmPhoto" && args?.analysisComplete) {
+              const { analysisComplete, ...confirmationData } = args;
+              args = confirmationData;
+            }
+            
+            const confirmId = getConfirmationId(args, idx);
+            return {
+              index: idx,
+              confirmId: confirmId,
+              content: msg.content,
+              args: args,
+              triggerContent: messages[idx - 1]?.content || "",
+              isConfirmed: confirmedFoodLogs.has(confirmId)
+            };
+          });
+        
+        // Save to localStorage
+        localStorage.setItem('foodConfirmations', JSON.stringify({
+          date: new Date().toISOString().split('T')[0],
+          confirmations: confirmations,
+          confirmed: Array.from(confirmedFoodLogs),
+          editedItems: editedFoodItems instanceof Map 
+            ? Object.fromEntries(Array.from(editedFoodItems.entries()))
+            : {}
+        }));
+      }, 500); // Wait 500ms before saving
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, confirmedFoodLogs, editedFoodItems, getConfirmationId]);
 
   // Show loading state while checking auth
   if (isSignedIn === undefined) {
@@ -867,7 +1268,7 @@ export default function Chat() {
               // Check if there's an active food confirmation
               const lastMessage = messages[messages.length - 1];
               const hasActiveConfirmation = lastMessage?.toolCalls?.some(
-                tc => tc.toolName === "confirmFood"
+                tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
               );
               
               if (hasActiveConfirmation) {
@@ -1002,9 +1403,30 @@ export default function Chat() {
           {messages.map((message, index) => {
           // Handle messages with tool calls (like confirmFood)
           if (message.toolCalls && message.toolCalls.length > 0) {
-            const confirmFoodCall = message.toolCalls.find(tc => tc.toolName === "confirmFood");
+            const confirmFoodCall = message.toolCalls.find(tc => 
+              tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
+            );
+            
             if (confirmFoodCall) {
-              const args = confirmFoodCall.args;
+              // For analyzeAndConfirmPhoto, the confirmation data is in args, not result
+              let args = confirmFoodCall.args;
+              
+              // If it's analyzeAndConfirmPhoto and has analysisComplete, extract the data
+              if (confirmFoodCall.toolName === "analyzeAndConfirmPhoto" && args?.analysisComplete) {
+                // Remove the analysisComplete flag for consistent handling
+                const { analysisComplete, ...confirmationData } = args;
+                args = confirmationData;
+              }
+              
+              // Skip if no valid args or if it's an error
+              if (!args || args.error || !args.items) {
+                logger.warn('[Chat] Skipping confirmation - invalid args:', {
+                  hasArgs: !!args,
+                  hasError: args?.error,
+                  hasItems: args?.items
+                });
+                return null;
+              }
               const confirmId = getConfirmationId(args, index);
               const isConfirmed = confirmedFoodLogs.has(confirmId);
               
@@ -1022,181 +1444,147 @@ export default function Chat() {
                   
                   {/* Food confirmation card - either full or collapsed */}
                   <div className="flex justify-start">
-                    {isConfirmed ? (
-                      // Collapsed summary view
-                      <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
-                        <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          <span className="font-medium text-green-800 dark:text-green-200">
-                            Logged {args.mealType}
-                          </span>
-                          <span className="text-sm text-green-700 dark:text-green-300">
-                            • {editedFoodItems[confirmId] ? 
-                                editedFoodItems[confirmId].reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
-                                args.totalCalories} calories
-                          </span>
-                          <span className="text-sm text-green-600 dark:text-green-400">
-                            • {editedFoodItems[confirmId]?.length || args.items.length} items
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      // Full confirmation bubble
-                      <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="font-medium text-gray-900 dark:text-gray-100">Got it! Let me confirm what you had: 📝</div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 -mt-1 -mr-1"
-                            onClick={() => {
-                              if (editingFoodLog === confirmId) {
-                                setEditingFoodLog(null);
-                              } else {
-                                setEditingFoodLog(confirmId);
-                                // Initialize edited items if not already done
-                                if (!editedFoodItems[confirmId]) {
-                                  setEditedFoodItems({ ...editedFoodItems, [confirmId]: [...args.items] });
+                    <ConfirmationBubble
+                      args={args}
+                      confirmId={confirmId}
+                      isConfirmed={isConfirmed}
+                      editingFoodLog={editingFoodLog}
+                      editedFoodItems={editedFoodItems}
+                      isStealthMode={isStealthMode}
+                      isStreaming={isStreaming}
+                      onEdit={() => handleEditToggle(confirmId, args)}
+                      onEditChange={handleEditChange}
+                      onReject={() => {
+                        setEditingFoodLog(null);
+                        setEditedFoodItems(prev => {
+                          const newMap = new Map(prev);
+                          newMap.set(confirmId, args.items);
+                          return newMap;
+                        });
+                      }}
+                      onConfirm={async () => {
+                        // Check for duplicate
+                        if (isDuplicateLog(args)) {
+                          logger.warn('[Chat] Duplicate log prevented for:', args.description);
+                          setMessages(prev => [...prev, {
+                            role: "assistant",
+                            content: "This food was already logged recently!"
+                          }]);
+                          return;
+                        }
+                        
+                        // Check if already processing this request
+                        const requestKey = `${confirmId}-${Date.now()}`;
+                        if (activeLogRequests.has(confirmId)) {
+                          logger.warn('[Chat] Already processing this confirmation:', confirmId);
+                          return;
+                        }
+                        
+                        // Mark as processing
+                        setActiveLogRequests(prev => new Set(prev).add(confirmId));
+                        setConfirmedFoodLogs(prev => new Set(prev).add(confirmId));
+                        setIsLoading(true);
+                        
+                        try {
+                          // Get the final data (either edited or original)
+                          const finalItems = editedFoodItems.get(confirmId) || args.items;
+                          const finalCalories = finalItems.reduce((sum: number, item: any) => sum + (item.calories || 0), 0);
+                          const finalProtein = finalItems.reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
+                          const finalCarbs = finalItems.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0);
+                          const finalFat = finalItems.reduce((sum: number, item: any) => sum + (item.fat || 0), 0);
+                          
+                          // Log the food directly
+                          const logResult = await logFood({
+                            description: args.description,
+                            foods: finalItems.map((item: any) => ({
+                              name: item.name,
+                              quantity: item.quantity,
+                              calories: item.calories,
+                              protein: item.protein || 0,
+                              carbs: item.carbs || 0,
+                              fat: item.fat || 0,
+                            })),
+                            meal: args.mealType,
+                            aiEstimated: true,
+                            confidence: args.confidence || "medium"
+                          });
+                          
+                          // Track this successful log
+                          const logKey = `${args.mealType}-${finalCalories}`;
+                          setRecentLogs(prev => new Map(prev).set(logKey, Date.now()));
+                          
+                          // Add a success message
+                          const caloriesRemaining = (profile?.dailyCalorieTarget || 2000) - ((todayStats?.calories || 0) + finalCalories);
+                          const successMessage = `Logged! ${caloriesRemaining} calories left today.`;
+                          setMessages(prev => [...prev, {
+                            role: "assistant",
+                            content: successMessage
+                          }]);
+                          
+                          // Save the message to chat history with foodLogId
+                          if (threadId) {
+                            try {
+                              await saveMessage({
+                                threadId,
+                                role: "assistant",
+                                content: successMessage,
+                                metadata: {
+                                  foodLogId: logResult,
+                                  actionType: "food_log"
                                 }
-                              }
-                            }}
-                          >
-                            <PenSquare className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="space-y-1">
-                          {(editedFoodItems[confirmId] || args.items).map((item: any, i: number) => (
-                            <div key={i} className="text-sm font-mono text-gray-800 dark:text-gray-200">
-                              {editingFoodLog === confirmId ? (
-                                <div className="flex items-center gap-2">
-                                  <span>•</span>
-                                  <Input
-                                    value={item.name}
-                                    onChange={(e) => {
-                                      const updatedItems = [...(editedFoodItems[confirmId] || args.items)];
-                                      updatedItems[i] = { ...updatedItems[i], name: e.target.value };
-                                      setEditedFoodItems({ ...editedFoodItems, [confirmId]: updatedItems });
-                                    }}
-                                    className="h-6 px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800"
-                                  />
-                                  <Input
-                                    value={item.quantity}
-                                    onChange={(e) => {
-                                      const updatedItems = [...(editedFoodItems[confirmId] || args.items)];
-                                      updatedItems[i] = { ...updatedItems[i], quantity: e.target.value };
-                                      setEditedFoodItems({ ...editedFoodItems, [confirmId]: updatedItems });
-                                    }}
-                                    className="h-6 px-2 py-1 text-sm w-24 bg-gray-50 dark:bg-gray-800"
-                                  />
-                                  <span>-</span>
-                                  <Input
-                                    type="number"
-                                    value={item.calories}
-                                    onChange={(e) => {
-                                      const updatedItems = [...(editedFoodItems[confirmId] || args.items)];
-                                      updatedItems[i] = { ...updatedItems[i], calories: parseInt(e.target.value) || 0 };
-                                      setEditedFoodItems({ ...editedFoodItems, [confirmId]: updatedItems });
-                                    }}
-                                    className="h-6 px-2 py-1 text-sm w-20 bg-gray-50 dark:bg-gray-800"
-                                  />
-                                  <span>cal</span>
-                                </div>
-                              ) : (
-                                <span>• {item.name} {item.quantity} - {item.calories} cal</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                          <div className="font-medium font-mono text-gray-900 dark:text-gray-100">
-                            Total: {editedFoodItems[confirmId] ? 
-                              editedFoodItems[confirmId].reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
-                              args.totalCalories} calories
-                          </div>
-                          {!isStealthMode && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                              {args.totalProtein}g protein • {args.totalCarbs}g carbs • {args.totalFat}g fat
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-4 space-y-3">
-                          <div className="text-sm text-gray-800 dark:text-gray-200">
-                            Should I log this as your {args.mealType}? 🤔
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              className="flex-1"
-                              variant="default"
-                              onClick={async () => {
-                                // Mark this confirmation as confirmed
-                                setConfirmedFoodLogs(prev => new Set(prev).add(confirmId));
-                                
-                                // Update the bubble's args if edited
-                                if (editedFoodItems[confirmId]) {
-                                  const updatedMessage = [...messages];
-                                  const confirmCall = updatedMessage[index].toolCalls?.find(tc => tc.toolName === "confirmFood");
-                                  if (confirmCall) {
-                                    // Update the args with edited data
-                                    const editedItems = editedFoodItems[confirmId];
-                                    confirmCall.args = {
-                                      ...confirmCall.args,
-                                      items: editedItems,
-                                      totalCalories: editedItems.reduce((sum: number, item: any) => sum + (item.calories || 0), 0)
-                                    };
-                                  }
-                                  setMessages(updatedMessage);
-                                }
-                                
-                                // Send "yes" using streaming (it will add the user message)
-                                setIsLoading(true);
-                                
-                                try {
-                                  await sendStreamingMessage(
-                                    "yes",
-                                    threadId || undefined
-                                  );
-                                } catch (error) {
-                                  logger.error("Error confirming:", error);
-                                  // On error, add an error message
-                                  setMessages(prev => [...prev, {
-                                    role: "assistant",
-                                    content: "Sorry, I couldn't log that. Please try again."
-                                  }]);
-                                } finally {
-                                  setIsLoading(false);
-                                  setEditingFoodLog(null);
-                                }
-                              }}
-                              disabled={isStreaming}
-                            >
-                              <Check className="h-4 w-4 mr-2" />
-                              Yes, log it! 📝
-                            </Button>
-                            {editingFoodLog === confirmId && (
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingFoodLog(null);
-                                  setEditedFoodItems({ ...editedFoodItems, [confirmId]: args.items });
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground dark:text-gray-400 text-center">
-                            If this isn't accurate, just tell me what to change in the chat below
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                              });
+                            } catch (err) {
+                              logger.warn('[Chat] Could not save food log message to history:', err);
+                            }
+                          }
+                          
+                          // Clear pending confirmation if exists
+                          if (confirmPendingConfirmation && pendingConfirmations) {
+                            try {
+                              await confirmPendingConfirmation({ confirmationId: pendingConfirmations._id });
+                            } catch (err) {
+                              logger.warn('[Chat] Could not clear pending confirmation:', err);
+                            }
+                          }
+                          
+                        } catch (error) {
+                          logger.error("Error logging food directly:", error);
+                          // On error, fall back to sending "yes" message
+                          try {
+                            await sendStreamingMessage(
+                              "yes",
+                              threadId || undefined
+                            );
+                          } catch (streamError) {
+                            logger.error("Error confirming via stream:", streamError);
+                            setMessages(prev => [...prev, {
+                              role: "assistant",
+                              content: "Sorry, I couldn't log that. Please try again."
+                            }]);
+                          }
+                        } finally {
+                          setIsLoading(false);
+                          setEditingFoodLog(null);
+                          // Remove from active requests
+                          setActiveLogRequests(prev => {
+                            const next = new Set(prev);
+                            next.delete(confirmId);
+                            return next;
+                          });
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               );
             }
           }
 
-          // Regular message display
+          // Regular message display - use memoized component
+          const imgUrl = message.storageId && imageUrls?.[message.storageId] 
+            ? imageUrls[message.storageId] 
+            : message.imageUrl || null;
+            
           return (
             <div
               key={index}
@@ -1205,57 +1593,11 @@ export default function Chat() {
                 message.role === "user" ? "items-end" : "items-start"
               )}
             >
-              {message.role === "user" ? (
-                <>
-                  {/* Display image separately without background */}
-                  {(message.imageUrl || (message.storageId && imageUrls?.[message.storageId])) && (
-                    <div>
-                      <img 
-                        src={message.storageId && imageUrls?.[message.storageId] 
-                          ? imageUrls[message.storageId] 
-                          : message.imageUrl || ''} 
-                        alt="Uploaded food" 
-                        className="rounded-lg"
-                        style={{ maxHeight: '120px', maxWidth: '120px', objectFit: 'cover' }}
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Display text in a separate bubble if there's content or if it's a photo placeholder */}
-                  {(message.content && message.content !== "[Photo uploaded]") && (
-                    <div className={cn(
-                      "relative max-w-[70%] px-4 py-2.5",
-                      "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100",
-                      "rounded-2xl rounded-br-sm",
-                      "shadow-sm"
-                    )}>
-                      <div className="text-[15px] leading-relaxed">{message.content}</div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="max-w-[70%] space-y-2">
-                  {/* Show tool call indicator if active */}
-                  {message.activeToolCall && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      {message.activeToolCall.status === 'calling' ? (
-                        <>
-                          <div className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full" />
-                          <span>Running {message.activeToolCall.name}...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-3 w-3 text-green-500" />
-                          <span>Completed {message.activeToolCall.name}</span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="text-gray-800 dark:text-gray-200">
-                    <MarkdownMessage content={message.content} className="text-[15px]" />
-                  </div>
-                </div>
-              )}
+              <ChatMessage 
+                message={message} 
+                index={index}
+                imageUrl={imgUrl}
+              />
             </div>
           );
         })}
@@ -1396,15 +1738,19 @@ export default function Chat() {
                 {/* Send button */}
                 <button
                   type="submit"
-                  disabled={(!input.trim() && !selectedImage) || isStreaming}
+                  disabled={(!input.trim() && !selectedImage) || isStreaming || isUploading}
                   className={cn(
                     "ml-2 rounded-full p-1.5 transition-all focus:outline-none focus:ring-0",
-                    (!input.trim() && !selectedImage) || isStreaming
+                    (!input.trim() && !selectedImage) || isStreaming || isUploading
                       ? "bg-gray-400 dark:bg-gray-700 text-gray-600 dark:text-gray-500 cursor-not-allowed"
                       : "bg-gray-700 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100"
                   )}
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  {isUploading ? (
+                    <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
