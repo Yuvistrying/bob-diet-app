@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useRef, useCallback } from "react";
+import React, { createContext, useContext, useRef, useCallback, useState } from "react";
 import { useStreamingChat } from "~/app/hooks/useStreamingChat";
 import { logger } from "~/app/utils/logger";
 
@@ -28,6 +28,13 @@ interface ChatContextType {
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   setThreadId: React.Dispatch<React.SetStateAction<string | null>>;
   setOnCompleteCallback: (callback: ((threadId: string) => void) | null) => void;
+  // Confirmation bubble state
+  confirmedFoodLogs: Set<string>;
+  setConfirmedFoodLogs: React.Dispatch<React.SetStateAction<Set<string>>>;
+  editedFoodItems: Map<string, any>;
+  setEditedFoodItems: React.Dispatch<React.SetStateAction<Map<string, any>>>;
+  editingFoodLog: string | null;
+  setEditingFoodLog: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -35,6 +42,11 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Store callbacks that can be set by individual pages
   const onCompleteCallbackRef = useRef<((threadId: string) => void) | null>(null);
+  
+  // Confirmation bubble state that persists across tab switches
+  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(new Set());
+  const [editedFoodItems, setEditedFoodItems] = useState<Map<string, any>>(new Map());
+  const [editingFoodLog, setEditingFoodLog] = useState<string | null>(null);
   
   // This state will persist across tab switches
   const streamingChat = useStreamingChat({
@@ -56,7 +68,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   return (
     <ChatContext.Provider value={{
       ...streamingChat,
-      setOnCompleteCallback
+      setOnCompleteCallback,
+      // Confirmation bubble state
+      confirmedFoodLogs,
+      setConfirmedFoodLogs,
+      editedFoodItems,
+      setEditedFoodItems,
+      editingFoodLog,
+      setEditingFoodLog
     }}>
       {children}
     </ChatContext.Provider>

@@ -62,13 +62,28 @@ export const saveMessage = mutation({
     const messageMetadata = args.metadata ? {
       ...args.metadata,
       threadId: args.threadId,
-      toolCalls: args.toolCalls,
     } : {
       threadId: args.threadId,
-      toolCalls: args.toolCalls,
     };
     
+    // Add toolCalls to metadata only if they exist
+    if (args.toolCalls && args.toolCalls.length > 0) {
+      messageMetadata.toolCalls = args.toolCalls;
+    }
+    
     console.log(`[saveMessage] Saving ${args.role} message to thread ${args.threadId}: "${args.content.substring(0, 50)}..."`);
+    
+    // Log if we have toolCalls
+    if (args.toolCalls && args.toolCalls.length > 0) {
+      console.log(`[saveMessage] Message has ${args.toolCalls.length} tool calls:`, args.toolCalls.map(tc => tc.toolName));
+      console.log(`[saveMessage] Full toolCalls data:`, JSON.stringify(args.toolCalls, null, 2));
+    }
+    
+    // Log the final metadata object
+    console.log(`[saveMessage] Final metadata object keys:`, Object.keys(messageMetadata));
+    if (messageMetadata.toolCalls) {
+      console.log(`[saveMessage] Metadata contains toolCalls:`, messageMetadata.toolCalls.length);
+    }
     
     const messageId = await ctx.db.insert("chatHistory", {
       userId: identity.subject,
@@ -154,9 +169,29 @@ export const getThreadMessages = query({
     if (messages.length > 0) {
       const last = messages[0];
       console.log(`[getThreadMessages] Most recent: [${last.role}] "${last.content.substring(0, 50)}..."`);
+      
+      // Debug: Check for messages with toolCalls
+      const messagesWithToolCalls = messages.filter(m => m.metadata?.toolCalls && m.metadata.toolCalls.length > 0);
+      if (messagesWithToolCalls.length > 0) {
+        console.log(`[getThreadMessages] Found ${messagesWithToolCalls.length} messages with tool calls`);
+        messagesWithToolCalls.forEach((msg, idx) => {
+          console.log(`[getThreadMessages] Message ${idx} toolCalls:`, {
+            role: msg.role,
+            content: msg.content.substring(0, 50),
+            toolCallCount: msg.metadata?.toolCalls?.length,
+            toolNames: msg.metadata?.toolCalls?.map((tc: any) => tc.toolName)
+          });
+        });
+      } else {
+        console.log(`[getThreadMessages] No messages found with toolCalls in metadata`);
+      }
     }
     
-    return messages.reverse(); // Return in chronological order
+    // Return messages with toolCalls properly extracted
+    return messages.reverse().map(msg => ({
+      ...msg,
+      toolCalls: msg.metadata?.toolCalls || undefined
+    }))
   },
 });
 
@@ -330,17 +365,34 @@ export const checkAndSummarize = action({
       limit: 50,
     });
     
-    if (messages.length < 5) return null;
+    // Need at least 10 messages total (5 to summarize + 5 to keep recent)
+    if (messages.length < 10) {
+      console.log(`[checkAndSummarize] Not enough messages: ${messages.length} < 10`);
+      return null;
+    }
     
     // Get existing summaries for this thread
     const summaries = await ctx.runQuery(api.threads.getThreadSummaries, {
       threadId: args.threadId,
     });
     
-    // Find the last summarized message index
-    const lastSummaryIndex = summaries.length > 0 
-      ? summaries[summaries.length - 1].messageRange.endIndex 
-      : 0;
+    // Find the total messages already summarized
+    let totalMessagesSummarized = 0;
+    if (summaries.length > 0) {
+      const lastSummary = summaries[summaries.length - 1];
+      totalMessagesSummarized = lastSummary.messageRange.endIndex;
+    }
+    
+    // Calculate how many new messages we have since last summary
+    const newMessageCount = messages.length - totalMessagesSummarized;
+    
+    console.log(`[checkAndSummarize] Status: ${messages.length} total messages, ${totalMessagesSummarized} already summarized, ${newMessageCount} new messages`);
+    
+    // Only summarize if we have at least 5 new messages
+    if (newMessageCount < 5) {
+      console.log(`[checkAndSummarize] Not enough new messages: ${newMessageCount} < 5`);
+      return null;
+    }
     
     // Check if we should summarize
     const messagesToCheck = messages.map((m: any, idx: number) => ({
@@ -349,15 +401,21 @@ export const checkAndSummarize = action({
       timestamp: m.timestamp,
     }));
     
-    if (!shouldSummarizeMessages(messagesToCheck, lastSummaryIndex)) {
+    if (!shouldSummarizeMessages(messagesToCheck, totalMessagesSummarized)) {
+      console.log(`[checkAndSummarize] Should not summarize - conditions not met`);
       return null;
     }
     
     // Get messages to summarize (from last summary to 5 messages ago)
     const endIndex = messages.length - 5;
-    const messagesToSummarize = messages.slice(lastSummaryIndex, endIndex);
+    const messagesToSummarize = messages.slice(totalMessagesSummarized, endIndex);
     
-    if (messagesToSummarize.length === 0) return null;
+    if (messagesToSummarize.length === 0) {
+      console.log(`[checkAndSummarize] No messages to summarize`);
+      return null;
+    }
+    
+    console.log(`[checkAndSummarize] Will summarize ${messagesToSummarize.length} messages (indexes ${totalMessagesSummarized} to ${endIndex})`)
     
     // Get previous summary for context
     const previousSummary = summaries.length > 0 
@@ -379,7 +437,7 @@ export const checkAndSummarize = action({
       threadId: args.threadId,
       summary,
       messageRange: {
-        startIndex: lastSummaryIndex,
+        startIndex: totalMessagesSummarized,
         endIndex: endIndex,
         startTimestamp: messagesToSummarize[0].timestamp,
         endTimestamp: messagesToSummarize[messagesToSummarize.length - 1].timestamp,

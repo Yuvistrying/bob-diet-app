@@ -105,67 +105,6 @@ export function createTools(
 
   // Photo analysis tool (only if storageId provided)
   if (storageId) {
-    let hasAnalyzed = false; // Track if we've already analyzed this photo
-    
-    tools.analyzePhoto = tool({
-      description: "Analyze a food photo to estimate calories and macros. Only call this ONCE per photo.",
-      parameters: z.object({
-        mealContext: z.string().optional().describe("Additional context about the meal type"),
-      }),
-      execute: async (args) => {
-        console.log("[analyzePhoto tool] Execute called with storageId:", storageId);
-        
-        // Prevent multiple analyses of the same photo
-        if (hasAnalyzed) {
-          console.warn("[analyzePhoto tool] Already analyzed this photo, returning cached result");
-          return { error: "Photo already analyzed. Use confirmFood to show the results." };
-        }
-        
-        if (!storageId) {
-          return { error: "No image uploaded. Please upload an image first." };
-        }
-        
-        hasAnalyzed = true; // Mark as analyzed
-        
-        try {
-          console.log("[analyzePhoto tool] Calling vision.analyzeFoodPublic");
-          const result = await convexClient.action(api.vision.analyzeFoodPublic, {
-            storageId: storageId as Id<"_storage">,
-            context: args.mealContext,
-          });
-          
-          console.log("[analyzePhoto tool] Result from vision:", result);
-        
-          if (!result.error && result.foods) {
-            console.log("[analyzePhoto tool] Saving photo analysis");
-            await convexClient.mutation(api.photoAnalyses.savePhotoAnalysis, {
-              userId,
-              timestamp: Date.now(),
-              storageId: storageId as Id<"_storage">,
-              analysis: {
-                foods: result.foods,
-                totalCalories: result.totalCalories,
-                totalProtein: result.totalProtein,
-                totalCarbs: result.totalCarbs,
-                totalFat: result.totalFat,
-                overallConfidence: result.confidence || result.overallConfidence,
-                metadata: result.metadata,
-              },
-              confirmed: false,
-              embedding: result.embedding,
-            });
-          }
-          
-          return result;
-        } catch (error: any) {
-          console.error("[analyzePhoto tool] Error:", error);
-          return { 
-            error: `Failed to analyze photo: ${error.message || 'Unknown error'}`,
-          };
-        }
-      },
-    });
-    
     // Combined analyze and confirm tool for photos
     tools.analyzeAndConfirmPhoto = tool({
       description: "Analyze a food photo and immediately ask for confirmation - combines analyzePhoto and confirmFood in one step",
@@ -219,7 +158,15 @@ export function createTools(
           
           const confirmationData = {
             description: analysisResult.foods.map((f: any) => f.name).join(", "),
-            items: analysisResult.foods,
+            items: analysisResult.foods.map((f: any) => ({
+              name: f.name,
+              quantity: f.quantity,
+              calories: f.calories,
+              protein: f.protein,
+              carbs: f.carbs,
+              fat: f.fat,
+              // Remove confidence field from items
+            })),
             totalCalories: analysisResult.totalCalories,
             totalProtein: analysisResult.totalProtein,
             totalCarbs: analysisResult.totalCarbs,
@@ -329,7 +276,18 @@ export function createTools(
 export function detectIntent(userMessage: string) {
   const msg = userMessage.toLowerCase();
   
-  const intents = {
+  // Check for query patterns first (higher priority)
+  const queryPatterns = [
+    /what (did i|have i|i) (eat|ate|had)/i,
+    /show me (my|today|what)/i,
+    /how (much|many) (did i|have i|calories)/i,
+    /list (my|today|what i)/i,
+    /tell me (what|about)/i
+  ];
+  
+  const isQuery = queryPatterns.some(pattern => pattern.test(msg));
+  
+  const intents: Record<string, RegExp> = {
     food: /\b(ate|had|eat|eating|food|meal|breakfast|lunch|dinner|snack|log|for me)\b/i,
     weight: /\b(weight|weigh|scale|kg|lbs|pounds|kilos)\b/i,
     progress: /\b(progress|today|left|remaining|how|calories|status)\b/i,
@@ -340,6 +298,16 @@ export function detectIntent(userMessage: string) {
   };
   
   const detected = [];
+  
+  // If it's a query, prioritize progress intent
+  if (isQuery) {
+    detected.push('query');
+    detected.push('progress');
+    // Don't add 'food' intent for queries
+    return detected;
+  }
+  
+  // Otherwise, normal intent detection
   for (const [intent, regex] of Object.entries(intents)) {
     if (regex.test(msg)) {
       detected.push(intent);
@@ -352,6 +320,18 @@ export function detectIntent(userMessage: string) {
 // Helper to determine which tools to load
 export function getToolsForIntent(intents: string[], hasPendingConfirmation: boolean) {
   const isConfirmingFood = intents.includes('confirmation') && hasPendingConfirmation;
+  const isQuery = intents.includes('query');
+  
+  // For queries, only load showProgress tool
+  if (isQuery && !isConfirmingFood) {
+    return {
+      needsFoodTools: false,
+      needsWeightTool: false,
+      needsProgressTool: true,
+      needsSearchTool: false,
+    };
+  }
+  
   const needsFoodTools = !intents.length || 
     intents.some(i => ['food', 'photo', 'search'].includes(i)) || 
     isConfirmingFood;

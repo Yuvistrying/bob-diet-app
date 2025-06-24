@@ -118,8 +118,6 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
         for (const line of lines) {
           if (line.trim() === '') continue;
           
-          logger.debug('[useStreamingChat] Processing line:', line);
-          
           // Parse SSE format: "TYPE:DATA"
           if (line.startsWith('0:')) {
             // Text delta (type 0)
@@ -127,7 +125,7 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
               const content = JSON.parse(line.slice(2));
               accumulatedText += content;
               
-              // Update UI with animated chunks
+              // Update UI immediately for now - we'll implement a better debouncing solution
               setMessages(prev => prev.map((msg, idx) => 
                 idx === assistantIndex! 
                   ? { ...msg, content: accumulatedText }
@@ -140,6 +138,13 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
             // Tool call start (type 1)
             try {
               const toolCallData = JSON.parse(line.slice(2));
+              
+              logger.info('[useStreamingChat] Received tool call (type 1):', {
+                toolName: toolCallData.toolName,
+                hasArgs: !!toolCallData.args,
+                argsKeys: toolCallData.args ? Object.keys(toolCallData.args) : []
+              });
+              
               // Show tool is being called
               setMessages(prev => prev.map((msg, idx) => 
                 idx === assistantIndex! 
@@ -169,6 +174,31 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
             // Tool result (type 2)
             try {
               const toolResult = JSON.parse(line.slice(2));
+              
+              logger.info('[useStreamingChat] Received tool result (type 2):', {
+                toolCallId: toolResult.toolCallId,
+                hasResult: !!toolResult.result,
+                resultKeys: toolResult.result ? Object.keys(toolResult.result) : []
+              });
+              
+              // Find the matching tool call and merge the result into its args
+              const toolCallIndex = toolCalls.findIndex(tc => tc.toolCallId === toolResult.toolCallId);
+              if (toolCallIndex !== -1) {
+                const toolCall = toolCalls[toolCallIndex];
+                
+                // For analyzeAndConfirmPhoto, merge the result into args
+                if (toolCall.toolName === 'analyzeAndConfirmPhoto' && toolResult.result) {
+                  logger.info('[useStreamingChat] Merging analyzeAndConfirmPhoto result into args');
+                  toolCalls[toolCallIndex] = {
+                    ...toolCall,
+                    args: {
+                      ...toolCall.args,
+                      ...toolResult.result
+                    }
+                  };
+                }
+              }
+              
               // Mark tool as complete
               setMessages(prev => prev.map((msg, idx) => 
                 idx === assistantIndex! && msg.activeToolCall
@@ -200,6 +230,13 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
             // Tool call (type 9) - same as type 1
             try {
               const toolCallData = JSON.parse(line.slice(2));
+              
+              logger.info('[useStreamingChat] Received tool call (type 9):', {
+                toolName: toolCallData.toolName,
+                hasArgs: !!toolCallData.args,
+                argsKeys: toolCallData.args ? Object.keys(toolCallData.args) : []
+              });
+              
               // Show tool is being called
               setMessages(prev => prev.map((msg, idx) => 
                 idx === assistantIndex! 
@@ -229,6 +266,31 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
             // Tool result (type a) - same as type 2
             try {
               const toolResult = JSON.parse(line.slice(2));
+              
+              logger.info('[useStreamingChat] Received tool result (type a):', {
+                toolCallId: toolResult.toolCallId,
+                hasResult: !!toolResult.result,
+                resultKeys: toolResult.result ? Object.keys(toolResult.result) : []
+              });
+              
+              // Find the matching tool call and merge the result into its args
+              const toolCallIndex = toolCalls.findIndex(tc => tc.toolCallId === toolResult.toolCallId);
+              if (toolCallIndex !== -1) {
+                const toolCall = toolCalls[toolCallIndex];
+                
+                // For analyzeAndConfirmPhoto, merge the result into args
+                if (toolCall.toolName === 'analyzeAndConfirmPhoto' && toolResult.result) {
+                  logger.info('[useStreamingChat] Merging analyzeAndConfirmPhoto result into args');
+                  toolCalls[toolCallIndex] = {
+                    ...toolCall,
+                    args: {
+                      ...toolCall.args,
+                      ...toolResult.result
+                    }
+                  };
+                }
+              }
+              
               // Mark tool as complete
               setMessages(prev => prev.map((msg, idx) => 
                 idx === assistantIndex! && msg.activeToolCall
@@ -261,6 +323,11 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
       }
       
       // Mark as complete
+      logger.info('[useStreamingChat] Completing message with toolCalls:', {
+        toolCallCount: toolCalls.length,
+        toolNames: toolCalls.map(tc => tc.toolName)
+      });
+      
       setMessages(prev => prev.map((msg, idx) => 
         idx === assistantIndex! 
           ? { 
@@ -280,23 +347,33 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
         }
       }
     } catch (error: any) {
-      logger.error("[useStreamingChat] Error:", error);
-      
-      // Update assistant message with error
-      setMessages(prev => prev.map((msg, idx) => 
-        idx === assistantIndex! 
-          ? { 
-              ...msg, 
-              content: error.name === 'AbortError' 
-                ? msg.content // Keep partial content on abort
-                : "Sorry, I encountered an error. Please try again.",
-              isStreaming: false 
-            }
-          : msg
-      ));
-      
-      if (error.name !== 'AbortError' && options.onError) {
-        options.onError(error);
+      // Handle AbortError silently - it's expected when cancelling previous requests
+      if (error.name === 'AbortError') {
+        logger.debug("[useStreamingChat] Request aborted (expected behavior)");
+        // Keep partial content on abort
+        setMessages(prev => prev.map((msg, idx) => 
+          idx === assistantIndex! 
+            ? { ...msg, isStreaming: false }
+            : msg
+        ));
+      } else {
+        // Log real errors
+        logger.error("[useStreamingChat] Error:", error);
+        
+        // Update assistant message with error
+        setMessages(prev => prev.map((msg, idx) => 
+          idx === assistantIndex! 
+            ? { 
+                ...msg, 
+                content: "Sorry, I encountered an error. Please try again.",
+                isStreaming: false 
+              }
+            : msg
+        ));
+        
+        if (options.onError) {
+          options.onError(error);
+        }
       }
     } finally {
       setIsStreaming(false);

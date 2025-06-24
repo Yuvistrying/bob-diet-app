@@ -101,20 +101,24 @@ Provide a JSON response with:
 // Determine if messages should be summarized
 export function shouldSummarizeMessages(
   messages: MessageToSummarize[],
-  lastSummaryIndex: number
+  totalMessagesSummarized: number
 ): boolean {
   // Don't summarize if:
-  // 1. Less than 5 messages since last summary
-  if (messages.length - lastSummaryIndex < 5) return false;
+  // 1. Not enough total messages (need at least 10)
+  if (messages.length < 10) return false;
   
-  // 2. Active tool chain in progress (check last message)
+  // 2. Less than 5 new messages since last summary
+  const newMessageCount = messages.length - totalMessagesSummarized;
+  if (newMessageCount < 5) return false;
+  
+  // 3. Active tool chain in progress (check last message)
   const lastMessage = messages[messages.length - 1];
   if (lastMessage.content.includes("Let me confirm:") || 
       lastMessage.content.includes("Is this correct?")) {
     return false;
   }
   
-  // 3. Recent weight log (within last 3 messages)
+  // 4. Recent weight log (within last 3 messages)
   const recentMessages = messages.slice(-3);
   const hasRecentWeightLog = recentMessages.some(m => 
     m.content.toLowerCase().includes("weight") || 
@@ -122,6 +126,7 @@ export function shouldSummarizeMessages(
   );
   if (hasRecentWeightLog) return false;
   
+  console.log(`[shouldSummarizeMessages] Can summarize: ${messages.length} total, ${totalMessagesSummarized} already summarized, ${newMessageCount} new`);
   return true;
 }
 

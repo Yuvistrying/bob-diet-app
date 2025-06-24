@@ -19,6 +19,7 @@ console.log("[stream-v2] API key length:", process.env.ANTHROPIC_API_KEY?.length
 const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(req: Request) {
+  console.log("[stream-v2] ========== NEW REQUEST ==========");
   const debug = new StreamDebugger();
   debug.log("REQUEST_START", { method: "POST", url: req.url });
   
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
       // Get recent messages - NOT CACHED (needs to be real-time)
       convexClient.query(api.threads.getThreadMessages, {
         threadId,
-        limit: 20  // Only recent messages, summaries will provide older context
+        limit: 5  // Only recent messages, summaries will provide older context
       }),
       // Get thread summaries - NOT CACHED (needs to be real-time)
       convexClient.query(api.threads.getThreadSummaries, {
@@ -246,7 +247,33 @@ export async function POST(req: Request) {
     console.log("[stream-v2] Available tools:", Object.keys(tools));
     
     // 7. Stream response
+    // Collect toolCalls during streaming to ensure they're saved
+    const collectedToolCalls: any[] = [];
+    
     try {
+      // Prepare messages first - only recent messages, NO system messages
+      let messages = [];
+      
+      // Add recent messages - LIMIT TO LAST 10 to prevent token explosion
+      if (threadMessages.length > 0) {
+        const recentMessages = threadMessages
+          .filter((m: any) => m.content && m.content.trim())
+          .slice(-10) // Take only last 10 messages
+          .map((m: any) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content.trim(),
+          }));
+        messages = recentMessages;
+      }
+      
+      // Ensure we have at least one message
+      if (messages.length === 0) {
+        messages = [{
+          role: "user" as const,
+          content: prompt || "Hello"
+        }];
+      }
+
       console.log("[stream-v2] Starting stream with:", {
         hasTools: Object.keys(tools).length > 0,
         toolNames: Object.keys(tools),
@@ -274,29 +301,6 @@ export async function POST(req: Request) {
         ).join("; ");
         
         systemPrompt = `${systemPrompt}\n\nPrevious context: ${summaryContext}`;
-      }
-      
-      // Prepare messages - only recent messages, NO system messages
-      let messages = [];
-      
-      // Add recent messages - LIMIT TO LAST 10 to prevent token explosion
-      if (threadMessages.length > 0) {
-        const recentMessages = threadMessages
-          .filter((m: any) => m.content && m.content.trim())
-          .slice(-10) // Take only last 10 messages
-          .map((m: any) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content.trim(),
-          }));
-        messages = recentMessages;
-      }
-      
-      // Ensure we have at least one message
-      if (messages.length === 0) {
-        messages = [{
-          role: "user" as const,
-          content: prompt || "Hello"
-        }];
       }
       
       console.log("[stream-v2] Prepared messages:", {
@@ -349,6 +353,45 @@ export async function POST(req: Request) {
               message: 'Vercel AI SDK generated an error chunk'
             });
             // Log but don't panic - we filter these out in the stream
+          } else if (chunk.type === 'tool-call') {
+            // Handle tool call chunks
+            const toolCallChunk = chunk as any;
+            if (toolCallChunk.toolCallId && toolCallChunk.toolName) {
+              console.log('[stream-v2] Tool call chunk received:', {
+                toolCallId: toolCallChunk.toolCallId,
+                toolName: toolCallChunk.toolName,
+                hasArgs: !!toolCallChunk.args
+              });
+              
+              // Collect the tool call
+              collectedToolCalls.push({
+                toolCallId: toolCallChunk.toolCallId,
+                toolName: toolCallChunk.toolName,
+                args: toolCallChunk.args || {}
+              });
+            }
+          } else if (chunk.type === 'tool-result' && (chunk as any).toolCallId && (chunk as any).result) {
+            // Handle tool results for analyzeAndConfirmPhoto
+            const toolCallId = (chunk as any).toolCallId;
+            const result = (chunk as any).result;
+            
+            // Find the matching tool call and update it with the result
+            const toolCallIndex = collectedToolCalls.findIndex(tc => tc.toolCallId === toolCallId);
+            if (toolCallIndex !== -1) {
+              const toolCall = collectedToolCalls[toolCallIndex];
+              
+              // For analyzeAndConfirmPhoto, merge the result into args
+              if (toolCall.toolName === 'analyzeAndConfirmPhoto' && result) {
+                console.log('[stream-v2] Merging analyzeAndConfirmPhoto result into args');
+                collectedToolCalls[toolCallIndex] = {
+                  ...toolCall,
+                  args: {
+                    ...toolCall.args,
+                    ...result
+                  }
+                };
+              }
+            }
           }
         },
         onToolCall: async ({ toolCall }) => {
@@ -364,6 +407,13 @@ export async function POST(req: Request) {
             hasArgs: !!toolCall.args,
             argsPreview: JSON.stringify(toolCall.args).substring(0, 100)
           });
+          
+          // Collect tool calls to ensure they're saved
+          collectedToolCalls.push({
+            toolCallId: toolCall.toolCallId,
+            toolName: toolCall.toolName,
+            args: toolCall.args
+          });
         },
         onFinish: async ({ text, toolCalls, usage, finishReason }: any) => {
           debug.log("STREAM_FINISH", {
@@ -374,21 +424,51 @@ export async function POST(req: Request) {
           });
           
           try {
+            // Use collected toolCalls if onFinish doesn't provide them
+            const finalToolCalls = (toolCalls && toolCalls.length > 0) ? toolCalls : collectedToolCalls;
+            
             console.log("[stream-v2] Stream finished:", { 
               hasText: !!text, 
               textLength: text?.length,
-              toolCallsCount: toolCalls?.length,
-              finishReason
+              toolCallsCount: finalToolCalls?.length,
+              toolCallDetails: finalToolCalls?.map(tc => ({
+                toolName: tc.toolName,
+                hasArgs: !!tc.args,
+                argsKeys: tc.args ? Object.keys(tc.args) : []
+              })),
+              finishReason,
+              collectedDuringStream: collectedToolCalls.length,
+              receivedInOnFinish: toolCalls?.length || 0
             });
             
-            // Only save assistant message if there's actual content
-            if (text && text.trim().length > 0) {
+            // Save assistant message if there's content OR tool calls
+            if ((text && text.trim().length > 0) || (finalToolCalls && finalToolCalls.length > 0)) {
+              // Check if any tool calls resulted in food logs
+              let foodLogId = undefined;
+              if (finalToolCalls && finalToolCalls.length > 0) {
+                const logFoodCall = finalToolCalls.find(tc => tc.toolName === 'logFood');
+                if (logFoodCall && logFoodCall.result?.logId) {
+                  foodLogId = logFoodCall.result.logId;
+                  console.log("[stream-v2] Food logged with ID:", foodLogId);
+                }
+              }
+              
+              console.log("[stream-v2] Saving assistant message with toolCalls:", {
+                hasToolCalls: !!finalToolCalls && finalToolCalls.length > 0,
+                toolCallCount: finalToolCalls?.length || 0,
+                toolNames: finalToolCalls?.map(tc => tc.toolName) || [],
+                hasText: !!text && text.trim().length > 0,
+                textLength: text?.trim().length || 0,
+                usingCollected: collectedToolCalls.length > 0 && (!toolCalls || toolCalls.length === 0)
+              });
+              
               await convexClient.mutation(api.threads.saveMessage, {
                 threadId,
                 role: "assistant",
-                content: text,
-                toolCalls: toolCalls || [],
+                content: text || "",  // Use empty string if no text
+                toolCalls: finalToolCalls || [],
                 metadata: {
+                  foodLogId,
                   usage: usage ? {
                     promptTokens: usage.promptTokens || 0,
                     completionTokens: usage.completionTokens || 0,
@@ -400,8 +480,8 @@ export async function POST(req: Request) {
               // Trigger summarization check (async, don't wait)
               convexClient.action(api.threads.checkAndSummarize, { threadId })
                 .catch(error => console.error("[stream-v2] Summarization check failed:", error));
-            } else if (!toolCalls || toolCalls.length === 0) {
-              // No text and no tool calls - this might be why we get errors
+            } else {
+              // No text and no tool calls - this is unexpected
               console.warn("[stream-v2] Stream finished with no content or tool calls");
             }
           } catch (saveError: any) {
