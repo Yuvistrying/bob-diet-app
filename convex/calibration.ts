@@ -25,7 +25,7 @@ export const runWeeklyCalibration = internalMutation({
   },
 });
 
-// Main calibration function
+// Main calibration function - uses 7-day moving averages
 export const calibrateUserTargets = internalMutation({
   args: {
     userId: v.string(),
@@ -53,11 +53,13 @@ export const calibrateUserTargets = internalMutation({
       )
       .collect();
     
-    // Need at least 3 weight entries for calibration
-    if (weightLogs.length < 3) {
+    // For first week, we need at least 1 weight entry
+    // For subsequent weeks, need at least 7 days of data
+    const isFirstWeek = weightLogs.length < 7;
+    if (weightLogs.length < 1) {
       return { 
         status: "insufficient_data",
-        message: "Need at least 3 weight entries in the last 2 weeks"
+        message: "Need at least 1 weight entry to start calibration"
       };
     }
     
@@ -70,36 +72,83 @@ export const calibrateUserTargets = internalMutation({
       )
       .collect();
     
-    // Calculate daily averages
-    const dailyCalories: Record<string, number> = {};
+    // Build daily data map
+    const dailyData: Record<string, { calories: number; weight?: number }> = {};
+    
+    // Add calorie data
     foodLogs.forEach(log => {
-      if (!dailyCalories[log.date]) {
-        dailyCalories[log.date] = 0;
+      if (!dailyData[log.date]) {
+        dailyData[log.date] = { calories: 0 };
       }
-      dailyCalories[log.date] += log.totalCalories;
+      dailyData[log.date].calories += log.totalCalories;
     });
     
-    const loggedDays = Object.keys(dailyCalories).length;
-    if (loggedDays < 7) {
+    // Add weight data (use most recent weight for each day)
+    const weightsByDate: Record<string, number> = {};
+    weightLogs.forEach(log => {
+      const date = new Date(log.createdAt).toISOString().split('T')[0];
+      const weightInKg = convertToKg(log.weight, log.unit);
+      // Keep the most recent weight for each day
+      if (!weightsByDate[date] || log.createdAt > (weightsByDate[date] || 0)) {
+        weightsByDate[date] = weightInKg;
+      }
+    });
+    
+    // Fill in daily data with weights
+    Object.entries(weightsByDate).forEach(([date, weight]) => {
+      if (!dailyData[date]) {
+        dailyData[date] = { calories: 0 };
+      }
+      dailyData[date].weight = weight;
+    });
+    
+    // Sort dates
+    const sortedDates = Object.keys(dailyData).sort();
+    
+    if (sortedDates.length < 7) {
       return {
         status: "insufficient_data",
-        message: "Need at least 7 days of food logs in the last 2 weeks"
+        message: "Need at least 7 days of data for calibration"
       };
     }
     
-    // Calculate average daily calories
-    const totalCalories = Object.values(dailyCalories).reduce((sum, cal) => sum + cal, 0);
-    const avgDailyCalories = Math.round(totalCalories / loggedDays);
+    // Calculate 7-day moving averages
+    const movingAverages = calculateMovingAverages(dailyData, sortedDates, weightsByDate);
     
-    // Calculate weight change
-    const sortedWeights = weightLogs.sort((a, b) => a.createdAt - b.createdAt);
-    const startWeight = convertToKg(sortedWeights[0].weight, sortedWeights[0].unit);
-    const endWeight = convertToKg(sortedWeights[sortedWeights.length - 1].weight, sortedWeights[sortedWeights.length - 1].unit);
+    if (movingAverages.length < 2) {
+      return {
+        status: "insufficient_data",
+        message: "Need more data to calculate trend"
+      };
+    }
+    
+    // For first week, use first weight as baseline
+    // Otherwise, compare first and last 7-day averages
+    let startWeight: number;
+    let endWeight: number;
+    let avgDailyCalories: number;
+    
+    if (isFirstWeek) {
+      // Use first weight entry as baseline
+      startWeight = convertToKg(weightLogs[0].weight, weightLogs[0].unit);
+      endWeight = movingAverages[movingAverages.length - 1].avgWeight;
+      avgDailyCalories = movingAverages[movingAverages.length - 1].avgCalories;
+    } else {
+      // Compare week 1 average to week 2 average
+      const week1Average = movingAverages[6]; // 7th day (0-indexed)
+      const week2Average = movingAverages[movingAverages.length - 1]; // Last day
+      
+      startWeight = week1Average.avgWeight;
+      endWeight = week2Average.avgWeight;
+      avgDailyCalories = week2Average.avgCalories;
+    }
+    
     const actualWeightChange = endWeight - startWeight; // kg
+    const periodDays = isFirstWeek ? 7 : movingAverages.length;
     
-    // Calculate expected weight change based on calories
+    // Calculate expected weight change based on average calorie deficit/surplus
     const dailyDeficit = profile.dailyCalorieTarget - avgDailyCalories;
-    const expectedWeightChange = (dailyDeficit * loggedDays) / 7700; // 7700 cal = 1kg
+    const expectedWeightChange = (dailyDeficit * periodDays) / 7700; // 7700 cal = 1kg
     
     // Calculate the difference
     const weightDifference = actualWeightChange - expectedWeightChange;
@@ -111,20 +160,26 @@ export const calibrateUserTargets = internalMutation({
     
     if (Math.abs(weightDifference) < 0.2) {
       // Within 200g - no adjustment needed
-      reason = "Weight change matches expected. No adjustment needed.";
+      reason = isFirstWeek 
+        ? "Weight trend matches expected. No adjustment needed."
+        : "7-day average weight change matches expected. No adjustment needed.";
     } else if (weightDifference > 0) {
       // Lost less weight than expected or gained weight
       // Need to reduce calorie target
-      const adjustmentCalories = Math.round((weightDifference * 7700) / loggedDays);
+      const adjustmentCalories = Math.round((weightDifference * 7700) / periodDays);
       adjustment = -Math.min(adjustmentCalories, 200); // Max 200 cal reduction
-      reason = `Lost ${Math.abs(weightDifference).toFixed(1)}kg less than expected. Reducing target.`;
+      reason = isFirstWeek
+        ? `Weight trending ${Math.abs(weightDifference).toFixed(1)}kg higher than expected. Reducing calorie target.`
+        : `7-day average shows ${Math.abs(weightDifference).toFixed(1)}kg less loss than expected. Reducing calorie target.`;
       confidence = weightDifference > 0.5 ? "high" : "medium";
     } else {
       // Lost more weight than expected
       // Can increase calorie target
-      const adjustmentCalories = Math.round((Math.abs(weightDifference) * 7700) / loggedDays);
+      const adjustmentCalories = Math.round((Math.abs(weightDifference) * 7700) / periodDays);
       adjustment = Math.min(adjustmentCalories, 150); // Max 150 cal increase
-      reason = `Lost ${Math.abs(weightDifference).toFixed(1)}kg more than expected. Increasing target.`;
+      reason = isFirstWeek
+        ? `Weight trending ${Math.abs(weightDifference).toFixed(1)}kg lower than expected. Increasing calorie target.`
+        : `7-day average shows ${Math.abs(weightDifference).toFixed(1)}kg more loss than expected. Increasing calorie target.`;
       confidence = Math.abs(weightDifference) > 0.5 ? "high" : "medium";
     }
     
@@ -139,7 +194,7 @@ export const calibrateUserTargets = internalMutation({
         oldCalorieTarget: profile.dailyCalorieTarget,
         newCalorieTarget: newTarget,
         reason,
-        dataPointsAnalyzed: loggedDays,
+        dataPointsAnalyzed: periodDays,
         confidence,
         createdAt: Date.now(),
       });
@@ -161,7 +216,11 @@ export const calibrateUserTargets = internalMutation({
           avgDailyCalories,
           actualWeightChange,
           expectedWeightChange,
-          loggedDays,
+          periodDays,
+          startWeight,
+          endWeight,
+          isFirstWeek,
+          movingAverageCount: movingAverages.length
         }
       };
     }
@@ -173,7 +232,11 @@ export const calibrateUserTargets = internalMutation({
         avgDailyCalories,
         actualWeightChange,
         expectedWeightChange,
-        loggedDays,
+        periodDays,
+        startWeight,
+        endWeight,
+        isFirstWeek,
+        movingAverageCount: movingAverages.length
       }
     };
   },
@@ -226,6 +289,66 @@ function convertToKg(weight: number, unit: string): number {
   return unit === "lbs" ? weight * 0.453592 : weight;
 }
 
+// Calculate 7-day moving averages for weight and calories
+function calculateMovingAverages(
+  dailyData: Record<string, { calories: number; weight?: number }>,
+  sortedDates: string[],
+  weightsByDate: Record<string, number>
+): Array<{ date: string; avgWeight: number; avgCalories: number }> {
+  const movingAverages: Array<{ date: string; avgWeight: number; avgCalories: number }> = [];
+  
+  // Need at least 7 days for first average
+  if (sortedDates.length < 7) return movingAverages;
+  
+  // Calculate moving average for each day (starting from day 7)
+  for (let i = 6; i < sortedDates.length; i++) {
+    const endDate = sortedDates[i];
+    let weightSum = 0;
+    let weightCount = 0;
+    let calorieSum = 0;
+    let calorieCount = 0;
+    
+    // Look back 7 days
+    for (let j = i - 6; j <= i; j++) {
+      const date = sortedDates[j];
+      const data = dailyData[date];
+      
+      // For calories, use actual data or 0 if no logs
+      calorieSum += data.calories || 0;
+      calorieCount++;
+      
+      // For weight, carry forward the last known weight
+      let weightForDay = data.weight;
+      if (!weightForDay) {
+        // Find the most recent weight before this date
+        for (let k = j - 1; k >= 0; k--) {
+          const prevDate = sortedDates[k];
+          if (dailyData[prevDate]?.weight) {
+            weightForDay = dailyData[prevDate].weight;
+            break;
+          }
+        }
+      }
+      
+      if (weightForDay) {
+        weightSum += weightForDay;
+        weightCount++;
+      }
+    }
+    
+    // Only add if we have weight data
+    if (weightCount > 0) {
+      movingAverages.push({
+        date: endDate,
+        avgWeight: weightSum / weightCount,
+        avgCalories: calorieSum / calorieCount
+      });
+    }
+  }
+  
+  return movingAverages;
+}
+
 // Manual calibration trigger (for testing or on-demand)
 export const triggerCalibration = mutation({
   args: {},
@@ -240,7 +363,11 @@ export const triggerCalibration = mutation({
       avgDailyCalories: number;
       actualWeightChange: number;
       expectedWeightChange: number;
-      loggedDays: number;
+      periodDays: number;
+      startWeight: number;
+      endWeight: number;
+      isFirstWeek: boolean;
+      movingAverageCount: number;
     };
     message?: string;
   } | null> => {
