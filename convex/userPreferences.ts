@@ -56,6 +56,7 @@ export const saveAgentThreadId = mutation({
     
     if (existing) {
       await ctx.db.patch(existing._id, {
+        agentThreadId: args.threadId,
         updatedAt: Date.now(),
       });
     } else {
@@ -70,6 +71,7 @@ export const saveAgentThreadId = mutation({
         language: "en",
         darkMode: false,
         cuteMode: false,
+        agentThreadId: args.threadId,
         reminderSettings: {
           weighInReminder: true,
           mealReminders: false,

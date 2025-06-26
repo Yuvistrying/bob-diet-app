@@ -224,7 +224,7 @@ export default function Logs() {
                       {isStealthMode ? (
                         todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "On Track"
                       ) : (
-                        `${todayStats?.calories || 0}/${profile?.dailyCalorieTarget || 2000}`
+                        `${Math.round(todayStats?.calories || 0)}/${profile?.dailyCalorieTarget || 2000}`
                       )}
                     </div>
                   </div>
@@ -240,7 +240,7 @@ export default function Logs() {
                       {isStealthMode ? (
                         todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Need More" : "Good"
                       ) : (
-                        `${todayStats?.protein || 0}g`
+                        `${Math.round(todayStats?.protein || 0)}g`
                       )}
                     </div>
                     {!isStealthMode && (
@@ -260,7 +260,7 @@ export default function Logs() {
                           Carbs
                         </div>
                         <div className="text-lg font-semibold text-foreground">
-                          {todayStats?.carbs || 0}g
+                          {Math.round(todayStats?.carbs || 0)}g
                         </div>
                         <div className="text-xs text-muted-foreground">
                           of {profile?.carbsTarget || 200}g
@@ -275,7 +275,7 @@ export default function Logs() {
                           Fats
                         </div>
                         <div className="text-lg font-semibold text-foreground">
-                          {todayStats?.fat || 0}g
+                          {Math.round(todayStats?.fat || 0)}g
                         </div>
                         <div className="text-xs text-muted-foreground">
                           of {profile?.fatTarget || 65}g
@@ -334,7 +334,7 @@ export default function Logs() {
                             <div className="flex items-center gap-1">
                               {!isStealthMode && (
                                 <div className="text-sm text-muted-foreground mr-2">
-                                  {log.totalCalories} kcal
+                                  {Math.round(log.totalCalories)} kcal
                                 </div>
                               )}
                               {isToday && (
@@ -367,7 +367,7 @@ export default function Logs() {
                           </div>
                           {!isStealthMode && (
                             <div className="text-xs text-muted-foreground">
-                              {log.totalCalories} kcal • {log.totalProtein}g Protein • {log.totalCarbs}g Carbs • {log.totalFat}g Fats
+                              {Math.round(log.totalCalories)} kcal • {Math.round(log.totalProtein)}g Protein • {Math.round(log.totalCarbs)}g Carbs • {Math.round(log.totalFat)}g Fats
                             </div>
                           )}
                         </div>

@@ -78,6 +78,9 @@ export const getOrCreateDailySession = mutation({
       });
     }
     
+    // Clear any pending confirmations when starting a new day to prevent auto-confirm bug
+    await ctx.runMutation(api.pendingConfirmations.clearUserPendingConfirmations, {});
+    
     return await ctx.db.get(newSession);
   },
 });
@@ -128,6 +131,9 @@ export const startNewChatSession = mutation({
     
     // Clear session cache to ensure fresh context
     await ctx.runMutation(api.sessionCache.clearSessionCache, {});
+    
+    // Clear any pending confirmations to prevent auto-confirm bug
+    await ctx.runMutation(api.pendingConfirmations.clearUserPendingConfirmations, {});
     
     return await ctx.db.get(newSession);
   },

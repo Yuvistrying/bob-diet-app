@@ -45,6 +45,57 @@ export const getOrCreateDailyThread = mutation({
   },
 });
 
+// Create a new thread for "New Chat" functionality
+export const createNewThread = mutation({
+  args: {
+    previousThreadId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const now = Date.now();
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Create new thread ID
+    const newThreadId = `thread_${identity.subject}_${now}`;
+    
+    // If there's a previous thread, trigger summarization
+    if (args.previousThreadId) {
+      // Schedule the summarization to run asynchronously
+      await ctx.scheduler.runAfter(0, api.threads.checkAndSummarize, {
+        threadId: args.previousThreadId,
+      });
+    }
+    
+    // Create new daily thread entry
+    await ctx.db.insert("dailyThreads", {
+      userId: identity.subject,
+      date: today,
+      threadId: newThreadId,
+      messageCount: 0,
+      firstMessageAt: now,
+      lastMessageAt: now,
+    });
+    
+    // Get today's food logs to provide context
+    const todayFoodLogs = await ctx.db
+      .query("foodLogs")
+      .withIndex("by_user_date", q => 
+        q.eq("userId", identity.subject).eq("date", today)
+      )
+      .collect();
+    
+    return { 
+      threadId: newThreadId, 
+      isNew: true, 
+      messageCount: 0,
+      foodLogsCount: todayFoodLogs.length,
+      previousThreadSummarized: !!args.previousThreadId,
+    };
+  },
+});
+
 // Save a message to the thread
 export const saveMessage = mutation({
   args: {
@@ -134,7 +185,7 @@ export const getThreadMessages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     
-    const limit = args.limit || 100;
+    const limit = args.limit || 1000; // Much higher default limit
     
     // Get the daily thread info to find the timestamp range
     const thread = await ctx.db
@@ -147,7 +198,7 @@ export const getThreadMessages = query({
       return [];
     }
     
-    // Get ALL messages from today - both food logs AND conversation
+    // Get messages for this specific thread only
     const messages = await ctx.db
       .query("chatHistory")
       .withIndex("by_user_timestamp", q => 
@@ -155,7 +206,7 @@ export const getThreadMessages = query({
       )
       .order("desc")
       .filter(q => 
-        q.gte(q.field("timestamp"), thread.firstMessageAt)
+        q.eq(q.field("metadata.threadId"), args.threadId)
       )
       .take(limit);
     
