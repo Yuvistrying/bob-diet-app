@@ -339,6 +339,13 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
           : msg
       ));
       
+      // Force a re-render on mobile devices to ensure confirmation bubbles appear
+      if (toolCalls.length > 0 && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+          setMessages(prev => [...prev]);
+        }, 100);
+      }
+      
       const finalThreadId = currentThreadId || threadId || `thread_${Date.now()}`;
       if (finalThreadId !== threadId) {
         setThreadId(finalThreadId);

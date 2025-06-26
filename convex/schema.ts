@@ -90,6 +90,7 @@ export default defineSchema({
         dinner: v.optional(v.string())
       })
     }),
+    agentThreadId: v.optional(v.string()), // For persisting chat thread across refreshes
     updatedAt: v.number()
   }).index("by_user", ["userId"]),
 

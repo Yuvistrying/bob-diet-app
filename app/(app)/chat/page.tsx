@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -59,14 +60,17 @@ const ChatMessage = memo(({
         )}
         
         {(message.content && message.content !== "[Photo uploaded]") && (
-          <div className={cn(
-            "relative max-w-[70%] px-4 py-2.5",
-            "bg-muted text-foreground",
-            "rounded-2xl rounded-br-sm",
-            "shadow-sm border border-border",
-            message.content.length < 20 && "min-w-[80px] text-center"
-          )}>
-            <div className="text-[15px] leading-relaxed">{message.content}</div>
+          <div className="flex justify-end w-full">
+            <div className={cn(
+              "px-3 py-2",
+              "bg-muted text-foreground",
+              "rounded-2xl rounded-br-sm",
+              "shadow-sm border border-border",
+              "text-[15px] leading-relaxed text-left",
+              "max-w-[85%]"
+            )}>
+              {message.content}
+            </div>
           </div>
         )}
       </div>
@@ -75,7 +79,7 @@ const ChatMessage = memo(({
   
   return (
     <div className="flex justify-start">
-      <div className="max-w-[70%] space-y-2">
+      <div className="max-w-[85%] space-y-2">
         {message.activeToolCall && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {message.activeToolCall.status === 'calling' ? (
@@ -127,8 +131,8 @@ const ConfirmationBubble = memo(({
           </span>
           <span className="text-sm text-green-700 dark:text-green-300">
             • {editedItems.get(confirmId) ? 
-                editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
-                args.totalCalories} calories
+                Math.round(editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0)) : 
+                Math.round(args.totalCalories)} calories
           </span>
           <span className="text-sm text-green-600 dark:text-green-400">
             • {editedItems.get(confirmId)?.length || args.items.length} items
@@ -180,7 +184,7 @@ const ConfirmationBubble = memo(({
                 <span>cal</span>
               </div>
             ) : (
-              <span>• {item.name} {item.quantity} - {item.calories} cal</span>
+              <span>• {item.name} {item.quantity} - {Math.round(item.calories)} cal</span>
             )}
           </div>
         ))}
@@ -188,12 +192,12 @@ const ConfirmationBubble = memo(({
       <div className="mt-3 pt-3 border-t border-border">
         <div className="font-medium text-foreground">
           Total: {editedItems.get(confirmId) ? 
-            editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0) : 
-            args.totalCalories} calories
+            Math.round(editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0)) : 
+            Math.round(args.totalCalories)} calories
         </div>
         {!isStealthMode && (
           <div className="text-xs text-muted-foreground mt-1">
-            {args.totalProtein}g protein • {args.totalCarbs}g carbs • {args.totalFat}g fat
+            {Math.round(args.totalProtein)}g protein • {Math.round(args.totalCarbs)}g carbs • {Math.round(args.totalFat)}g fat
           </div>
         )}
       </div>
@@ -248,18 +252,18 @@ export default function Chat() {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [onboardingHeight, setOnboardingHeight] = useState(0);
+  const [inputAreaHeight, setInputAreaHeight] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
   // Duplicate prevention tracking
   const [activeLogRequests, setActiveLogRequests] = useState<Set<string>>(new Set());
-  const [recentLogs, setRecentLogs] = useState<Map<string, number>>(new Map()); // logKey -> timestamp
   const [activeUploadId, setActiveUploadId] = useState<string | null>(null); // Track active upload
-  const [recentMessageHashes, setRecentMessageHashes] = useState<Set<string>>(new Set()); // Track recent messages
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const onboardingRef = useRef<HTMLDivElement>(null);
+  const inputAreaRef = useRef<HTMLDivElement>(null);
   const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
   
   // Use shared chat context that persists across tab switches (moved up to use threadId)
@@ -308,13 +312,16 @@ export default function Chat() {
   const getOrCreateDailySession = useMutation(api.chatSessions.getOrCreateDailySession);
   const updateTheme = useMutation(api.userPreferences.updateTheme);
   const getOrCreateDailyThread = useMutation(api.threads.getOrCreateDailyThread);
+  const createNewThread = useMutation(api.threads.createNewThread);
   const logFood = useMutation(api.foodLogs.logFood);
   const saveMessage = useMutation(api.threads.saveMessage);
   const confirmPendingConfirmation = useMutation(api.pendingConfirmations.confirmPendingConfirmation);
+  const expirePendingConfirmation = useMutation(api.pendingConfirmations.expirePendingConfirmation);
   
-  // Query for thread messages
+  // Query for thread messages - load when we have a thread ID
+  const [shouldLoadThreadMessages, setShouldLoadThreadMessages] = useState(true);
   const threadMessages = useQuery(api.threads.getThreadMessages, 
-    threadId ? { threadId, limit: 100 } : "skip"
+    threadId && shouldLoadThreadMessages ? { threadId } : "skip"
   );
   
   // Get all storage IDs from messages that need image URLs
@@ -426,7 +433,7 @@ export default function Chat() {
         try {
           const parsed = JSON.parse(savedConfirmations);
           const today = new Date().toISOString().split('T')[0];
-          // Only load confirmations from today
+          // Only load confirmations from today AND from the same thread (if specified)
           if (parsed.date === today) {
             setPersistedConfirmations(parsed.confirmations || []);
             // Restore confirmed state for already-logged items
@@ -439,10 +446,18 @@ export default function Chat() {
             }
           } else {
             // Clear old confirmations from previous days
+            logger.info('Clearing old confirmations from previous day:', parsed.date);
             localStorage.removeItem('foodConfirmations');
+            // Also clear any state that might have been set
+            setPersistedConfirmations([]);
+            setConfirmedFoodLogs(new Set());
+            setEditedFoodItems(new Map());
+            setEditingFoodLog(null);
           }
         } catch (e) {
           logger.error('Error loading persisted confirmations:', e);
+          // Clear corrupted data
+          localStorage.removeItem('foodConfirmations');
         }
       }
     }
@@ -453,11 +468,22 @@ export default function Chat() {
   
   // Load thread messages from Convex when available or thread changes
   useEffect(() => {
-    // Load messages if:
-    // 1. We have thread messages from Convex
-    // 2. Either we have no messages OR the thread has changed
-    if (threadMessages && threadMessages.length > 0 && 
-        (messages.length === 0 || syncedThreadId !== threadId)) {
+    // Skip if threadMessages is not ready yet
+    if (!threadMessages) return;
+    
+    // If thread changed and we need to sync
+    if (threadId && syncedThreadId !== threadId) {
+      logger.info(`[Chat] Thread changed from ${syncedThreadId} to ${threadId}`);
+      
+      // If threadMessages is empty, this is a new thread - keep existing messages (like greeting)
+      if (threadMessages.length === 0) {
+        logger.info(`[Chat] New thread with no messages - keeping existing messages`);
+        setSyncedThreadId(threadId);
+        setHasLoadedHistory(true);
+        return;
+      }
+      
+      // Load messages from Convex
       logger.info(`[Chat] Loading ${threadMessages.length} messages from Convex for thread ${threadId}`);
       
       // Convert Convex messages to the format expected by the chat UI
@@ -484,7 +510,11 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Restore confirmed states from localStorage if available
+      // Don't clear confirmed states - they should persist from localStorage
+      // The initial load already restored them
+      
+      // Actually, we DO need to restore them here because the initial load
+      // happens before we have a thread ID, so we need to re-apply them
       const savedConfirmations = localStorage.getItem('foodConfirmations');
       if (savedConfirmations) {
         try {
@@ -494,9 +524,46 @@ export default function Chat() {
             logger.info('[Chat] Restoring confirmed states for loaded messages:', parsed.confirmed);
             setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
             if (parsed.editedItems) {
-              // Convert the plain object back to a Map
-              const itemsMap = new Map(Object.entries(parsed.editedItems));
-              setEditedFoodItems(itemsMap);
+              setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
+            }
+          }
+        } catch (e) {
+          logger.error('Error restoring confirmation states:', e);
+        }
+      }
+    }
+    
+    // Also handle initial load when we have no messages at all
+    if (messages.length === 0 && threadMessages && threadMessages.length > 0) {
+      logger.info(`[Chat] Initial load: Loading ${threadMessages.length} messages from Convex`);
+      
+      const loadedMessages = threadMessages.map((msg: any) => {
+        return {
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+          toolCalls: msg.toolCalls || undefined,
+          storageId: msg.metadata?.storageId
+        };
+      });
+      
+      setMessages(loadedMessages);
+      setHasLoadedHistory(true);
+      setSyncedThreadId(threadId);
+      
+      // Restore confirmed states for initial load too
+      const savedConfirmations = localStorage.getItem('foodConfirmations');
+      if (savedConfirmations) {
+        try {
+          const parsed = JSON.parse(savedConfirmations);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date === today) {
+            // For initial load, we might not have threadId in localStorage yet
+            if (parsed.confirmed && parsed.confirmed.length > 0) {
+              logger.info('[Chat] Restoring confirmed states on initial load:', parsed.confirmed);
+              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+              if (parsed.editedItems) {
+                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
+              }
             }
           }
         } catch (e) {
@@ -515,24 +582,34 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Get or create daily thread on mount
+  // Get or create daily thread on mount (only if no thread exists at all)
   useEffect(() => {
     const initThread = async () => {
-      if (!threadId && profile) {
-        try {
-          const result = await getOrCreateDailyThread({});
-          if (result.threadId) {
-            logger.info(`[Chat] Initialized daily thread: ${result.threadId}`);
-            setThreadId(result.threadId);
-          }
-        } catch (error) {
-          logger.error('Failed to get/create daily thread:', error);
+      // Skip if we already have a thread or are waiting for preferences to load
+      if (threadId || !profile) {
+        return;
+      }
+      
+      // If preferences loaded and has a saved thread, don't create daily thread
+      if (preferences?.agentThreadId) {
+        logger.info(`[Chat] Skipping daily thread - saved thread exists: ${preferences.agentThreadId}`);
+        return;
+      }
+      
+      // Only create daily thread if no saved thread exists
+      try {
+        const result = await getOrCreateDailyThread({});
+        if (result.threadId) {
+          logger.info(`[Chat] No saved thread found, using daily thread: ${result.threadId}`);
+          setThreadId(result.threadId);
         }
+      } catch (error) {
+        logger.error('Failed to get/create daily thread:', error);
       }
     };
     
     initThread();
-  }, [profile, threadId, getOrCreateDailyThread, setThreadId]);
+  }, [profile, threadId, preferences, getOrCreateDailyThread, setThreadId]);
 
   // Save confirmation state to localStorage whenever it changes (debounced)
   useEffect(() => {
@@ -572,6 +649,7 @@ export default function Chat() {
         if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
           const persistData = {
             date: today,
+            threadId: threadId, // Add thread ID to make confirmations thread-specific
             confirmations: currentConfirmations,
             confirmed: Array.from(confirmedFoodLogs),
             editedItems: editedFoodItems instanceof Map 
@@ -603,14 +681,15 @@ export default function Chat() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [confirmedFoodLogs, editedFoodItems, messages]);
+  }, [confirmedFoodLogs, editedFoodItems, messages, threadId]);
 
   // Load thread ID from preferences
   useEffect(() => {
-    // if (preferences?.agentThreadId && !threadId) {
-    //   setThreadId(preferences.agentThreadId);
-    // }
-  }, []);
+    if (preferences?.agentThreadId && !threadId) {
+      logger.info(`[Chat] Loading saved thread from preferences: ${preferences.agentThreadId}`);
+      setThreadId(preferences.agentThreadId);
+    }
+  }, [preferences?.agentThreadId, threadId, setThreadId]);
 
   // Create or check daily session on mount
   useEffect(() => {
@@ -638,7 +717,16 @@ export default function Chat() {
               role: "assistant",
               content: greeting,
             }]);
-            setThreadId(null); // Clear thread for new day
+            // Don't clear threadId if we have a saved thread from preferences
+            if (!preferences?.agentThreadId) {
+              setThreadId(null); // Only clear thread for new day if no saved thread
+            }
+            
+            // Clear any persisted confirmations from previous day to prevent auto-confirm bug
+            localStorage.removeItem('foodConfirmations');
+            setConfirmedFoodLogs(new Set());
+            setEditedFoodItems(new Map());
+            setEditingFoodLog(null);
           }
         } catch (error) {
           logger.error("Error initializing session:", error);
@@ -647,7 +735,7 @@ export default function Chat() {
     };
     
     initializeSession();
-  }, [profile, hasLoggedWeightToday, hasLoadedHistory, dailySummary, messages.length]);
+  }, [profile, hasLoggedWeightToday, hasLoadedHistory, dailySummary, messages.length, preferences]);
 
 
 
@@ -661,9 +749,9 @@ export default function Chat() {
       loadingRef.current = true;
       logger.info('[Chat] Initializing chat - no existing messages');
       
-      // If we have a threadId, wait for messages to load from Convex
-      if (threadId) {
-        logger.info('[Chat] Have threadId, waiting for Convex messages');
+      // If we have a threadId or saved thread in preferences, wait for messages to load from Convex
+      if (threadId || preferences?.agentThreadId) {
+        logger.info('[Chat] Have threadId or saved thread, waiting for Convex messages');
         return;
       }
       
@@ -760,7 +848,7 @@ export default function Chat() {
         loadingRef.current = false;
       }, 100);
     }
-  }, [dailySummary, onboardingStatus, hasLoadedHistory, persistedConfirmations, messages.length, threadId, isOnboarding]);
+  }, [dailySummary, onboardingStatus, hasLoadedHistory, persistedConfirmations, messages.length, threadId, isOnboarding, preferences]);
 
   // Measure onboarding container height
   useEffect(() => {
@@ -778,6 +866,77 @@ export default function Chat() {
       };
     }
   }, [isOnboarding, currentOnboardingStep]);
+
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      // Scroll to the very bottom of the container
+      container.scrollTop = container.scrollHeight;
+      
+      // If messagesEndRef exists, also try scrollIntoView as backup
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+  }, []);
+
+  // Measure input area height
+  useEffect(() => {
+    const measureInputArea = () => {
+      if (inputAreaRef.current) {
+        const height = inputAreaRef.current.offsetHeight;
+        setInputAreaHeight(height);
+        
+        // Scroll to bottom when input area first appears
+        if (height > 0 && chatContainerRef.current) {
+          // Check if we should auto-scroll (when near bottom)
+          const container = chatContainerRef.current;
+          const { scrollTop, scrollHeight, clientHeight } = container;
+          const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+          
+          if (isNearBottom) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+      }
+    };
+
+    let resizeObserver: ResizeObserver | null = null;
+
+    // Set up observer when component mounts
+    const setupObserver = () => {
+      measureInputArea(); // Initial measurement
+      
+      if (inputAreaRef.current) {
+        resizeObserver = new ResizeObserver((entries) => {
+          measureInputArea();
+        });
+        
+        resizeObserver.observe(inputAreaRef.current);
+      }
+    };
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    const rafId = requestAnimationFrame(() => {
+      setupObserver();
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, []); // Remove inputAreaHeight dependency to avoid recreating observer
+
+  // Force remeasure when image preview changes
+  useEffect(() => {
+    if (inputAreaRef.current) {
+      const height = inputAreaRef.current.offsetHeight;
+      setInputAreaHeight(height);
+    }
+  }, [imagePreview]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -828,6 +987,18 @@ export default function Chat() {
         now - lastSentMessageRef.current.timestamp < 2000) {
       logger.warn('[Chat] Duplicate message submission prevented:', messageContent);
       return;
+    }
+    
+    // Check if this is a confirmation message
+    const isConfirmationMessage = /^(yes|yep|yeah|confirm|ok|correct|right|sure)$/i.test(userMessage.toLowerCase().trim());
+    
+    // If NOT a confirmation and we have pending confirmations, expire them
+    if (!isConfirmationMessage && pendingConfirmations) {
+      try {
+        await expirePendingConfirmation({ confirmationId: pendingConfirmations._id });
+      } catch (err) {
+        logger.warn('[Chat] Could not expire pending confirmation:', err);
+      }
     }
     
     // Don't add message here - the streaming hook will add it
@@ -919,14 +1090,6 @@ export default function Chat() {
     }
   }, []);
   
-  const scrollToBottom = useCallback(() => {
-    if (chatContainerRef.current && messagesEndRef.current) {
-      const container = chatContainerRef.current;
-      // Use scrollTop instead of scrollIntoView for better control
-      container.scrollTop = container.scrollHeight;
-    }
-  }, []);
-  
   // Smart auto-scroll - only when appropriate
   useEffect(() => {
     if (!chatContainerRef.current || messages.length === 0) return;
@@ -955,6 +1118,22 @@ export default function Chat() {
       });
     }
   }, [messages, isStreaming, scrollToBottom, hasLoadedHistory]);
+
+  // Auto-scroll when input area height changes
+  useEffect(() => {
+    if (inputAreaHeight > 0 && chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 10; // Much tighter threshold
+      
+      // Only scroll if user was already at the very bottom
+      if (isAtBottom) {
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+      }
+    }
+  }, [inputAreaHeight, scrollToBottom]);
 
   // Handle file processing
   const processImageFile = (file: File) => {
@@ -1052,67 +1231,19 @@ export default function Chat() {
     return "text-destructive";
   };
   
-  // Generate a stable ID for a confirmation
+  // Generate a unique ID for each confirmation
   const getConfirmationId = useCallback((args: any, messageIndex: number, messageContent?: string) => {
-    // Create a stable ID based on food content and a hash of the message
+    // Create a unique ID based on food content and message index
     const foodNames = args.items?.map((item: any) => item.name).join('-') || '';
-    // Use a combination of food details to create a unique but stable ID
+    // Use a combination of food details to create a content hash
     const contentHash = `${args.mealType}-${args.totalCalories}-${foodNames}`.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    // Remove messageIndex from the ID to make it truly stable across reloads
-    return `confirm-${Math.abs(contentHash)}`;
+    // Include message index to ensure uniqueness for same food logged multiple times
+    // This allows persistence to work properly while preventing auto-confirmation
+    return `confirm-${Math.abs(contentHash)}-${messageIndex}`;
   }, []);
-  
-  // Clean up old entries from recentLogs (older than 30 seconds)
-  const cleanupRecentLogs = () => {
-    const now = Date.now();
-    const thirtySecondsAgo = now - 30000;
-    
-    setRecentLogs(prev => {
-      const newMap = new Map(prev);
-      for (const [key, timestamp] of newMap) {
-        if (timestamp < thirtySecondsAgo) {
-          newMap.delete(key);
-        }
-      }
-      return newMap;
-    });
-    
-    // Also clean up message hashes older than 30 seconds
-    setRecentMessageHashes(prev => {
-      const newSet = new Set<string>();
-      const cutoffTime = now - 30000;
-      prev.forEach(hash => {
-        const [, timestamp] = hash.split('_');
-        if (parseInt(timestamp) > cutoffTime) {
-          newSet.add(hash);
-        }
-      });
-      return newSet;
-    });
-  };
-  
-  // Check if this food log is a duplicate
-  const isDuplicateLog = (args: any): boolean => {
-    const logKey = `${args.mealType}-${args.totalCalories}-${Date.now() / 1000 | 0}`; // 1-second precision
-    const now = Date.now();
-    
-    // Clean up old entries
-    cleanupRecentLogs();
-    
-    // Check if we logged something very similar in the last 30 seconds
-    for (const [key, timestamp] of recentLogs) {
-      if (key.startsWith(`${args.mealType}-${args.totalCalories}`) && 
-          now - timestamp < 30000) {
-        logger.warn('[Chat] Duplicate log detected:', { key, timeSince: now - timestamp });
-        return true;
-      }
-    }
-    
-    return false;
-  };
   
   // Callbacks for confirmation bubble
   const handleEditChange = useCallback((confirmId: string, itemIndex: number, field: string, value: any) => {
@@ -1275,29 +1406,61 @@ export default function Chat() {
           />
           <Button
             onClick={async () => {
-              // Check if there's an active food confirmation
-              const lastMessage = messages[messages.length - 1];
-              const hasActiveConfirmation = lastMessage?.toolCalls?.some(
-                tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
-              );
+              // Check if there are any unconfirmed food logs across ALL messages
+              const hasUnconfirmedFoodLogs = messages.some((msg, idx) => {
+                const confirmCall = msg.toolCalls?.find(tc => 
+                  tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
+                );
+                if (confirmCall && confirmCall.args && !confirmCall.args.error) {
+                  const confirmId = getConfirmationId(confirmCall.args, idx);
+                  return !confirmedFoodLogs.has(confirmId);
+                }
+                return false;
+              });
               
-              if (hasActiveConfirmation) {
-                alert("Please complete the current food confirmation first!");
-                return;
+              let confirmMessage = "Start a new chat? Your food logs will be saved.";
+              if (hasUnconfirmedFoodLogs) {
+                confirmMessage = "You have unconfirmed food items. Starting a new chat will close these pending confirmations. Continue?";
               }
               
-              if (confirm("Start a new chat? Your food logs will be saved.")) {
+              if (confirm(confirmMessage)) {
                 setIsLoading(true);
                 try {
                   // Start new session
                   await startNewChatSession();
-                  // Clear messages
+                  
+                  // Create a new thread, passing the current thread ID for summarization
+                  const newThreadResult = await createNewThread({
+                    previousThreadId: threadId || undefined
+                  });
+                  
+                  // Clear messages with context-aware greeting
+                  let greeting = `Hey ${profile?.name || "there"}! Fresh chat started! `;
+                  if (newThreadResult.foodLogsCount > 0) {
+                    greeting += `I can see you've logged ${newThreadResult.foodLogsCount} items today. `;
+                  }
+                  greeting += `What can I help you with?`;
+                  
                   setMessages([{
                     role: "assistant",
-                    content: `Hey ${profile?.name || "there"}! Fresh chat started! What can I help you with?`,
+                    content: greeting,
                   }]);
-                  // Clear thread ID
-                  setThreadId(null);
+                  
+                  // Set the new thread ID
+                  setThreadId(newThreadResult.threadId);
+                  
+                  // Save the new thread ID to preferences so it persists across refreshes
+                  logger.info(`[Chat] Saving new thread to preferences: ${newThreadResult.threadId}`);
+                  await saveAgentThreadId({ threadId: newThreadResult.threadId });
+                  logger.info(`[Chat] Thread saved successfully`);
+                  
+                  // Clear confirmations for new thread (they're thread-specific)
+                  setConfirmedFoodLogs(new Set());
+                  setEditedFoodItems(new Map());
+                  setEditingFoodLog(null);
+                  // Don't clear localStorage - let the save effect handle it with new thread context
+                  // Enable loading thread messages for the new thread
+                  setShouldLoadThreadMessages(true);
                 } catch (error) {
                   logger.error("Error starting new chat:", error);
                 } finally {
@@ -1371,7 +1534,7 @@ export default function Chat() {
                     {isStealthMode ? (
                       todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "OK"
                     ) : (
-                      `${todayStats?.calories || 0}/${profile?.dailyCalorieTarget || 2000}`
+                      `${Math.round(todayStats?.calories || 0)}/${profile?.dailyCalorieTarget || 2000}`
                     )}
                   </span>
                 </div>
@@ -1387,7 +1550,7 @@ export default function Chat() {
                       {isStealthMode ? (
                         todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Low" : "OK"
                       ) : (
-                        `${todayStats?.protein || 0}g/${profile?.proteinTarget || 150}g`
+                        `${Math.round(todayStats?.protein || 0)}g/${profile?.proteinTarget || 150}g`
                       )}
                     </span>
                   </div>
@@ -1401,7 +1564,7 @@ export default function Chat() {
                       Carbs
                     </span>
                     <span className={cn("text-xs font-semibold", todayStats && profile?.carbsTarget ? getProgressColor(todayStats.carbs, profile.carbsTarget) : "text-muted-foreground")}>
-                      {todayStats?.carbs || 0}g/{profile?.carbsTarget || 200}g
+                      {Math.round(todayStats?.carbs || 0)}g/{profile?.carbsTarget || 200}g
                     </span>
                   </div>
                 )}
@@ -1418,7 +1581,7 @@ export default function Chat() {
                         ? getProgressColor(todayStats.fat, profile.fatTarget || 65) 
                         : "text-muted-foreground"
                     )}>
-                      {todayStats?.fat || 0}g/{profile?.fatTarget || 65}g
+                      {Math.round(todayStats?.fat || 0)}g/{profile?.fatTarget || 65}g
                     </span>
                   </div>
                 )}
@@ -1431,7 +1594,7 @@ export default function Chat() {
 
       {/* Chat Messages - Scrollable area */}
       <div className="flex-1 relative overflow-hidden">
-        <div ref={chatContainerRef} className="h-full overflow-y-auto overflow-x-hidden space-y-4" style={{ minHeight: 0, paddingBottom: isOnboarding && currentOnboardingStep ? `${onboardingHeight + 180}px` : "140px" }}>
+        <div ref={chatContainerRef} className="h-full overflow-y-auto overflow-x-hidden space-y-1">
           <div className="max-w-lg mx-auto px-4 pt-4">
         <ClientOnly>
           
@@ -1469,15 +1632,8 @@ export default function Chat() {
               // Don't filter based on date here since we already handle that in loading
               
               return (
-                <div key={index} className="space-y-4">
-                  {/* Bob's message */}
-                  <div className="flex justify-start">
-                    <div className="max-w-[70%] text-foreground">
-                      <MarkdownMessage content={message.content} className="text-[15px]" />
-                    </div>
-                  </div>
-                  
-                  {/* Food confirmation card - either full or collapsed */}
+                <div key={index} className="space-y-1">
+                  {/* Food confirmation card only - no duplicate message */}
                   <div className="flex justify-start">
                     <ConfirmationBubble
                       args={args}
@@ -1498,16 +1654,6 @@ export default function Chat() {
                         });
                       }}
                       onConfirm={async () => {
-                        // Check for duplicate
-                        if (isDuplicateLog(args)) {
-                          logger.warn('[Chat] Duplicate log prevented for:', args.description);
-                          setMessages(prev => [...prev, {
-                            role: "assistant",
-                            content: "This food was already logged recently!"
-                          }]);
-                          return;
-                        }
-                        
                         // Check if already processing this request
                         const requestKey = `${confirmId}-${Date.now()}`;
                         if (activeLogRequests.has(confirmId)) {
@@ -1515,9 +1661,11 @@ export default function Chat() {
                           return;
                         }
                         
-                        // Mark as processing
+                        // Mark as processing with flushSync for immediate mobile rendering
                         setActiveLogRequests(prev => new Set(prev).add(confirmId));
-                        setConfirmedFoodLogs(prev => new Set(prev).add(confirmId));
+                        flushSync(() => {
+                          setConfirmedFoodLogs(prev => new Set(prev).add(confirmId));
+                        });
                         setIsLoading(true);
                         
                         try {
@@ -1544,13 +1692,17 @@ export default function Chat() {
                             confidence: args.confidence || "medium"
                           });
                           
-                          // Track this successful log
-                          const logKey = `${args.mealType}-${finalCalories}`;
-                          setRecentLogs(prev => new Map(prev).set(logKey, Date.now()));
-                          
-                          // Add a success message
-                          const caloriesRemaining = (profile?.dailyCalorieTarget || 2000) - ((todayStats?.calories || 0) + finalCalories);
-                          const successMessage = `Logged! ${caloriesRemaining} calories left today.`;
+                          // Add a success message with rounded numbers
+                          const caloriesRemaining = Math.round((profile?.dailyCalorieTarget || 2000) - ((todayStats?.calories || 0) + finalCalories));
+                          const encouragements = [
+                            "Great job tracking! 💪",
+                            "You're doing awesome! 🌟", 
+                            "Keep it up! 🎯",
+                            "Nice logging! 👏",
+                            "Way to stay on track! 🚀"
+                          ];
+                          const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+                          const successMessage = `${caloriesRemaining} calories left today. ${randomEncouragement}`;
                           setMessages(prev => [...prev, {
                             role: "assistant",
                             content: successMessage
@@ -1573,13 +1725,23 @@ export default function Chat() {
                             }
                           }
                           
-                          // Clear pending confirmation if exists
+                          // Clear pending confirmation if exists - CRITICAL for preventing auto-confirm bug
+                          logger.info('[Chat] Checking for pending confirmations to clear:', {
+                            hasMutation: !!confirmPendingConfirmation,
+                            hasPendingConfirmations: !!pendingConfirmations,
+                            pendingConfirmationId: pendingConfirmations?._id
+                          });
+                          
                           if (confirmPendingConfirmation && pendingConfirmations) {
                             try {
+                              logger.info('[Chat] Calling confirmPendingConfirmation with ID:', pendingConfirmations._id);
                               await confirmPendingConfirmation({ confirmationId: pendingConfirmations._id });
+                              logger.info('[Chat] Successfully marked pending confirmation as confirmed');
                             } catch (err) {
-                              logger.warn('[Chat] Could not clear pending confirmation:', err);
+                              logger.error('[Chat] Failed to clear pending confirmation:', err);
                             }
+                          } else {
+                            logger.warn('[Chat] No pending confirmation to clear - this might be the issue!');
                           }
                           
                         } catch (error) {
@@ -1622,9 +1784,9 @@ export default function Chat() {
             
           return (
             <div
-              key={index}
+              key={message.toolCalls?.[0]?.toolCallId || `msg-${index}`}
               className={cn(
-                "flex flex-col gap-2",
+                "flex flex-col gap-1",
                 message.role === "user" ? "items-end" : "items-start"
               )}
             >
@@ -1649,6 +1811,8 @@ export default function Chat() {
         )}
           <div ref={messagesEndRef} />
           </div>
+          {/* Dynamic spacer for input area - includes 76px bottom padding */}
+          <div style={{ height: `${(inputAreaHeight || 150) + 76}px` }} />
         </div>
       </div>
       
@@ -1690,14 +1854,17 @@ export default function Chat() {
         <button
           onClick={scrollToBottom}
           className="fixed right-1/2 translate-x-1/2 bg-muted text-foreground rounded-full p-2.5 shadow-sm transition-all duration-200 focus:outline-none focus:ring-0 border border-border"
-          style={{ zIndex: 10, bottom: "calc(76px + 5rem + 2rem)" }}
+          style={{ 
+            zIndex: 10, 
+            bottom: `${(inputAreaHeight || 150) + 76 + 10}px` 
+          }}
         >
           <ChevronDown className="h-5 w-5" />
         </button>
       )}
       
       {/* Input Area - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border" style={{ paddingBottom: "76px" }}>
+      <div ref={inputAreaRef} className="fixed bottom-0 left-0 right-0 bg-background border-t border-border" style={{ paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
         <div className="max-w-lg mx-auto px-4 py-4">
           <form
             onSubmit={handleSubmit}

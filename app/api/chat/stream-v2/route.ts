@@ -257,7 +257,22 @@ export async function POST(req: Request) {
       // Add recent messages - LIMIT TO LAST 10 to prevent token explosion
       if (threadMessages.length > 0) {
         const recentMessages = threadMessages
-          .filter((m: any) => m.content && m.content.trim())
+          .filter((m: any) => {
+            // Filter out messages with content
+            if (!m.content || !m.content.trim()) return false;
+            
+            // IMPORTANT: Filter out any messages that contain confirmFood toolCalls
+            // This prevents Bob from seeing previous confirmations and auto-confirming
+            if (m.toolCalls && m.toolCalls.some((tc: any) => tc.toolName === 'confirmFood')) {
+              console.log("[stream-v2] Filtering out confirmFood message from context:", {
+                role: m.role,
+                contentPreview: m.content.substring(0, 50) + '...'
+              });
+              return false;
+            }
+            
+            return true;
+          })
           .slice(-10) // Take only last 10 messages
           .map((m: any) => ({
             role: m.role as "user" | "assistant",
