@@ -245,8 +245,6 @@ export default function Chat() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
-  // Removed - now using ChatProvider state
-  const [persistedConfirmations, setPersistedConfirmations] = useState<any[]>([]);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [onboardingHeight, setOnboardingHeight] = useState(0);
@@ -421,45 +419,19 @@ export default function Chat() {
   // Clear any old localStorage data on mount to prevent cross-user data leakage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Clear old localStorage items that might contain other users' data
-      // Don't clear chatMessages - we'll load from Convex instead
-      // localStorage.removeItem('agentThreadId');
-      
-      // Load persisted confirmations for today only
+      // Check for old confirmations from previous days and clear them
       const savedConfirmations = localStorage.getItem('foodConfirmations');
       if (savedConfirmations) {
         try {
           const parsed = JSON.parse(savedConfirmations);
           const today = new Date().toISOString().split('T')[0];
-          // Only load confirmations from today AND from the same thread (if specified)
-          if (parsed.date === today) {
-            setPersistedConfirmations(parsed.confirmations || []);
-            // Restore confirmed state for already-logged items
-            if (parsed.confirmed && parsed.confirmed.length > 0) {
-              logger.info('[Chat] Restoring confirmed states on mount:', parsed.confirmed);
-              setConfirmedFoodLogs(prev => {
-                const newSet = new Set([...prev, ...parsed.confirmed]);
-                logger.info('[Chat] Initial confirmed states set:', Array.from(newSet));
-                return newSet;
-              });
-              if (parsed.editedItems) {
-                logger.info('[Chat] Restoring edited items:', Object.keys(parsed.editedItems));
-                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
-              }
-            }
-          } else {
-            // Clear old confirmations from previous days
-            logger.info('Clearing old confirmations from previous day:', parsed.date);
+          // Only keep today's confirmations
+          if (parsed.date !== today) {
+            logger.info('[Chat] Clearing old confirmations from previous day:', parsed.date);
             localStorage.removeItem('foodConfirmations');
-            // Also clear any state that might have been set
-            setPersistedConfirmations([]);
-            setConfirmedFoodLogs(new Set());
-            setEditedFoodItems(new Map());
-            setEditingFoodLog(null);
           }
         } catch (e) {
-          logger.error('Error loading persisted confirmations:', e);
-          // Clear corrupted data
+          logger.error('[Chat] Error checking saved confirmations:', e);
           localStorage.removeItem('foodConfirmations');
         }
       }
@@ -483,27 +455,7 @@ export default function Chat() {
         logger.info(`[Chat] New thread with no messages - keeping existing messages (${messages.length} messages)`);
         setSyncedThreadId(threadId);
         setHasLoadedHistory(true);
-        // Still restore confirmation states even for empty thread
-        const savedConfirmations = localStorage.getItem('foodConfirmations');
-        if (savedConfirmations) {
-          try {
-            const parsed = JSON.parse(savedConfirmations);
-            const today = new Date().toISOString().split('T')[0];
-            if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
-              logger.info('[Chat] Restoring confirmed states for empty thread:', parsed.confirmed);
-              setConfirmedFoodLogs(prev => {
-                const newSet = new Set(prev);
-                parsed.confirmed.forEach((id: string) => newSet.add(id));
-                return newSet;
-              });
-              if (parsed.editedItems) {
-                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
-              }
-            }
-          } catch (e) {
-            logger.error('Error restoring confirmation states for empty thread:', e);
-          }
-        }
+        // Confirmed states are now initialized in ChatProvider from localStorage
         return;
       }
       
@@ -534,33 +486,8 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Don't clear confirmed states - they should persist from localStorage
-      // The initial load already restored them
-      
-      // Actually, we DO need to restore them here because the initial load
-      // happens before we have a thread ID, so we need to re-apply them
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
-            logger.info('[Chat] Restoring confirmed states for loaded messages:', parsed.confirmed);
-            // Use callback to ensure we're adding to existing state
-            setConfirmedFoodLogs(prev => {
-              const newSet = new Set(prev);
-              parsed.confirmed.forEach((id: string) => newSet.add(id));
-              logger.info('[Chat] Confirmed states after thread load restore:', Array.from(newSet));
-              return newSet;
-            });
-            if (parsed.editedItems) {
-              setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
-            }
-          }
-        } catch (e) {
-          logger.error('Error restoring confirmation states:', e);
-        }
-      }
+      // Confirmed states are now initialized in ChatProvider from localStorage
+      // No need to restore them here
     }
     
     // Also handle initial load when we have no messages at all
@@ -580,32 +507,8 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Restore confirmed states for initial load too
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today) {
-            // For initial load, we might not have threadId in localStorage yet
-            if (parsed.confirmed && parsed.confirmed.length > 0) {
-              logger.info('[Chat] Restoring confirmed states on initial load:', parsed.confirmed);
-              // Use callback to ensure we're adding to existing state
-              setConfirmedFoodLogs(prev => {
-                const newSet = new Set(prev);
-                parsed.confirmed.forEach((id: string) => newSet.add(id));
-                logger.info('[Chat] Confirmed states after restore:', Array.from(newSet));
-                return newSet;
-              });
-              if (parsed.editedItems) {
-                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
-              }
-            }
-          }
-        } catch (e) {
-          logger.error('Error restoring confirmation states:', e);
-        }
-      }
+      // Confirmed states are now initialized in ChatProvider from localStorage
+      // No need to restore them here
     }
   }, [threadMessages, messages.length, setMessages, threadId, syncedThreadId]);
   
@@ -991,7 +894,7 @@ export default function Chat() {
         loadingRef.current = false;
       }, 100);
     }
-  }, [dailySummary, onboardingStatus, hasLoadedHistory, persistedConfirmations, messages.length, threadId, isOnboarding, preferences]);
+  }, [dailySummary, onboardingStatus, hasLoadedHistory, messages.length, threadId, isOnboarding, preferences]);
 
   // Measure onboarding container height
   useEffect(() => {
@@ -1601,6 +1504,18 @@ export default function Chat() {
                   await saveAgentThreadId({ threadId: newThreadResult.threadId });
                   logger.info(`[Chat] Thread saved successfully`);
                   
+                  // Save the greeting to Convex so it persists
+                  logger.info('[Chat] Saving New Chat greeting to thread');
+                  try {
+                    await saveMessage({
+                      threadId: newThreadResult.threadId,
+                      role: "assistant",
+                      content: greeting,
+                    });
+                  } catch (err) {
+                    logger.error('[Chat] Failed to save New Chat greeting:', err);
+                  }
+                  
                   // Clear confirmations for new thread (they're thread-specific)
                   setConfirmedFoodLogs(new Set());
                   setEditedFoodItems(new Map());
@@ -1634,8 +1549,8 @@ export default function Chat() {
           {/* Weight Cards Row */}
           <div className="grid grid-cols-2 gap-1.5">
             {/* Goal Card */}
-            <div className="border border-border rounded-lg p-2 text-center">
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
+              <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                 <Target className="h-3 w-3" />
                 Goal
               </div>
@@ -1650,8 +1565,8 @@ export default function Chat() {
             </div>
 
             {/* Current Weight Card */}
-            <div className="border border-border rounded-lg p-2 text-center">
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
+              <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                 <Scale className="h-3 w-3" />
                 Current
               </div>
@@ -1665,8 +1580,8 @@ export default function Chat() {
           </div>
 
           {/* Nutrition Card - Full Width */}
-          <div className="border border-border rounded-lg p-2">
-            <div className="text-xs text-muted-foreground text-center mb-1 flex items-center justify-center gap-1">
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-xs text-muted-foreground text-center mb-2 flex items-center justify-center gap-1">
               <Flame className="h-3 w-3" />
               Nutrition
             </div>
