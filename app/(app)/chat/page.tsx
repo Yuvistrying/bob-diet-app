@@ -546,15 +546,15 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Scroll to bottom on initial load
+  // Scroll to bottom on initial load when messages first appear
   useEffect(() => {
-    if (messages.length > 0 && chatContainerRef.current) {
+    if (messages.length > 0 && chatContainerRef.current && !hasLoadedHistory) {
       // Small delay to ensure DOM is fully rendered
       setTimeout(() => {
         scrollToBottom();
       }, 100);
     }
-  }, []); // Empty dependency array = only runs on mount
+  }, [messages.length, hasLoadedHistory, scrollToBottom]); // Trigger when messages are first loaded
 
   // Get or create daily thread on mount (only if no thread exists at all)
   useEffect(() => {
@@ -1185,6 +1185,11 @@ export default function Chat() {
         threadId || undefined,
         storageId || undefined
       );
+      
+      // Explicitly scroll to bottom after sending a message
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
     } catch (error) {
       logger.error("Error sending message:", error);
       // Add error message
@@ -1217,35 +1222,21 @@ export default function Chat() {
     if (!chatContainerRef.current || messages.length === 0) return;
     
     const container = chatContainerRef.current;
-    const prevScrollHeight = container.scrollHeight;
-    const prevScrollTop = container.scrollTop;
-    const { clientHeight } = container;
-    const isNearBottom = prevScrollHeight - prevScrollTop - clientHeight < 100;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 50; // Reduced threshold for more responsive scrolling
     
-    // Don't auto-scroll if we're loading initial messages from database
-    const isLoadingInitialMessages = hasLoadedHistory && messages.length > 5 && !isStreaming;
-    if (isLoadingInitialMessages) {
-      return;
-    }
+    // Get the last message to check if it's from user or assistant
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage?.role === 'user';
     
-    // If user is near the bottom, follow new messages
-    if (isNearBottom) {
+    // Always scroll to bottom for user messages or if near bottom
+    if (isUserMessage || isNearBottom) {
       requestAnimationFrame(() => {
         scrollToBottom();
       });
-    } else {
-      // Otherwise, maintain relative scroll position
-      // This prevents content from jumping when new messages are added
-      requestAnimationFrame(() => {
-        const newScrollHeight = container.scrollHeight;
-        const scrollDiff = newScrollHeight - prevScrollHeight;
-        // Keep the same content in view by adjusting scroll position
-        if (scrollDiff > 0) {
-          container.scrollTop = prevScrollTop + scrollDiff;
-        }
-      });
     }
-  }, [messages, hasLoadedHistory, isStreaming, scrollToBottom]);
+    // Don't maintain scroll position - just let it be
+  }, [messages, scrollToBottom]);
 
   // Auto-scroll when input area height changes
   useEffect(() => {
