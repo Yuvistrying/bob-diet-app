@@ -723,7 +723,7 @@ export default function Logs() {
           {addType === "food" && (
             <div className="mt-4 space-y-4">
               <div>
-                <Label htmlFor="food-time" className="text-muted-foreground">Time</Label>
+                <Label htmlFor="food-time" className="text-muted-foreground mb-2">Time</Label>
                 <Input
                   id="food-time"
                   type="time"
@@ -733,7 +733,7 @@ export default function Logs() {
                 />
               </div>
               <div>
-                <Label htmlFor="food-desc" className="text-muted-foreground">Description *</Label>
+                <Label htmlFor="food-desc" className="text-muted-foreground mb-2">Description *</Label>
                 <Input
                   id="food-desc"
                   placeholder="e.g., Grilled chicken with rice"
@@ -744,7 +744,7 @@ export default function Logs() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="food-cal" className="text-muted-foreground">Calories *</Label>
+                  <Label htmlFor="food-cal" className="text-muted-foreground mb-2">Calories *</Label>
                   <Input
                     id="food-cal"
                     type="number"
@@ -755,7 +755,7 @@ export default function Logs() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="food-protein" className="text-muted-foreground">Protein (g)</Label>
+                  <Label htmlFor="food-protein" className="text-muted-foreground mb-2">Protein (g)</Label>
                   <Input
                     id="food-protein"
                     type="number"
@@ -768,7 +768,7 @@ export default function Logs() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="food-carbs" className="text-muted-foreground">Carbs (g)</Label>
+                  <Label htmlFor="food-carbs" className="text-muted-foreground mb-2">Carbs (g)</Label>
                   <Input
                     id="food-carbs"
                     type="number"
@@ -779,7 +779,7 @@ export default function Logs() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="food-fat" className="text-muted-foreground">Fats (g)</Label>
+                  <Label htmlFor="food-fat" className="text-muted-foreground mb-2">Fats (g)</Label>
                   <Input
                     id="food-fat"
                     type="number"
@@ -803,7 +803,7 @@ export default function Logs() {
           {addType === "weight" && (
             <div className="mt-4 space-y-4">
               <div>
-                <Label htmlFor="weight" className="text-muted-foreground">Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
+                <Label htmlFor="weight" className="text-muted-foreground mb-2">Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
                 <Input
                   id="weight"
                   type="number"
@@ -841,7 +841,7 @@ export default function Logs() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-desc" className="text-muted-foreground">Description *</Label>
+              <Label htmlFor="edit-desc" className="text-muted-foreground mb-2">Description *</Label>
               <Input
                 id="edit-desc"
                 value={foodForm.description}
@@ -851,7 +851,7 @@ export default function Logs() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-cal" className="text-muted-foreground">Calories *</Label>
+                <Label htmlFor="edit-cal" className="text-muted-foreground mb-2">Calories *</Label>
                 <Input
                   id="edit-cal"
                   type="number"
@@ -861,7 +861,7 @@ export default function Logs() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-protein" className="text-muted-foreground">Protein (g)</Label>
+                <Label htmlFor="edit-protein" className="text-muted-foreground mb-2">Protein (g)</Label>
                 <Input
                   id="edit-protein"
                   type="number"
@@ -873,7 +873,7 @@ export default function Logs() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-carbs" className="text-muted-foreground">Carbs (g)</Label>
+                <Label htmlFor="edit-carbs" className="text-muted-foreground mb-2">Carbs (g)</Label>
                 <Input
                   id="edit-carbs"
                   type="number"
@@ -883,7 +883,7 @@ export default function Logs() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-fat" className="text-muted-foreground">Fats (g)</Label>
+                <Label htmlFor="edit-fat" className="text-muted-foreground mb-2">Fats (g)</Label>
                 <Input
                   id="edit-fat"
                   type="number"
@@ -940,7 +940,7 @@ export default function Logs() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-weight" className="text-muted-foreground">Weight ({editingWeightLog?.unit || "kg"})</Label>
+              <Label htmlFor="edit-weight" className="text-muted-foreground mb-2">Weight ({editingWeightLog?.unit || "kg"})</Label>
               <Input
                 id="edit-weight"
                 type="number"

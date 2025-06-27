@@ -137,52 +137,52 @@ export default function Profile() {
         <>
       {/* About You Section */}
       <div className="mt-4 border border-border rounded-lg">
-        <CardHeader className="pb-3">
+        <CardHeader className="p-4 pb-3">
           <CardTitle className="text-lg text-foreground flex items-center gap-2">
             <User className="h-5 w-5" />
             About you
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-4">
           <div>
-            <Label htmlFor="name" className="text-foreground">Name</Label>
+            <Label htmlFor="name" className="text-foreground mb-1">Name</Label>
             <Input
               id="name"
               value={isEditing ? formData.name : profile.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={!isEditing}
-              className="mt-1 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              className="mt-2 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
             />
           </div>
 
           <div>
-            <Label htmlFor="age" className="text-foreground">Age</Label>
+            <Label htmlFor="age" className="text-foreground mb-1">Age</Label>
             <Input
               id="age"
               type="number"
               value={isEditing ? formData.age : profile.age}
               onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })}
               disabled={!isEditing}
-              className="mt-1 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              className="mt-2 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
             />
           </div>
 
           <div>
-            <Label htmlFor="height" className="text-foreground">Height (cm)</Label>
+            <Label htmlFor="height" className="text-foreground mb-1">Height (cm)</Label>
             <Input
               id="height"
               type="number"
               value={isEditing ? formData.height : profile.height}
               onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) })}
               disabled={!isEditing}
-              className="mt-1 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              className="mt-2 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
             />
           </div>
 
           {/* Starting Weight */}
           <div>
-            <Label className="text-foreground">Starting Weight</Label>
-            <div className="mt-1 p-2 bg-muted rounded-md border border-border">
+            <Label className="text-foreground mb-2">Starting Weight</Label>
+            <div className="mt-2 p-2 bg-muted rounded-md border border-border">
               <div className="text-lg font-semibold text-foreground">
                 <span className="flex items-center gap-1">
                   <Flag className="h-4 w-4" />
@@ -199,8 +199,8 @@ export default function Profile() {
 
           {/* Current Weight */}
           <div>
-            <Label className="text-foreground">Current Weight</Label>
-            <div className="mt-1 p-2 bg-muted rounded-md border border-border">
+            <Label className="text-foreground mb-2">Current Weight</Label>
+            <div className="mt-2 p-2 bg-muted rounded-md border border-border">
               <div className="text-lg font-semibold text-foreground">
                 <span className="flex items-center gap-1">
                   <Scale className="h-4 w-4" />
@@ -216,7 +216,7 @@ export default function Profile() {
           </div>
 
           <div>
-            <Label htmlFor="targetWeight" className="text-foreground">Target Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
+            <Label htmlFor="targetWeight" className="text-foreground mb-2">Target Weight ({profile?.preferredUnits === "imperial" ? "lbs" : "kg"})</Label>
             <Input
               id="targetWeight"
               type="number"
@@ -236,12 +236,12 @@ export default function Profile() {
                 }
               }}
               disabled={!isEditing}
-              className="mt-1 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+              className="mt-2 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
             />
           </div>
 
           <div>
-            <Label className="text-foreground">Gender</Label>
+            <Label className="text-foreground mb-1">Gender</Label>
             <p className="text-xs text-muted-foreground mb-2">
               Asking because this affects calorie and nutrient recommendations
             </p>
@@ -250,7 +250,7 @@ export default function Profile() {
               value={isEditing ? formData.gender : profile.gender}
               onValueChange={(value) => setFormData({ ...formData, gender: value })}
               disabled={!isEditing}
-              className="grid grid-cols-3 gap-2 mt-1"
+              className="grid grid-cols-3 gap-2 mt-2"
             >
               <ToggleGroupItem value="female" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-border hover:bg-accent hover:text-accent-foreground text-muted-foreground">
                 Female
@@ -265,7 +265,7 @@ export default function Profile() {
           </div>
 
           <div>
-            <Label className="text-foreground">Activity Level</Label>
+            <Label className="text-foreground mb-1">Activity Level</Label>
             <p className="text-xs text-muted-foreground mb-2">
               How active are you on a typical day?
             </p>
@@ -274,7 +274,7 @@ export default function Profile() {
               onValueChange={(value) => setFormData({ ...formData, activityLevel: value })}
               disabled={!isEditing}
             >
-              <SelectTrigger className="mt-1 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              <SelectTrigger className="mt-2 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
@@ -287,7 +287,7 @@ export default function Profile() {
           </div>
 
           <div>
-            <Label className="text-foreground">Current Goal</Label>
+            <Label className="text-foreground mb-1">Current Goal</Label>
             <p className="text-xs text-muted-foreground mb-2">
               Your daily recommendations will change based on this selection
             </p>
@@ -309,7 +309,7 @@ export default function Profile() {
                 }
               }}
               disabled={!isEditing}
-              className="grid grid-cols-3 gap-2 mt-1"
+              className="grid grid-cols-3 gap-2 mt-2"
             >
               <ToggleGroupItem value="gain" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground border-border hover:bg-accent hover:text-accent-foreground text-muted-foreground">
                 Gain
@@ -374,17 +374,17 @@ export default function Profile() {
 
       {/* Service Preferences */}
       <div className="mt-4 border border-border rounded-lg">
-        <CardHeader className="pb-3">
+        <CardHeader className="p-4 pb-3">
           <CardTitle className="text-lg text-foreground flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Service Preferences
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-4">
           <div>
-            <Label htmlFor="language" className="text-foreground">Language</Label>
+            <Label htmlFor="language" className="text-foreground mb-1">Language</Label>
             <Select defaultValue={preferences.language || "en"}>
-              <SelectTrigger className="mt-1 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
+              <SelectTrigger className="mt-2 bg-input border-border text-foreground disabled:bg-muted disabled:text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">

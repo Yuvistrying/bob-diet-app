@@ -44,8 +44,46 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const onCompleteCallbackRef = useRef<((threadId: string) => void) | null>(null);
   
   // Confirmation bubble state that persists across tab switches
-  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(new Set());
-  const [editedFoodItems, setEditedFoodItems] = useState<Map<string, any>>(new Map());
+  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(() => {
+    // Initialize from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const savedConfirmations = localStorage.getItem('foodConfirmations');
+      if (savedConfirmations) {
+        try {
+          const parsed = JSON.parse(savedConfirmations);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
+            logger.info('[ChatProvider] Initializing confirmed states from localStorage:', parsed.confirmed);
+            return new Set(parsed.confirmed);
+          }
+        } catch (e) {
+          logger.error('[ChatProvider] Error loading saved confirmations:', e);
+        }
+      }
+    }
+    return new Set();
+  });
+  
+  const [editedFoodItems, setEditedFoodItems] = useState<Map<string, any>>(() => {
+    // Initialize edited items from localStorage
+    if (typeof window !== 'undefined') {
+      const savedConfirmations = localStorage.getItem('foodConfirmations');
+      if (savedConfirmations) {
+        try {
+          const parsed = JSON.parse(savedConfirmations);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date === today && parsed.editedItems) {
+            logger.info('[ChatProvider] Initializing edited items from localStorage');
+            return new Map(Object.entries(parsed.editedItems));
+          }
+        } catch (e) {
+          logger.error('[ChatProvider] Error loading edited items:', e);
+        }
+      }
+    }
+    return new Map();
+  });
+  
   const [editingFoodLog, setEditingFoodLog] = useState<string | null>(null);
   
   // This state will persist across tab switches

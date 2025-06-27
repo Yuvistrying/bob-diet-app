@@ -73,7 +73,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
+            <Label htmlFor="name" className="text-right mb-1">
               Name
             </Label>
             <Input
@@ -85,7 +85,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="age" className="text-right">
+            <Label htmlFor="age" className="text-right mb-1">
               Age
             </Label>
             <Input
@@ -100,7 +100,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="height" className="text-right">
+            <Label htmlFor="height" className="text-right mb-1">
               Height (cm)
             </Label>
             <Input
@@ -115,7 +115,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="currentWeight" className="text-right">
+            <Label htmlFor="currentWeight" className="text-right mb-2">
               Current Weight (kg)
             </Label>
             <Input
@@ -131,7 +131,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="targetWeight" className="text-right">
+            <Label htmlFor="targetWeight" className="text-right mb-2">
               Target Weight (kg)
             </Label>
             <Input
@@ -147,7 +147,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="gender" className="text-right">
+            <Label htmlFor="gender" className="text-right mb-1">
               Gender
             </Label>
             <Select 
@@ -166,7 +166,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="activity" className="text-right">
+            <Label htmlFor="activity" className="text-right mb-1">
               Activity Level
             </Label>
             <Select 
@@ -186,7 +186,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
           </div>
           
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="goal" className="text-right">
+            <Label htmlFor="goal" className="text-right mb-1">
               Goal
             </Label>
             <Select 
