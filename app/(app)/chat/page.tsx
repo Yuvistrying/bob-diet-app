@@ -421,7 +421,13 @@ export default function Chat() {
   
   // Track if we're at bottom for auto-scroll
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [justScrolledUser, setJustScrolledUser] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Transform to push container up
+  const [containerTransform, setContainerTransform] = useState(0);
+  const containerTransformRef = useRef(0);
+  const justScrolledUserRef = useRef(false);
   
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
@@ -926,9 +932,6 @@ export default function Chat() {
               if (parsed.confirmed?.length > 0) {
                 setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
               }
-              if (parsed.editedItems) {
-                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
-              }
             }
           } catch (e) {
             logger.error('Error loading confirmations:', e);
@@ -977,13 +980,13 @@ export default function Chat() {
   // Measure input area height
   useEffect(() => {
     const measureInputArea = () => {
-      if (inputAreaRef.current && chatContainerRef.current) {
+      if (inputAreaRef.current && scrollAreaRef.current) {
         const oldHeight = inputAreaHeight || 0;
         const newHeight = inputAreaRef.current.offsetHeight;
         
         // Only update if height actually changed
         if (oldHeight !== newHeight) {
-          const container = chatContainerRef.current;
+          const container = scrollAreaRef.current;
           const { scrollTop, scrollHeight, clientHeight } = container;
           const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
           const scrollBottom = scrollHeight - scrollTop - clientHeight;
@@ -994,9 +997,9 @@ export default function Chat() {
           if (!isNearBottom) {
             // User has scrolled up - maintain their position
             requestAnimationFrame(() => {
-              if (chatContainerRef.current) {
-                const newScrollHeight = chatContainerRef.current.scrollHeight;
-                chatContainerRef.current.scrollTop = newScrollHeight - clientHeight - scrollBottom;
+              if (scrollAreaRef.current) {
+                const newScrollHeight = scrollAreaRef.current.scrollHeight;
+                scrollAreaRef.current.scrollTop = newScrollHeight - clientHeight - scrollBottom;
               }
             });
           }
@@ -1212,13 +1215,7 @@ export default function Chat() {
         storageId || undefined
       );
       
-      // Always scroll to bottom after sending a message
-      setTimeout(() => {
-        if (scrollAreaRef.current) {
-          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-        }
-        setIsAtBottom(true);
-      }, 100);
+      // The transform will be handled by the useEffect that watches for new user messages
     } catch (error) {
       logger.error("Error sending message:", error);
       // Add error message
@@ -1229,15 +1226,43 @@ export default function Chat() {
     }
   };
 
-  // Auto-scroll when new messages arrive (only if already at bottom)
+  // Handle assistant messages - reduce transform if content is cut off
   useEffect(() => {
-    if (messages.length > 0 && isAtBottom) {
-      // Use requestAnimationFrame for smooth scroll after render
-      requestAnimationFrame(() => {
-        scrollToBottom();
-      });
+    if (messages.length > 0 && scrollAreaRef.current) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Only handle assistant messages
+      if (lastMessage.role === 'assistant' || lastMessage.isStreaming) {
+        // Don't do anything if we just pushed for a user message
+        if (!justScrolledUserRef.current && containerTransformRef.current > 0) {
+          // Check if content is being cut off at the bottom
+          const container = scrollAreaRef.current;
+          const { scrollHeight, clientHeight } = container;
+          
+          // If there's content below the viewport, gradually reduce transform
+          if (scrollHeight > clientHeight) {
+            // Calculate how much content is cut off
+            const contentBelowViewport = scrollHeight - clientHeight;
+            
+            // Reduce transform by a portion of the cut-off content
+            const reduction = Math.min(containerTransformRef.current, contentBelowViewport * 0.5);
+            const newTransform = Math.max(0, containerTransformRef.current - reduction);
+            
+            console.log('📉 Reducing transform for assistant:', {
+              contentBelowViewport,
+              reduction,
+              newTransform
+            });
+            
+            if (reduction > 0) {
+              setContainerTransform(newTransform);
+              containerTransformRef.current = newTransform;
+            }
+          }
+        }
+      }
     }
-  }, [messages, isAtBottom, scrollToBottom]);
+  }, [messages]);
   
   // Scroll to bottom on initial load
   useEffect(() => {
@@ -1245,6 +1270,66 @@ export default function Chat() {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, []); // Only on mount
+  
+  // Watch for new user messages and push them to top with transform
+  const previousMessageCount = useRef(0);
+  useEffect(() => {
+    if (messages.length > previousMessageCount.current && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Check if the new message is from the user
+      if (lastMessage.role === 'user') {
+        // Use requestAnimationFrame to ensure DOM has painted
+        requestAnimationFrame(() => {
+          // Double RAF to ensure layout is complete
+          requestAnimationFrame(() => {
+            if (scrollAreaRef.current) {
+              const userMessages = scrollAreaRef.current.querySelectorAll('.items-end');
+              if (userMessages.length > 0) {
+                const lastUserMessage = userMessages[userMessages.length - 1] as HTMLElement;
+                if (lastUserMessage) {
+                  // Get positions
+                  const messageRect = lastUserMessage.getBoundingClientRect();
+                  const containerRect = scrollAreaRef.current.getBoundingClientRect();
+                  
+                  // Calculate how far the message is from the top of the container
+                  const distanceFromTop = messageRect.top - containerRect.top;
+                  
+                  // Only apply transform if the message is actually visible
+                  if (distanceFromTop > 0) {
+                    // Add this distance to our transform to push everything up
+                    const newTransform = containerTransformRef.current + distanceFromTop;
+                    
+                    console.log('🎯 [useEffect] Push to top with transform:', {
+                      distanceFromTop,
+                      currentTransform: containerTransformRef.current,
+                      newTransform
+                    });
+                    
+                    // Apply the transform
+                    setContainerTransform(newTransform);
+                    containerTransformRef.current = newTransform;
+                    
+                    setIsAtBottom(false);
+                    setJustScrolledUser(true);
+                    justScrolledUserRef.current = true;
+                    
+                    // Reset the flag after animation completes
+                    setTimeout(() => {
+                      setJustScrolledUser(false);
+                      justScrolledUserRef.current = false;
+                    }, 1000);
+                  }
+                }
+              }
+            }
+          });
+        });
+      }
+    }
+    
+    previousMessageCount.current = messages.length;
+  }, [messages]);
 
   // Scroll to bottom when input area changes (if at bottom)
   useEffect(() => {
@@ -1254,6 +1339,15 @@ export default function Chat() {
       });
     }
   }, [inputAreaHeight, isAtBottom, scrollToBottom]);
+  
+  // Additional auto-scroll check (this might be the missing one)
+  useEffect(() => {
+    if (messages.length > 0 && isAtBottom) {
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    }
+  }, [messages, isAtBottom, scrollToBottom]);
 
   // Handle file processing
   const processImageFile = (file: File) => {
@@ -1698,7 +1792,12 @@ export default function Chat() {
       {/* Chat Messages - Scrollable area */}
       <div className="flex-1 relative overflow-hidden">
         <div ref={scrollAreaRef} className="h-full overflow-y-auto overflow-x-hidden">
-          <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
+          <div 
+            className="max-w-lg mx-auto px-4 pt-4 space-y-4"
+            style={{ 
+              transform: `translateY(-${containerTransform}px)`,
+              transition: 'transform 0.3s ease-out'
+            }}>
         <ClientOnly>
           <AnimatePresence initial={false}>
           {messages.map((message, index) => {
