@@ -28,7 +28,26 @@ export const getDailySummary = query({
     hasPendingConfirmations: boolean;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) {
+      console.log("[getDailySummary] Not authenticated, returning null");
+      return {
+        today: {
+          date: new Date().toISOString().split('T')[0],
+          stats: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+          summary: "Not authenticated",
+          hasWeighedIn: false,
+          foodLogs: [],
+          remaining: null
+        },
+        yesterday: {
+          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          stats: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+          total: "0cal (0p/0c/0f)"
+        },
+        profile: null,
+        hasPendingConfirmations: false
+      };
+    }
     const userId = identity.subject;
 
     // Get today's date
