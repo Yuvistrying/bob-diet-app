@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "~/app/components/ui/button";
@@ -47,7 +48,11 @@ const ChatMessage = memo(({
 }) => {
   if (message.role === "user") {
     return (
-      <div className="flex flex-col items-stretch gap-2 max-w-[85%] ml-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="flex flex-col items-stretch gap-2 max-w-[85%] ml-auto">
         {imageUrl && (
           <div>
             <img
@@ -71,12 +76,16 @@ const ChatMessage = memo(({
             {message.content}
           </div>
         )}
-      </div>
+      </motion.div>
     );
   }
   
   return (
-    <div className="flex justify-start">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="flex justify-start">
       <div className="max-w-[85%] space-y-2">
         {message.activeToolCall && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -97,7 +106,7 @@ const ChatMessage = memo(({
           <MarkdownMessage content={message.content} className="text-[15px]" />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 });
 
@@ -217,7 +226,7 @@ export default function Chat() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  // Remove showScrollToBottom - we'll use !isAtBottom instead
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [onboardingHeight, setOnboardingHeight] = useState(0);
   const [inputAreaHeight, setInputAreaHeight] = useState(0);
@@ -229,7 +238,6 @@ export default function Chat() {
   const [activeUploadId, setActiveUploadId] = useState<string | null>(null); // Track active upload
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const onboardingRef = useRef<HTMLDivElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null);
@@ -411,9 +419,15 @@ export default function Chat() {
   // Track if we've synced messages for this thread
   const [syncedThreadId, setSyncedThreadId] = useState<string | null>(null);
   
-  // Scroll to bottom function - define early to avoid initialization error
+  // Track if we're at bottom for auto-scroll
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
   }, []);
   
   // Load thread messages from Convex when available or thread changes
@@ -461,10 +475,12 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Force scroll to bottom after loading messages from database
+      // Scroll to bottom after loading messages from database
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-      }, 200);
+        if (scrollAreaRef.current) {
+          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+      }, 100);
       
       // Restore confirmed/rejected states from localStorage after loading messages
       const savedConfirmations = localStorage.getItem('foodConfirmations');
@@ -505,10 +521,12 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Force scroll to bottom after loading messages from database
+      // Scroll to bottom after loading messages from database
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-      }, 200);
+        if (scrollAreaRef.current) {
+          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+      }, 100);
       
       // Restore confirmed/rejected states from localStorage after loading messages
       const savedConfirmations = localStorage.getItem('foodConfirmations');
@@ -542,15 +560,27 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Force scroll to bottom on initial page load
+  // Check if user is at bottom of scroll
+  const checkIfAtBottom = useCallback(() => {
+    if (!scrollAreaRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
+    const threshold = 50; // pixels from bottom
+    const atBottom = scrollHeight - clientHeight - scrollTop < threshold;
+    setIsAtBottom(atBottom);
+  }, []);
+  
+  // Handle scroll events
   useEffect(() => {
-    if (messages.length > 0) {
-      // Longer delay for initial load to ensure everything is rendered
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto" }); // Use auto for instant scroll on load
-      }, 200);
-    }
-  }, []); // Only on mount
+    const scrollElement = scrollAreaRef.current;
+    if (!scrollElement) return;
+    
+    const handleScroll = () => {
+      checkIfAtBottom();
+    };
+    
+    scrollElement.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollElement.removeEventListener('scroll', handleScroll);
+  }, [checkIfAtBottom]);
 
   // Get or create daily thread on mount (only if no thread exists at all)
   useEffect(() => {
@@ -1182,9 +1212,12 @@ export default function Chat() {
         storageId || undefined
       );
       
-      // Force scroll to bottom after sending a message
+      // Always scroll to bottom after sending a message
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (scrollAreaRef.current) {
+          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+        setIsAtBottom(true);
       }, 100);
     } catch (error) {
       logger.error("Error sending message:", error);
@@ -1196,62 +1229,31 @@ export default function Chat() {
     }
   };
 
-  // Handle scroll position to show/hide scroll to bottom button
+  // Auto-scroll when new messages arrive (only if already at bottom)
   useEffect(() => {
-    const handleScroll = () => {
-      if (chatContainerRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-        const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-        setShowScrollToBottom(!isAtBottom);
-      }
-    };
-    
-    const container = chatContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
-  
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messages.length === 0) return;
-    
-    // Check if user has scrolled up
-    if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-      
-      // Always scroll to bottom unless user has scrolled up
-      if (isNearBottom) {
-        // Small delay to ensure DOM is updated
-        setTimeout(() => {
-          scrollToBottom();
-        }, 50);
-      }
-    } else {
-      // If no container ref yet, just scroll
-      setTimeout(() => {
+    if (messages.length > 0 && isAtBottom) {
+      // Use requestAnimationFrame for smooth scroll after render
+      requestAnimationFrame(() => {
         scrollToBottom();
-      }, 50);
+      });
     }
-  }, [messages, scrollToBottom]);
-
-  // Auto-scroll when input area height changes
+  }, [messages, isAtBottom, scrollToBottom]);
+  
+  // Scroll to bottom on initial load
   useEffect(() => {
-    if (inputAreaHeight > 0 && chatContainerRef.current) {
-      const container = chatContainerRef.current;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 10; // Much tighter threshold
-      
-      // Only scroll if user was already at the very bottom
-      if (isAtBottom) {
-        requestAnimationFrame(() => {
-          scrollToBottom();
-        });
-      }
+    if (messages.length > 0 && scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [inputAreaHeight, scrollToBottom]);
+  }, []); // Only on mount
+
+  // Scroll to bottom when input area changes (if at bottom)
+  useEffect(() => {
+    if (inputAreaHeight > 0 && isAtBottom) {
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    }
+  }, [inputAreaHeight, isAtBottom, scrollToBottom]);
 
   // Handle file processing
   const processImageFile = (file: File) => {
@@ -1695,10 +1697,10 @@ export default function Chat() {
 
       {/* Chat Messages - Scrollable area */}
       <div className="flex-1 relative overflow-hidden">
-        <div ref={chatContainerRef} className="h-full overflow-y-auto overflow-x-hidden">
+        <div ref={scrollAreaRef} className="h-full overflow-y-auto overflow-x-hidden">
           <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
         <ClientOnly>
-          
+          <AnimatePresence initial={false}>
           {messages.map((message, index) => {
           // Handle messages with tool calls (like confirmFood)
           if (message.toolCalls && message.toolCalls.length > 0) {
@@ -1900,6 +1902,7 @@ export default function Chat() {
             </div>
           );
         })}
+        </AnimatePresence>
         </ClientOnly>
         
         {isStreaming && (
@@ -1952,9 +1955,15 @@ export default function Chat() {
       )}
 
       {/* Scroll to bottom button */}
-      {showScrollToBottom && (
-        <button
-          onClick={scrollToBottom}
+      {!isAtBottom && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          onClick={() => {
+            scrollToBottom();
+            setIsAtBottom(true);
+          }}
           className="fixed right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0"
           style={{ 
             zIndex: 20, 
@@ -1962,7 +1971,7 @@ export default function Chat() {
           }}
         >
           <ChevronDown className="h-5 w-5" />
-        </button>
+        </motion.button>
       )}
       
       {/* Input Area - Fixed at bottom */}
