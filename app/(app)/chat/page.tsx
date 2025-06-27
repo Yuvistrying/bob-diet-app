@@ -259,18 +259,21 @@ export default function Chat() {
     setRejectedFoodLogs
   } = useChat();
   
-  // Convex queries - only run when authenticated
-  const profile = useQuery(api.userProfiles.getUserProfile, isSignedIn === false ? "skip" : {});
-  const todayStats = useQuery(api.foodLogs.getTodayStats, isSignedIn === false ? "skip" : undefined);
-  const latestWeight = useQuery(api.weightLogs.getLatestWeight, isSignedIn === false ? "skip" : undefined);
-  const preferences = useQuery(api.userPreferences.getUserPreferences, isSignedIn === false ? "skip" : undefined);
-  const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus, isSignedIn === false ? "skip" : undefined);
-  const dailySummary = useQuery(api.dailySummary.getDailySummary, isSignedIn === false ? "skip" : {});
-  const sessionStats = useQuery(api.chatSessions.getSessionStats, isSignedIn === false ? "skip" : undefined);
-  const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday, isSignedIn === false ? "skip" : undefined);
-  const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus, isSignedIn === false ? "skip" : {});
+  // Convex queries - only run when authenticated (strict check)
+  const skipQueries = !isSignedIn || isSignedIn === undefined;
+  
+  const profile = useQuery(api.userProfiles.getUserProfile, skipQueries ? "skip" : {});
+  const todayStats = useQuery(api.foodLogs.getTodayStats, skipQueries ? "skip" : undefined);
+  const latestWeight = useQuery(api.weightLogs.getLatestWeight, skipQueries ? "skip" : undefined);
+  const preferences = useQuery(api.userPreferences.getUserPreferences, skipQueries ? "skip" : undefined);
+  const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus, skipQueries ? "skip" : undefined);
+  const dailySummary = useQuery(api.dailySummary.getDailySummary, skipQueries ? "skip" : {});
+  const sessionStats = useQuery(api.chatSessions.getSessionStats, skipQueries ? "skip" : undefined);
+  const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday, skipQueries ? "skip" : undefined);
+  const subscription = useQuery(api.subscriptions.fetchUserSubscription, skipQueries ? "skip" : undefined);
+  const subscriptionStatus = { hasActiveSubscription: subscription?.status === "active" };
   const pendingConfirmations = useQuery(api.pendingConfirmations.getLatestPendingConfirmation, 
-    !isSignedIn || !threadId ? "skip" : { threadId }
+    skipQueries || !threadId ? "skip" : { threadId }
   );
   
   // Convex action for Agent SDK (not used with streaming)
@@ -292,10 +295,10 @@ export default function Chat() {
   const confirmPendingConfirmation = useMutation(api.pendingConfirmations.confirmPendingConfirmation);
   const expirePendingConfirmation = useMutation(api.pendingConfirmations.expirePendingConfirmation);
   
-  // Query for thread messages - load when we have a thread ID
+  // Query for thread messages - load when we have a thread ID and are authenticated
   const [shouldLoadThreadMessages, setShouldLoadThreadMessages] = useState(true);
   const threadMessages = useQuery(api.threads.getThreadMessages, 
-    threadId && shouldLoadThreadMessages ? { threadId } : "skip"
+    isSignedIn && threadId && shouldLoadThreadMessages ? { threadId } : "skip"
   );
   
   // Get all storage IDs from messages that need image URLs
@@ -306,7 +309,7 @@ export default function Chat() {
   // Query to get image URLs for all storage IDs
   const imageUrls = useQuery(
     api.files.getMultipleImageUrls, 
-    storageIdsFromMessages.length > 0 
+    isSignedIn && storageIdsFromMessages.length > 0 
       ? { storageIds: storageIdsFromMessages }
       : "skip"
   );
@@ -376,27 +379,42 @@ export default function Chat() {
     // Wait for profile to load (undefined means still loading)
     if (profile === undefined) return;
     
-    // If we have a profile or confirmed no profile exists, set timer
-    const timer = setTimeout(() => {
-      setIsInitialLoad(false);
-    }, 5000); // 5 seconds grace period for all users
-    
-    return () => clearTimeout(timer);
+    // Set initial load to false immediately for all users
+    setIsInitialLoad(false);
   }, [profile, isSignedIn]);
 
   // Check subscription status after initial load period
   useEffect(() => {
-    // Skip if not signed in or still in initial load
-    if (isSignedIn === false || isInitialLoad) return;
+    console.log('[Chat] Subscription check:', {
+      isSignedIn,
+      isInitialLoad,
+      subscription: subscription ? { status: subscription.status, polarId: subscription.polarId } : null,
+      subscriptionStatus,
+      profile: profile ? 'loaded' : profile === undefined ? 'loading' : 'null',
+      skipQueries
+    });
     
-    // Skip if subscription status is still loading
-    if (subscriptionStatus === undefined) return;
+    // Skip if not fully authenticated yet
+    if (!isSignedIn || isSignedIn === undefined || isInitialLoad) return;
+    
+    // Skip if subscription is still loading  
+    if (subscription === undefined) {
+      console.log('[Chat] Subscription still loading...');
+      return;
+    }
+    
+    // Skip if profile is still loading (new users need profile first)
+    if (profile === undefined) {
+      console.log('[Chat] Profile still loading...');
+      return;
+    }
     
     // Only redirect if we're sure there's no active subscription
     if (!subscriptionStatus.hasActiveSubscription) {
+      console.log('[Chat] Redirecting to pricing - no active subscription');
       router.push("/pricing");
     }
-  }, [isInitialLoad, subscriptionStatus, router, isSignedIn]);
+  }, [isInitialLoad, subscription, subscriptionStatus, router, isSignedIn, profile, skipQueries]);
 
   // Clear any old localStorage data on mount to prevent cross-user data leakage
   useEffect(() => {

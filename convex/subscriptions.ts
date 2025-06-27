@@ -160,6 +160,7 @@ export const createCheckoutSession = action({
       successUrl: `${process.env.FRONTEND_URL}/success`,
       metadata: {
         userId: user.tokenIdentifier,
+        customerEmail: user.email!,
       },
     });
 
@@ -246,22 +247,66 @@ export const fetchUserSubscription = query({
     const identity = await ctx.auth.getUserIdentity();
 
     if (!identity) {
+      console.log("[fetchUserSubscription] No identity found");
       return null;
     }
 
+    console.log("[fetchUserSubscription] Looking up user with tokenIdentifier:", identity.subject);
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
       .first();
 
     if (!user) {
+      console.log("[fetchUserSubscription] No user found for tokenIdentifier:", identity.subject);
       return null;
     }
 
+    console.log("[fetchUserSubscription] Found user, looking up subscription with userId:", user.tokenIdentifier);
     const subscription = await ctx.db
       .query("subscriptions")
       .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
       .first();
+
+    if (!subscription) {
+      console.log("[fetchUserSubscription] No subscription found for userId:", user.tokenIdentifier);
+      
+      // Check if there's a subscription with the raw identity subject
+      const altSubscription = await ctx.db
+        .query("subscriptions")
+        .withIndex("userId", (q) => q.eq("userId", identity.subject))
+        .first();
+      
+      if (altSubscription) {
+        console.log("[fetchUserSubscription] Found subscription with raw identity.subject, returning it");
+        return altSubscription;
+      }
+      
+      // Also check for subscription by email if user has email
+      if (user.email) {
+        console.log("[fetchUserSubscription] Checking by customer email:", user.email);
+        // Get all subscriptions and find by customer email in metadata
+        const allSubscriptions = await ctx.db.query("subscriptions").collect();
+        const emailSubscription = allSubscriptions.find(sub => 
+          sub.metadata?.customerEmail === user.email
+        );
+        
+        if (emailSubscription) {
+          console.log("[fetchUserSubscription] Found subscription by email, updating userId");
+          // Update the subscription with correct userId
+          await (ctx.db as any).patch(emailSubscription._id, {
+            userId: user.tokenIdentifier
+          });
+          return emailSubscription;
+        }
+      }
+    } else {
+      console.log("[fetchUserSubscription] Found subscription:", {
+        id: subscription._id,
+        status: subscription.status,
+        polarId: subscription.polarId
+      });
+    }
 
     return subscription;
   },
@@ -274,6 +319,13 @@ export const handleWebhookEvent = mutation({
   handler: async (ctx, args) => {
     // Extract event type from webhook payload
     const eventType = args.body.type;
+    
+    console.log("[handleWebhookEvent] Received webhook event:", {
+      type: eventType,
+      dataId: args.body.data.id,
+      metadata: args.body.data.metadata,
+      customerId: args.body.data.customer_id
+    });
 
     // Store webhook event
     await ctx.db.insert("webhookEvents", {
@@ -286,8 +338,13 @@ export const handleWebhookEvent = mutation({
 
     switch (eventType) {
       case "subscription.created":
+        console.log("[handleWebhookEvent] Processing subscription.created");
+        console.log("[handleWebhookEvent] Metadata userId:", args.body.data.metadata?.userId);
+        console.log("[handleWebhookEvent] Customer ID:", args.body.data.customer_id);
+        console.log("[handleWebhookEvent] Status:", args.body.data.status);
+        
         // Insert new subscription
-        await ctx.db.insert("subscriptions", {
+        const subscriptionId = await ctx.db.insert("subscriptions", {
           polarId: args.body.data.id,
           polarPriceId: args.body.data.price_id,
           currency: args.body.data.currency,
@@ -317,6 +374,8 @@ export const handleWebhookEvent = mutation({
           customFieldData: args.body.data.custom_field_data || {},
           customerId: args.body.data.customer_id,
         });
+        
+        console.log("[handleWebhookEvent] Subscription created with ID:", subscriptionId);
         break;
 
       case "subscription.updated":
@@ -438,13 +497,22 @@ const validateEvent = (
 };
 
 export const paymentWebhook = httpAction(async (ctx, request) => {
-  console.log("Webhook received at /webhooks/polar");
-  console.log("Request method:", request.method);
-  console.log("Request URL:", request.url);
+  console.log("[paymentWebhook] Webhook received at /webhooks/polar");
+  console.log("[paymentWebhook] Request method:", request.method);
+  console.log("[paymentWebhook] Request URL:", request.url);
+  // Log headers for debugging
+  const headersObj: Record<string, string> = {};
+  request.headers.forEach((value, key) => {
+    headersObj[key] = value;
+  });
+  console.log("[paymentWebhook] Headers:", headersObj);
   
   try {
     const rawBody = await request.text();
-    console.log("Webhook body received, length:", rawBody.length);
+    console.log("[paymentWebhook] Webhook body received, length:", rawBody.length);
+    
+    // Log first 200 chars of body for debugging
+    console.log("[paymentWebhook] Body preview:", rawBody.substring(0, 200));
 
     // Internally validateEvent uses headers as a dictionary e.g. headers["webhook-id"]
     // So we need to convert the headers to a dictionary
@@ -469,6 +537,7 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
       body,
     });
 
+    console.log("[paymentWebhook] Webhook processed successfully");
     return new Response(JSON.stringify({ message: "Webhook received!" }), {
       status: 200,
       headers: {
@@ -476,7 +545,10 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
       },
     });
   } catch (error) {
+    console.error("[paymentWebhook] Error processing webhook:", error);
+    
     if (error instanceof WebhookVerificationError) {
+      console.error("[paymentWebhook] Webhook verification failed:", error.message);
       return new Response(
         JSON.stringify({ message: "Webhook verification failed" }),
         {
@@ -488,7 +560,8 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
       );
     }
 
-    return new Response(JSON.stringify({ message: "Webhook failed" }), {
+    console.error("[paymentWebhook] Unexpected error:", error instanceof Error ? error.message : error);
+    return new Response(JSON.stringify({ message: "Webhook failed", error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 400,
       headers: {
         "Content-Type": "application/json",
