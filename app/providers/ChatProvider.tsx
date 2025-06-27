@@ -31,10 +31,8 @@ interface ChatContextType {
   // Confirmation bubble state
   confirmedFoodLogs: Set<string>;
   setConfirmedFoodLogs: React.Dispatch<React.SetStateAction<Set<string>>>;
-  editedFoodItems: Map<string, any>;
-  setEditedFoodItems: React.Dispatch<React.SetStateAction<Map<string, any>>>;
-  editingFoodLog: string | null;
-  setEditingFoodLog: React.Dispatch<React.SetStateAction<string | null>>;
+  rejectedFoodLogs: Set<string>;
+  setRejectedFoodLogs: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -64,27 +62,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return new Set();
   });
   
-  const [editedFoodItems, setEditedFoodItems] = useState<Map<string, any>>(() => {
-    // Initialize edited items from localStorage
+  const [rejectedFoodLogs, setRejectedFoodLogs] = useState<Set<string>>(() => {
+    // Initialize from localStorage on mount
     if (typeof window !== 'undefined') {
       const savedConfirmations = localStorage.getItem('foodConfirmations');
       if (savedConfirmations) {
         try {
           const parsed = JSON.parse(savedConfirmations);
           const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today && parsed.editedItems) {
-            logger.info('[ChatProvider] Initializing edited items from localStorage');
-            return new Map(Object.entries(parsed.editedItems));
+          if (parsed.date === today && parsed.rejected && parsed.rejected.length > 0) {
+            logger.info('[ChatProvider] Initializing rejected states from localStorage:', parsed.rejected);
+            return new Set(parsed.rejected);
           }
         } catch (e) {
-          logger.error('[ChatProvider] Error loading edited items:', e);
+          logger.error('[ChatProvider] Error loading saved rejections:', e);
         }
       }
     }
-    return new Map();
+    return new Set();
   });
-  
-  const [editingFoodLog, setEditingFoodLog] = useState<string | null>(null);
   
   // This state will persist across tab switches
   const streamingChat = useStreamingChat({
@@ -110,10 +106,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Confirmation bubble state
       confirmedFoodLogs,
       setConfirmedFoodLogs,
-      editedFoodItems,
-      setEditedFoodItems,
-      editingFoodLog,
-      setEditingFoodLog
+      rejectedFoodLogs,
+      setRejectedFoodLogs
     }}>
       {children}
     </ChatContext.Provider>
