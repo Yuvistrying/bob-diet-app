@@ -436,9 +436,14 @@ export default function Chat() {
             setPersistedConfirmations(parsed.confirmations || []);
             // Restore confirmed state for already-logged items
             if (parsed.confirmed && parsed.confirmed.length > 0) {
-              logger.info('Restoring confirmed states:', parsed.confirmed);
-              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+              logger.info('[Chat] Restoring confirmed states on mount:', parsed.confirmed);
+              setConfirmedFoodLogs(prev => {
+                const newSet = new Set([...prev, ...parsed.confirmed]);
+                logger.info('[Chat] Initial confirmed states set:', Array.from(newSet));
+                return newSet;
+              });
               if (parsed.editedItems) {
+                logger.info('[Chat] Restoring edited items:', Object.keys(parsed.editedItems));
                 setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
               }
             }
@@ -475,9 +480,30 @@ export default function Chat() {
       
       // If threadMessages is empty, this is a new thread - keep existing messages (like greeting)
       if (threadMessages.length === 0) {
-        logger.info(`[Chat] New thread with no messages - keeping existing messages`);
+        logger.info(`[Chat] New thread with no messages - keeping existing messages (${messages.length} messages)`);
         setSyncedThreadId(threadId);
         setHasLoadedHistory(true);
+        // Still restore confirmation states even for empty thread
+        const savedConfirmations = localStorage.getItem('foodConfirmations');
+        if (savedConfirmations) {
+          try {
+            const parsed = JSON.parse(savedConfirmations);
+            const today = new Date().toISOString().split('T')[0];
+            if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
+              logger.info('[Chat] Restoring confirmed states for empty thread:', parsed.confirmed);
+              setConfirmedFoodLogs(prev => {
+                const newSet = new Set(prev);
+                parsed.confirmed.forEach((id: string) => newSet.add(id));
+                return newSet;
+              });
+              if (parsed.editedItems) {
+                setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
+              }
+            }
+          } catch (e) {
+            logger.error('Error restoring confirmation states for empty thread:', e);
+          }
+        }
         return;
       }
       
@@ -520,7 +546,13 @@ export default function Chat() {
           const today = new Date().toISOString().split('T')[0];
           if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
             logger.info('[Chat] Restoring confirmed states for loaded messages:', parsed.confirmed);
-            setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+            // Use callback to ensure we're adding to existing state
+            setConfirmedFoodLogs(prev => {
+              const newSet = new Set(prev);
+              parsed.confirmed.forEach((id: string) => newSet.add(id));
+              logger.info('[Chat] Confirmed states after thread load restore:', Array.from(newSet));
+              return newSet;
+            });
             if (parsed.editedItems) {
               setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
             }
@@ -558,7 +590,13 @@ export default function Chat() {
             // For initial load, we might not have threadId in localStorage yet
             if (parsed.confirmed && parsed.confirmed.length > 0) {
               logger.info('[Chat] Restoring confirmed states on initial load:', parsed.confirmed);
-              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+              // Use callback to ensure we're adding to existing state
+              setConfirmedFoodLogs(prev => {
+                const newSet = new Set(prev);
+                parsed.confirmed.forEach((id: string) => newSet.add(id));
+                logger.info('[Chat] Confirmed states after restore:', Array.from(newSet));
+                return newSet;
+              });
               if (parsed.editedItems) {
                 setEditedFoodItems(new Map(Object.entries(parsed.editedItems)));
               }
@@ -584,22 +622,30 @@ export default function Chat() {
   useEffect(() => {
     const initThread = async () => {
       // Skip if we already have a thread or are waiting for preferences to load
-      if (threadId || !profile) {
+      if (threadId || !profile || preferences === undefined) {
         return;
       }
       
       // If preferences loaded and has a saved thread, don't create daily thread
+      // (The previous useEffect will handle checking if it's from today)
       if (preferences?.agentThreadId) {
-        logger.info(`[Chat] Skipping daily thread - saved thread exists: ${preferences.agentThreadId}`);
-        return;
+        const threadTimestamp = parseInt(preferences.agentThreadId.split('_').pop() || '0');
+        const threadDate = threadTimestamp ? new Date(threadTimestamp).toISOString().split('T')[0] : null;
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (threadDate === today) {
+          logger.info(`[Chat] Skipping daily thread - saved thread exists from today: ${preferences.agentThreadId}`);
+          return;
+        }
       }
       
-      // Only create daily thread if no saved thread exists
+      // Only create daily thread if no saved thread exists or saved thread is old
       try {
         const result = await getOrCreateDailyThread({});
         if (result.threadId) {
-          logger.info(`[Chat] No saved thread found, using daily thread: ${result.threadId}`);
+          logger.info(`[Chat] Creating daily thread: ${result.threadId}`);
           setThreadId(result.threadId);
+          // Don't save this as agentThreadId - daily threads are not persisted
         }
       } catch (error) {
         logger.error('Failed to get/create daily thread:', error);
@@ -684,16 +730,34 @@ export default function Chat() {
   // Load thread ID from preferences
   useEffect(() => {
     if (preferences?.agentThreadId && !threadId) {
+      // Check if the saved thread is from today
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Extract date from thread ID if possible (thread IDs include timestamp)
+      // Format: thread_userId_timestamp
+      const threadTimestamp = parseInt(preferences.agentThreadId.split('_').pop() || '0');
+      const threadDate = threadTimestamp ? new Date(threadTimestamp).toISOString().split('T')[0] : null;
+      
+      // If thread is from a previous day, don't load it - let daily thread be created
+      if (threadDate && threadDate !== today) {
+        logger.info(`[Chat] Saved thread is from previous day (${threadDate}), will create new daily thread`);
+        // Clear the old thread from preferences
+        saveAgentThreadId({ threadId: '' }).catch(err => 
+          logger.error('Failed to clear old thread:', err)
+        );
+        return;
+      }
+      
       logger.info(`[Chat] Loading saved thread from preferences: ${preferences.agentThreadId}`);
       setThreadId(preferences.agentThreadId);
     }
-  }, [preferences?.agentThreadId, threadId, setThreadId]);
+  }, [preferences?.agentThreadId, threadId, setThreadId, saveAgentThreadId]);
 
   // Create or check daily session on mount
   useEffect(() => {
     const initializeSession = async () => {
-      // Only run once profile is loaded and chat history has been checked
-      if (profile && hasLoadedHistory && dailySummary !== undefined) {
+      // Only run once profile is loaded, chat history has been checked, and we have a thread ID
+      if (profile && hasLoadedHistory && dailySummary !== undefined && threadId) {
         try {
           // This will create a new session if needed or return existing one
           const session = await getOrCreateDailySession({});
@@ -702,22 +766,62 @@ export default function Chat() {
           const today = new Date().toISOString().split('T')[0];
           if (session && session.messageCount === 0 && session.startDate === today && messages.length === 0) {
             // New session with no history - show greeting
-            let greeting = `Good morning ${profile?.name || "there"}! 🌅 Starting fresh for today.`;
+            let greeting = `Good morning ${profile?.name || "there"}! 🌅`;
             
-            if (hasLoggedWeightToday === false) {
-              greeting += ` Don't forget to log your weight! ⚖️`;
+            // Add yesterday's summary if available
+            if (dailySummary?.yesterday?.stats?.calories > 0 && profile) {
+              const yesterday = dailySummary.yesterday.stats;
+              const calorieDiff = yesterday.calories - profile.dailyCalorieTarget;
+              const proteinDiff = yesterday.protein - profile.proteinTarget;
+              
+              greeting += ` Yesterday: ${Math.round(yesterday.calories)}cal (${Math.round(yesterday.protein)}p/${Math.round(yesterday.carbs)}c/${Math.round(yesterday.fat)}f). `;
+              
+              // Add insight based on goals
+              if (profile.goal === 'cut') {
+                if (calorieDiff > 200) {
+                  greeting += `You were ${Math.round(calorieDiff)} calories over target - let's tighten up today! 💪`;
+                } else if (calorieDiff >= -200 && calorieDiff <= 0) {
+                  greeting += `Great job staying in your deficit! 🎯`;
+                }
+              } else if (profile.goal === 'gain') {
+                if (calorieDiff < -200) {
+                  greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - need to eat more to gain! 🍽️`;
+                } else if (calorieDiff >= 0 && calorieDiff <= 300) {
+                  greeting += `Perfect surplus for lean gains! 💪`;
+                }
+              } else { // maintain
+                if (Math.abs(calorieDiff) <= 200) {
+                  greeting += `Excellent maintenance! Right on target! ✨`;
+                }
+              }
+            } else {
+              greeting += ` Starting fresh for today.`;
             }
             
-            greeting += ` What can I help you with?`;
+            if (hasLoggedWeightToday === false) {
+              greeting += `\n\nDon't forget to log your weight! ⚖️`;
+            }
+            
+            greeting += `\n\nWhat can I help you with?`;
             
             // Set greeting message only if we truly have no messages
             setMessages([{
               role: "assistant",
               content: greeting,
             }]);
-            // Don't clear threadId if we have a saved thread from preferences
-            if (!preferences?.agentThreadId) {
-              setThreadId(null); // Only clear thread for new day if no saved thread
+            
+            // Save greeting to Convex so it persists
+            if (threadId) {
+              logger.info('[Chat] Saving greeting message to thread:', threadId);
+              try {
+                await saveMessage({
+                  threadId,
+                  role: "assistant",
+                  content: greeting,
+                });
+              } catch (err) {
+                logger.error('[Chat] Failed to save greeting message:', err);
+              }
             }
             
             // Clear any persisted confirmations from previous day to prevent auto-confirm bug
@@ -733,7 +837,7 @@ export default function Chat() {
     };
     
     initializeSession();
-  }, [profile, hasLoggedWeightToday, hasLoadedHistory, dailySummary, messages.length, preferences]);
+  }, [profile, hasLoggedWeightToday, hasLoadedHistory, dailySummary, messages.length, preferences, threadId, saveMessage]);
 
 
 
@@ -761,12 +865,53 @@ export default function Chat() {
         // Build initial greeting with context
         greeting = `Good morning ${dailySummary.profile?.name || 'there'}! `;
         
-        if (dailySummary.yesterday.stats.calories > 0) {
+        if (dailySummary.yesterday.stats.calories > 0 && dailySummary.profile) {
+          const yesterday = dailySummary.yesterday.stats;
+          const target = dailySummary.profile.dailyCalorieTarget;
+          const proteinTarget = dailySummary.profile.proteinTarget;
+          
           greeting += `Yesterday: ${dailySummary.yesterday.total}. `;
+          
+          // Add insight based on goals
+          const calorieDiff = yesterday.calories - target;
+          const proteinDiff = yesterday.protein - proteinTarget;
+          
+          if (dailySummary.profile.goal === 'cut') {
+            if (calorieDiff > 200) {
+              greeting += `You were ${Math.round(calorieDiff)} calories over target - let's tighten up today! 💪 `;
+            } else if (calorieDiff < -500) {
+              greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - make sure you're eating enough! `;
+            } else if (calorieDiff >= -200 && calorieDiff <= 0) {
+              greeting += `Great job staying in your deficit! 🎯 `;
+            }
+          } else if (dailySummary.profile.goal === 'gain') {
+            if (calorieDiff < -200) {
+              greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - need to eat more to gain! 🍽️ `;
+            } else if (calorieDiff >= 0 && calorieDiff <= 300) {
+              greeting += `Perfect surplus for lean gains! 💪 `;
+            } else if (calorieDiff > 500) {
+              greeting += `You were ${Math.round(calorieDiff)} calories over - careful not to gain too fast! `;
+            }
+          } else { // maintain
+            if (Math.abs(calorieDiff) <= 200) {
+              greeting += `Excellent maintenance! Right on target! ✨ `;
+            } else if (calorieDiff > 200) {
+              greeting += `You were ${Math.round(calorieDiff)} calories over maintenance. `;
+            } else {
+              greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under maintenance. `;
+            }
+          }
+          
+          // Protein insight
+          if (proteinDiff < -20) {
+            greeting += `Try to hit your protein target today (${proteinTarget}g). `;
+          } else if (proteinDiff >= -10) {
+            greeting += `Great protein intake! 🥩 `;
+          }
         }
         
         if (!dailySummary.today.hasWeighedIn) {
-          greeting += `Don't forget to log your weight today! ⚖️\n\n`;
+          greeting += `\n\nDon't forget to log your weight today! ⚖️`;
         }
         
         if (dailySummary.today.foodLogs.length > 0) {
