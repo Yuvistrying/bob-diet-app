@@ -123,7 +123,7 @@ export const getDailySummary = query({
       yesterday: {
         date: yesterdayStr,
         stats: yesterdayStats,
-        total: `${yesterdayStats.calories}cal (${yesterdayStats.protein}p/${yesterdayStats.carbs}c/${yesterdayStats.fat}f)`
+        total: `${Math.round(yesterdayStats.calories)}cal (${Math.round(yesterdayStats.protein)}p/${Math.round(yesterdayStats.carbs)}c/${Math.round(yesterdayStats.fat)}f)`
       },
       profile: profile ? {
         name: profile.name,
