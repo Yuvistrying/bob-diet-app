@@ -259,18 +259,18 @@ export default function Chat() {
     setRejectedFoodLogs
   } = useChat();
   
-  // Convex queries
-  const profile = useQuery(api.userProfiles.getUserProfile, {});
-  const todayStats = useQuery(api.foodLogs.getTodayStats);
-  const latestWeight = useQuery(api.weightLogs.getLatestWeight);
-  const preferences = useQuery(api.userPreferences.getUserPreferences);
-  const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus);
-  const dailySummary = useQuery(api.dailySummary.getDailySummary, {});
-  const sessionStats = useQuery(api.chatSessions.getSessionStats);
-  const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday);
-  const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus, {});
+  // Convex queries - only run when authenticated
+  const profile = useQuery(api.userProfiles.getUserProfile, isSignedIn === false ? "skip" : {});
+  const todayStats = useQuery(api.foodLogs.getTodayStats, isSignedIn === false ? "skip" : undefined);
+  const latestWeight = useQuery(api.weightLogs.getLatestWeight, isSignedIn === false ? "skip" : undefined);
+  const preferences = useQuery(api.userPreferences.getUserPreferences, isSignedIn === false ? "skip" : undefined);
+  const onboardingStatus = useQuery(api.onboarding.getOnboardingStatus, isSignedIn === false ? "skip" : undefined);
+  const dailySummary = useQuery(api.dailySummary.getDailySummary, isSignedIn === false ? "skip" : {});
+  const sessionStats = useQuery(api.chatSessions.getSessionStats, isSignedIn === false ? "skip" : undefined);
+  const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday, isSignedIn === false ? "skip" : undefined);
+  const subscriptionStatus = useQuery(api.subscriptions.checkUserSubscriptionStatus, isSignedIn === false ? "skip" : {});
   const pendingConfirmations = useQuery(api.pendingConfirmations.getLatestPendingConfirmation, 
-    threadId ? { threadId } : "skip"
+    !isSignedIn || !threadId ? "skip" : { threadId }
   );
   
   // Convex action for Agent SDK (not used with streaming)
