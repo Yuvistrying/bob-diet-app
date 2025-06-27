@@ -22,6 +22,7 @@ import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as foodLogs from "../foodLogs.js";
 import type * as goalHistory from "../goalHistory.js";
+import type * as http from "../http.js";
 import type * as instructionTemplates from "../instructionTemplates.js";
 import type * as lib_bobPrompts from "../lib/bobPrompts.js";
 import type * as lib_cacheStrategy from "../lib/cacheStrategy.js";
@@ -77,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   foodLogs: typeof foodLogs;
   goalHistory: typeof goalHistory;
+  http: typeof http;
   instructionTemplates: typeof instructionTemplates;
   "lib/bobPrompts": typeof lib_bobPrompts;
   "lib/cacheStrategy": typeof lib_cacheStrategy;
