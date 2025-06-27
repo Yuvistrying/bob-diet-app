@@ -411,6 +411,15 @@ export default function Chat() {
   // Track if we've synced messages for this thread
   const [syncedThreadId, setSyncedThreadId] = useState<string | null>(null);
   
+  // Scroll to bottom function - define early to avoid initialization error
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      // Scroll to the very bottom of the container
+      container.scrollTop = container.scrollHeight;
+    }
+  }, []);
+  
   // Load thread messages from Convex when available or thread changes
   useEffect(() => {
     // Skip if threadMessages is not ready yet
@@ -938,15 +947,6 @@ export default function Chat() {
       };
     }
   }, [isOnboarding, currentOnboardingStep]);
-
-  // Scroll to bottom function
-  const scrollToBottom = useCallback(() => {
-    if (chatContainerRef.current) {
-      const container = chatContainerRef.current;
-      // Scroll to the very bottom of the container
-      container.scrollTop = container.scrollHeight;
-    }
-  }, []);
 
   // Measure input area height
   useEffect(() => {
