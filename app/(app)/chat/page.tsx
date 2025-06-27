@@ -108,17 +108,12 @@ const ConfirmationBubble = memo(({
   args, 
   confirmId,
   isConfirmed,
-  editingFoodLog,
-  editedFoodItems,
+  isRejected,
   isStealthMode,
   onConfirm,
-  onEdit,
-  onEditChange,
   onReject,
   isStreaming
 }: any) => {
-  // Ensure editedFoodItems is a Map
-  const editedItems = editedFoodItems instanceof Map ? editedFoodItems : new Map();
   if (isConfirmed) {
     return (
       <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
@@ -128,12 +123,26 @@ const ConfirmationBubble = memo(({
             Logged {args.mealType}
           </span>
           <span className="text-sm text-green-700 dark:text-green-300">
-            • {editedItems.get(confirmId) ? 
-                Math.round(editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0)) : 
-                Math.round(args.totalCalories)} calories
+            • {Math.round(args.totalCalories)} calories
           </span>
           <span className="text-sm text-green-600 dark:text-green-400">
-            • {editedItems.get(confirmId)?.length || args.items.length} items
+            • {args.items.length} items
+          </span>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isRejected) {
+    return (
+      <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-red-50/50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 shadow-sm">
+        <div className="flex items-center gap-2">
+          <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <span className="font-medium text-red-800 dark:text-red-200">
+            Not Accurate
+          </span>
+          <span className="text-sm text-red-700 dark:text-red-300">
+            • {args.mealType}
           </span>
         </div>
       </div>
@@ -147,51 +156,17 @@ const ConfirmationBubble = memo(({
           Got it! Let me confirm what you had:
           <FileText className="h-4 w-4" />
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 -mt-1 -mr-1"
-          onClick={onEdit}
-        >
-          <PenSquare className="h-4 w-4" />
-        </Button>
       </div>
       <div className="space-y-1">
-        {(editedItems.get(confirmId) || args.items).map((item: any, i: number) => (
+        {args.items.map((item: any, i: number) => (
           <div key={i} className="text-sm text-foreground">
-            {editingFoodLog === confirmId ? (
-              <div className="flex items-center gap-2">
-                <span>•</span>
-                <Input
-                  value={item.name}
-                  onChange={(e) => onEditChange(confirmId, i, 'name', e.target.value)}
-                  className="h-6 px-2 py-1 text-sm bg-input"
-                />
-                <Input
-                  value={item.quantity}
-                  onChange={(e) => onEditChange(confirmId, i, 'quantity', e.target.value)}
-                  className="h-6 px-2 py-1 text-sm w-24 bg-input"
-                />
-                <span>-</span>
-                <Input
-                  type="number"
-                  value={item.calories}
-                  onChange={(e) => onEditChange(confirmId, i, 'calories', parseInt(e.target.value) || 0)}
-                  className="h-6 px-2 py-1 text-sm w-20 bg-input"
-                />
-                <span>cal</span>
-              </div>
-            ) : (
-              <span>• {item.name} {item.quantity} - {Math.round(item.calories)} cal</span>
-            )}
+            <span>• {item.name} {item.quantity} - {Math.round(item.calories)} cal</span>
           </div>
         ))}
       </div>
       <div className="mt-3 pt-3 border-t border-border">
         <div className="font-medium text-foreground">
-          Total: {editedItems.get(confirmId) ? 
-            Math.round(editedItems.get(confirmId).reduce((sum: number, item: any) => sum + (item.calories || 0), 0)) : 
-            Math.round(args.totalCalories)} calories
+          Total: {Math.round(args.totalCalories)} calories
         </div>
         {!isStealthMode && (
           <div className="text-xs text-muted-foreground mt-1">
@@ -199,32 +174,29 @@ const ConfirmationBubble = memo(({
           </div>
         )}
       </div>
-      <div className="mt-4 space-y-3">
-        <div className="text-sm text-foreground">
+      <div className="mt-4 space-y-2">
+        <div className="text-sm text-foreground mb-3">
           Should I log this as your {args.mealType}?
         </div>
-        <div className="flex gap-2">
-          <Button
-            className="flex-1 transition-opacity hover:opacity-80"
-            variant="default"
-            onClick={onConfirm}
-            disabled={isStreaming}
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Yes, log it!
-          </Button>
-          {editingFoodLog === confirmId && (
-            <Button
-              variant="outline"
-              onClick={onReject}
-              disabled={isStreaming}
-              className="transition-opacity hover:opacity-80"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-          )}
-        </div>
+        <Button
+          className="w-full h-12 text-base font-medium transition-opacity hover:opacity-80"
+          variant="default"
+          onClick={onConfirm}
+          disabled={isStreaming}
+        >
+          <Check className="h-5 w-5 mr-2" />
+          Yes, log it!
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={onReject}
+          disabled={isStreaming}
+          className="w-full h-8 text-sm text-muted-foreground transition-opacity hover:opacity-80 hover:text-destructive"
+          size="sm"
+        >
+          <X className="h-3.5 w-3.5 mr-1.5" />
+          Not accurate
+        </Button>
       </div>
     </div>
   );
@@ -275,10 +247,8 @@ export default function Chat() {
     // Confirmation bubble state from ChatProvider
     confirmedFoodLogs,
     setConfirmedFoodLogs,
-    editedFoodItems,
-    setEditedFoodItems,
-    editingFoodLog,
-    setEditingFoodLog
+    rejectedFoodLogs,
+    setRejectedFoodLogs
   } = useChat();
   
   // Convex queries
@@ -486,8 +456,31 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Confirmed states are now initialized in ChatProvider from localStorage
-      // No need to restore them here
+      // Scroll to bottom after loading messages
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      
+      // Restore confirmed/rejected states from localStorage after loading messages
+      const savedConfirmations = localStorage.getItem('foodConfirmations');
+      if (savedConfirmations) {
+        try {
+          const parsed = JSON.parse(savedConfirmations);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date === today) {
+            if (parsed.confirmed && parsed.confirmed.length > 0) {
+              logger.info('[Chat] Restoring confirmed states after loading messages:', parsed.confirmed);
+              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+            }
+            if (parsed.rejected && parsed.rejected.length > 0) {
+              logger.info('[Chat] Restoring rejected states after loading messages:', parsed.rejected);
+              setRejectedFoodLogs(prev => new Set([...prev, ...parsed.rejected]));
+            }
+          }
+        } catch (e) {
+          logger.error('Error restoring confirmation states:', e);
+        }
+      }
     }
     
     // Also handle initial load when we have no messages at all
@@ -507,10 +500,33 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Confirmed states are now initialized in ChatProvider from localStorage
-      // No need to restore them here
+      // Scroll to bottom after loading messages
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      
+      // Restore confirmed/rejected states from localStorage after loading messages
+      const savedConfirmations = localStorage.getItem('foodConfirmations');
+      if (savedConfirmations) {
+        try {
+          const parsed = JSON.parse(savedConfirmations);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date === today) {
+            if (parsed.confirmed && parsed.confirmed.length > 0) {
+              logger.info('[Chat] Restoring confirmed states after loading messages:', parsed.confirmed);
+              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
+            }
+            if (parsed.rejected && parsed.rejected.length > 0) {
+              logger.info('[Chat] Restoring rejected states after loading messages:', parsed.rejected);
+              setRejectedFoodLogs(prev => new Set([...prev, ...parsed.rejected]));
+            }
+          }
+        } catch (e) {
+          logger.error('Error restoring confirmation states:', e);
+        }
+      }
     }
-  }, [threadMessages, messages.length, setMessages, threadId, syncedThreadId]);
+  }, [threadMessages, messages.length, setMessages, threadId, syncedThreadId, scrollToBottom, setConfirmedFoodLogs, setRejectedFoodLogs]);
   
   // Apply theme from preferences
   useEffect(() => {
@@ -520,6 +536,16 @@ export default function Chat() {
       document.documentElement.classList.toggle('dark', preferences.darkMode);
     }
   }, [preferences?.darkMode]);
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (messages.length > 0 && chatContainerRef.current) {
+      // Small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  }, []); // Empty dependency array = only runs on mount
 
   // Get or create daily thread on mount (only if no thread exists at all)
   useEffect(() => {
@@ -593,25 +619,26 @@ export default function Chat() {
         // 1. We have confirmations in the current messages (with toolCalls), OR
         // 2. We have confirmed food logs but NO toolCalls in messages (meaning messages were loaded from DB without toolCalls)
         // This prevents clearing confirmations when messages are reloaded without toolCalls
-        if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
+        if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages) || (rejectedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
           const persistData = {
             date: today,
             threadId: threadId, // Add thread ID to make confirmations thread-specific
             confirmations: currentConfirmations,
             confirmed: Array.from(confirmedFoodLogs),
-            editedItems: editedFoodItems instanceof Map 
-              ? Object.fromEntries(Array.from(editedFoodItems.entries()))
-              : editedFoodItems
+            rejected: Array.from(rejectedFoodLogs)
           };
           
           // Check if the state has actually changed
           const stateString = JSON.stringify(persistData);
           if (stateString !== lastSavedStateRef.current) {
-            logger.debug('Saving confirmed bubbles to localStorage:', Array.from(confirmedFoodLogs));
+            logger.debug('Saving confirmed/rejected bubbles to localStorage:', {
+              confirmed: Array.from(confirmedFoodLogs),
+              rejected: Array.from(rejectedFoodLogs)
+            });
             localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
             lastSavedStateRef.current = stateString;
           }
-        } else if (hasToolCallsInMessages && currentConfirmations.length === 0 && confirmedFoodLogs.size === 0) {
+        } else if (hasToolCallsInMessages && currentConfirmations.length === 0 && confirmedFoodLogs.size === 0 && rejectedFoodLogs.size === 0) {
           // Only clear if we have toolCalls in messages but no confirmations
           // This means the user rejected all confirmations
           logger.debug('Clearing food confirmations - no active confirmations');
@@ -628,7 +655,7 @@ export default function Chat() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [confirmedFoodLogs, editedFoodItems, messages, threadId]);
+  }, [confirmedFoodLogs, rejectedFoodLogs, messages, threadId]);
 
   // Load thread ID from preferences
   useEffect(() => {
@@ -730,8 +757,7 @@ export default function Chat() {
             // Clear any persisted confirmations from previous day to prevent auto-confirm bug
             localStorage.removeItem('foodConfirmations');
             setConfirmedFoodLogs(new Set());
-            setEditedFoodItems(new Map());
-            setEditingFoodLog(null);
+            setRejectedFoodLogs(new Set());
           }
         } catch (error) {
           logger.error("Error initializing session:", error);
@@ -740,7 +766,7 @@ export default function Chat() {
     };
     
     initializeSession();
-  }, [profile, hasLoggedWeightToday, hasLoadedHistory, dailySummary, messages.length, preferences, threadId, saveMessage]);
+  }, [profile, hasLoggedWeightToday, hasLoadedHistory, dailySummary, messages.length, preferences, threadId, saveMessage, getOrCreateDailySession, setMessages, setConfirmedFoodLogs, setRejectedFoodLogs]);
 
 
 
@@ -894,7 +920,7 @@ export default function Chat() {
         loadingRef.current = false;
       }, 100);
     }
-  }, [dailySummary, onboardingStatus, hasLoadedHistory, messages.length, threadId, isOnboarding, preferences]);
+  }, [dailySummary, onboardingStatus, hasLoadedHistory, messages.length, threadId, isOnboarding, preferences, setConfirmedFoodLogs, setMessages]);
 
   // Measure onboarding container height
   useEffect(() => {
@@ -1039,6 +1065,52 @@ export default function Chat() {
       return;
     }
     
+    // Check if user is correcting/rejecting a food log
+    const correctionPatterns = [
+      /actually it was/i,
+      /no,? it was/i,
+      /change that to/i,
+      /make it/i,
+      /should be/i,
+      /not .+, it('s| was)/i,
+      /send a new one/i,
+      /try again/i,
+      /that('s| is) wrong/i,
+      /that('s| is) not right/i,
+      /instead of/i,
+      /correction:/i
+    ];
+    
+    const isCorrection = correctionPatterns.some(pattern => pattern.test(userMessage));
+    
+    // Auto-reject the last pending confirmation if user is correcting
+    if (isCorrection) {
+      const lastPendingConfirmation = messages
+        .map((msg, idx) => ({ msg, idx }))
+        .reverse()
+        .find(({ msg, idx }) => {
+          const confirmCall = msg.toolCalls?.find(tc => 
+            tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
+          );
+          if (confirmCall && confirmCall.args && !confirmCall.args.error) {
+            const confirmId = getConfirmationId(confirmCall.args, idx);
+            return !confirmedFoodLogs.has(confirmId) && !rejectedFoodLogs.has(confirmId);
+          }
+          return false;
+        });
+      
+      if (lastPendingConfirmation) {
+        const confirmCall = lastPendingConfirmation.msg.toolCalls?.find(tc => 
+          tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
+        );
+        if (confirmCall) {
+          const confirmId = getConfirmationId(confirmCall.args, lastPendingConfirmation.idx);
+          logger.info('[Chat] Auto-rejecting confirmation due to correction:', confirmId);
+          setRejectedFoodLogs(prev => new Set(prev).add(confirmId));
+        }
+      }
+    }
+    
     // Check if this is a confirmation message
     const isConfirmationMessage = /^(yes|yep|yeah|confirm|ok|correct|right|sure)$/i.test(userMessage.toLowerCase().trim());
     
@@ -1140,34 +1212,40 @@ export default function Chat() {
     }
   }, []);
   
-  // Smart auto-scroll - only when appropriate
+  // Smart scroll behavior - maintain relative position or follow new messages
   useEffect(() => {
     if (!chatContainerRef.current || messages.length === 0) return;
     
     const container = chatContainerRef.current;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200; // More generous threshold
+    const prevScrollHeight = container.scrollHeight;
+    const prevScrollTop = container.scrollTop;
+    const { clientHeight } = container;
+    const isNearBottom = prevScrollHeight - prevScrollTop - clientHeight < 100;
     
-    // Don't auto-scroll if we're loading initial messages
-    const isLoadingInitialMessages = hasLoadedHistory && messages.length > 5;
-    if (isLoadingInitialMessages && !isStreaming) {
+    // Don't auto-scroll if we're loading initial messages from database
+    const isLoadingInitialMessages = hasLoadedHistory && messages.length > 5 && !isStreaming;
+    if (isLoadingInitialMessages) {
       return;
     }
     
-    // Conditions for auto-scroll:
-    // 1. User is streaming a message (always scroll)
-    // 2. User just sent a message (scroll to see their message)
-    // 3. User is already near bottom when new message arrives
-    const lastMessage = messages[messages.length - 1];
-    const isUserMessage = lastMessage?.role === 'user';
-    
-    if (isStreaming || isUserMessage || isNearBottom) {
-      // Use requestAnimationFrame for smoother scrolling
+    // If user is near the bottom, follow new messages
+    if (isNearBottom) {
       requestAnimationFrame(() => {
         scrollToBottom();
       });
+    } else {
+      // Otherwise, maintain relative scroll position
+      // This prevents content from jumping when new messages are added
+      requestAnimationFrame(() => {
+        const newScrollHeight = container.scrollHeight;
+        const scrollDiff = newScrollHeight - prevScrollHeight;
+        // Keep the same content in view by adjusting scroll position
+        if (scrollDiff > 0) {
+          container.scrollTop = prevScrollTop + scrollDiff;
+        }
+      });
     }
-  }, [messages, isStreaming, scrollToBottom, hasLoadedHistory]);
+  }, [messages, hasLoadedHistory, isStreaming, scrollToBottom]);
 
   // Auto-scroll when input area height changes
   useEffect(() => {
@@ -1295,32 +1373,6 @@ export default function Chat() {
     return `confirm-${Math.abs(contentHash)}-${messageIndex}`;
   }, []);
   
-  // Callbacks for confirmation bubble
-  const handleEditChange = useCallback((confirmId: string, itemIndex: number, field: string, value: any) => {
-    setEditedFoodItems(prev => {
-      const newMap = new Map(prev);
-      const items = newMap.get(confirmId) || [];
-      const updatedItems = [...items];
-      updatedItems[itemIndex] = { ...updatedItems[itemIndex], [field]: value };
-      newMap.set(confirmId, updatedItems);
-      return newMap;
-    });
-  }, [setEditedFoodItems]);
-  
-  const handleEditToggle = useCallback((confirmId: string, args: any) => {
-    if (editingFoodLog === confirmId) {
-      setEditingFoodLog(null);
-    } else {
-      setEditingFoodLog(confirmId);
-      if (!editedFoodItems.get(confirmId)) {
-        setEditedFoodItems(prev => {
-          const newMap = new Map(prev);
-          newMap.set(confirmId, [...args.items]);
-          return newMap;
-        });
-      }
-    }
-  }, [editingFoodLog, editedFoodItems, setEditingFoodLog, setEditedFoodItems]);
 
   // Persist confirmation states to localStorage
   useEffect(() => {
@@ -1357,15 +1409,13 @@ export default function Chat() {
           date: new Date().toISOString().split('T')[0],
           confirmations: confirmations,
           confirmed: Array.from(confirmedFoodLogs),
-          editedItems: editedFoodItems instanceof Map 
-            ? Object.fromEntries(Array.from(editedFoodItems.entries()))
-            : {}
+          rejected: Array.from(rejectedFoodLogs)
         }));
       }, 500); // Wait 500ms before saving
       
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, confirmedFoodLogs, editedFoodItems, getConfirmationId]);
+  }, [messages, confirmedFoodLogs, rejectedFoodLogs, getConfirmationId]);
 
   // Show loading state while checking auth
   if (isSignedIn === undefined) {
@@ -1463,7 +1513,7 @@ export default function Chat() {
                 );
                 if (confirmCall && confirmCall.args && !confirmCall.args.error) {
                   const confirmId = getConfirmationId(confirmCall.args, idx);
-                  return !confirmedFoodLogs.has(confirmId);
+                  return !confirmedFoodLogs.has(confirmId) && !rejectedFoodLogs.has(confirmId);
                 }
                 return false;
               });
@@ -1518,8 +1568,7 @@ export default function Chat() {
                   
                   // Clear confirmations for new thread (they're thread-specific)
                   setConfirmedFoodLogs(new Set());
-                  setEditedFoodItems(new Map());
-                  setEditingFoodLog(null);
+                  setRejectedFoodLogs(new Set());
                   // Don't clear localStorage - let the save effect handle it with new thread context
                   // Enable loading thread messages for the new thread
                   setShouldLoadThreadMessages(true);
@@ -1689,6 +1738,7 @@ export default function Chat() {
               }
               const confirmId = getConfirmationId(args, index);
               const isConfirmed = confirmedFoodLogs.has(confirmId);
+              const isRejected = rejectedFoodLogs.has(confirmId);
               
               // Always show confirmations - persistence handles old ones
               // Don't filter based on date here since we already handle that in loading
@@ -1701,19 +1751,20 @@ export default function Chat() {
                       args={args}
                       confirmId={confirmId}
                       isConfirmed={isConfirmed}
-                      editingFoodLog={editingFoodLog}
-                      editedFoodItems={editedFoodItems}
+                      isRejected={isRejected}
                       isStealthMode={isStealthMode}
                       isStreaming={isStreaming}
-                      onEdit={() => handleEditToggle(confirmId, args)}
-                      onEditChange={handleEditChange}
                       onReject={() => {
-                        setEditingFoodLog(null);
-                        setEditedFoodItems(prev => {
-                          const newMap = new Map(prev);
-                          newMap.set(confirmId, args.items);
-                          return newMap;
+                        // Mark as rejected
+                        flushSync(() => {
+                          setRejectedFoodLogs(prev => new Set(prev).add(confirmId));
                         });
+                        
+                        // Add a message to guide the user
+                        setMessages(prev => [...prev, {
+                          role: "assistant",
+                          content: "No problem! Please tell me what was incorrect so I can update it."
+                        }]);
                       }}
                       onConfirm={async () => {
                         // Check if already processing this request
@@ -1731,12 +1782,12 @@ export default function Chat() {
                         setIsLoading(true);
                         
                         try {
-                          // Get the final data (either edited or original)
-                          const finalItems = editedFoodItems.get(confirmId) || args.items;
-                          const finalCalories = finalItems.reduce((sum: number, item: any) => sum + (item.calories || 0), 0);
-                          const finalProtein = finalItems.reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
-                          const finalCarbs = finalItems.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0);
-                          const finalFat = finalItems.reduce((sum: number, item: any) => sum + (item.fat || 0), 0);
+                          // Use original data
+                          const finalItems = args.items;
+                          const finalCalories = args.totalCalories;
+                          const finalProtein = args.totalProtein;
+                          const finalCarbs = args.totalCarbs;
+                          const finalFat = args.totalFat;
                           
                           // Log the food directly
                           const logResult = await logFood({
@@ -1823,7 +1874,6 @@ export default function Chat() {
                           }
                         } finally {
                           setIsLoading(false);
-                          setEditingFoodLog(null);
                           // Remove from active requests
                           setActiveLogRequests(prev => {
                             const next = new Set(prev);
