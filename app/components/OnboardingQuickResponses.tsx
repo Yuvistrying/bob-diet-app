@@ -63,7 +63,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
         <div className="space-y-3">
           {/* Height input with unit toggle */}
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Height</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">Height</label>
             <div className="flex gap-2">
               {heightUnit === "cm" ? (
                 <Input
@@ -128,7 +128,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
           
           {/* Age input */}
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Age</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">Age</label>
             <Input
               type="number"
               placeholder="25"
@@ -171,7 +171,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
     return (
       <div className="space-y-3 p-3 bg-muted rounded-lg">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground block">
+          <label className="text-sm font-medium text-foreground mb-2 block">
             {step === "current_weight" ? "Current Weight" : "Target Weight"}
           </label>
           <div className="flex gap-2">
