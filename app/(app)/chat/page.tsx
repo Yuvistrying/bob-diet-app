@@ -368,31 +368,35 @@ export default function Chat() {
     };
   }, [threadId, saveAgentThreadId, setOnCompleteCallback]);
 
-  // For new users (no profile), check subscription immediately
+  // Give new users time for profile creation and subscription webhook
   useEffect(() => {
-    if (profile === null) {
+    // Only proceed if we're signed in
+    if (isSignedIn === false) return;
+    
+    // Wait for profile to load (undefined means still loading)
+    if (profile === undefined) return;
+    
+    // If we have a profile or confirmed no profile exists, set timer
+    const timer = setTimeout(() => {
       setIsInitialLoad(false);
-    }
-  }, [profile]);
-
-  // For existing users, give time for subscription webhook to update after payment
-  useEffect(() => {
-    // Only set timer if we have a profile (existing user)
-    if (profile && isInitialLoad) {
-      const timer = setTimeout(() => {
-        setIsInitialLoad(false);
-      }, 5000); // 5 seconds grace period
-      
-      return () => clearTimeout(timer);
-    }
-  }, [profile, isInitialLoad]);
+    }, 5000); // 5 seconds grace period for all users
+    
+    return () => clearTimeout(timer);
+  }, [profile, isSignedIn]);
 
   // Check subscription status after initial load period
   useEffect(() => {
-    if (!isInitialLoad && subscriptionStatus !== undefined && !subscriptionStatus.hasActiveSubscription) {
+    // Skip if not signed in or still in initial load
+    if (isSignedIn === false || isInitialLoad) return;
+    
+    // Skip if subscription status is still loading
+    if (subscriptionStatus === undefined) return;
+    
+    // Only redirect if we're sure there's no active subscription
+    if (!subscriptionStatus.hasActiveSubscription) {
       router.push("/pricing");
     }
-  }, [isInitialLoad, subscriptionStatus, router]);
+  }, [isInitialLoad, subscriptionStatus, router, isSignedIn]);
 
   // Clear any old localStorage data on mount to prevent cross-user data leakage
   useEffect(() => {
