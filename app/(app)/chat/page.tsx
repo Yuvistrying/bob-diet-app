@@ -413,11 +413,7 @@ export default function Chat() {
   
   // Scroll to bottom function - define early to avoid initialization error
   const scrollToBottom = useCallback(() => {
-    if (chatContainerRef.current) {
-      const container = chatContainerRef.current;
-      // Scroll to the very bottom of the container
-      container.scrollTop = container.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
   
   // Load thread messages from Convex when available or thread changes
@@ -465,10 +461,10 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Scroll to bottom after loading messages
+      // Force scroll to bottom after loading messages from database
       setTimeout(() => {
-        scrollToBottom();
-      }, 100);
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 200);
       
       // Restore confirmed/rejected states from localStorage after loading messages
       const savedConfirmations = localStorage.getItem('foodConfirmations');
@@ -509,10 +505,10 @@ export default function Chat() {
       setHasLoadedHistory(true);
       setSyncedThreadId(threadId);
       
-      // Scroll to bottom after loading messages
+      // Force scroll to bottom after loading messages from database
       setTimeout(() => {
-        scrollToBottom();
-      }, 100);
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 200);
       
       // Restore confirmed/rejected states from localStorage after loading messages
       const savedConfirmations = localStorage.getItem('foodConfirmations');
@@ -546,15 +542,15 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Scroll to bottom on initial load when messages first appear
+  // Force scroll to bottom on initial page load
   useEffect(() => {
-    if (messages.length > 0 && chatContainerRef.current && !hasLoadedHistory) {
-      // Small delay to ensure DOM is fully rendered
+    if (messages.length > 0) {
+      // Longer delay for initial load to ensure everything is rendered
       setTimeout(() => {
-        scrollToBottom();
-      }, 100);
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" }); // Use auto for instant scroll on load
+      }, 200);
     }
-  }, [messages.length, hasLoadedHistory, scrollToBottom]); // Trigger when messages are first loaded
+  }, []); // Only on mount
 
   // Get or create daily thread on mount (only if no thread exists at all)
   useEffect(() => {
@@ -1186,9 +1182,9 @@ export default function Chat() {
         storageId || undefined
       );
       
-      // Explicitly scroll to bottom after sending a message
+      // Force scroll to bottom after sending a message
       setTimeout(() => {
-        scrollToBottom();
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     } catch (error) {
       logger.error("Error sending message:", error);
@@ -1217,25 +1213,28 @@ export default function Chat() {
     }
   }, []);
   
-  // Smart scroll behavior - maintain relative position or follow new messages
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (!chatContainerRef.current || messages.length === 0) return;
+    if (messages.length === 0) return;
     
-    const container = chatContainerRef.current;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 50; // Reduced threshold for more responsive scrolling
-    
-    // Get the last message to check if it's from user or assistant
-    const lastMessage = messages[messages.length - 1];
-    const isUserMessage = lastMessage?.role === 'user';
-    
-    // Always scroll to bottom for user messages or if near bottom
-    if (isUserMessage || isNearBottom) {
-      requestAnimationFrame(() => {
+    // Check if user has scrolled up
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      
+      // Always scroll to bottom unless user has scrolled up
+      if (isNearBottom) {
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          scrollToBottom();
+        }, 50);
+      }
+    } else {
+      // If no container ref yet, just scroll
+      setTimeout(() => {
         scrollToBottom();
-      });
+      }, 50);
     }
-    // Don't maintain scroll position - just let it be
   }, [messages, scrollToBottom]);
 
   // Auto-scroll when input area height changes
