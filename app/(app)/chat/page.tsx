@@ -47,7 +47,7 @@ const ChatMessage = memo(({
 }) => {
   if (message.role === "user") {
     return (
-      <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-col items-stretch gap-2 max-w-[85%] ml-auto">
         {imageUrl && (
           <div>
             <img
@@ -60,17 +60,15 @@ const ChatMessage = memo(({
         )}
         
         {(message.content && message.content !== "[Photo uploaded]") && (
-          <div className="flex justify-end w-full">
-            <div className={cn(
-              "px-3 py-2",
-              "bg-muted text-foreground",
-              "rounded-2xl rounded-br-sm",
-              "shadow-sm border border-border",
-              "text-[15px] leading-relaxed text-left",
-              "max-w-[85%]"
-            )}>
-              {message.content}
-            </div>
+          <div className={cn(
+            "px-4 py-1",
+            "bg-muted text-foreground",
+            "rounded-2xl rounded-br-sm",
+            "shadow-sm border border-border",
+            "text-[15px] leading-relaxed text-left",
+            "whitespace-pre-wrap break-words"
+          )}>
+            {message.content}
           </div>
         )}
       </div>
@@ -873,30 +871,34 @@ export default function Chat() {
       const container = chatContainerRef.current;
       // Scroll to the very bottom of the container
       container.scrollTop = container.scrollHeight;
-      
-      // If messagesEndRef exists, also try scrollIntoView as backup
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
     }
   }, []);
 
   // Measure input area height
   useEffect(() => {
     const measureInputArea = () => {
-      if (inputAreaRef.current) {
-        const height = inputAreaRef.current.offsetHeight;
-        setInputAreaHeight(height);
+      if (inputAreaRef.current && chatContainerRef.current) {
+        const oldHeight = inputAreaHeight || 0;
+        const newHeight = inputAreaRef.current.offsetHeight;
         
-        // Scroll to bottom when input area first appears
-        if (height > 0 && chatContainerRef.current) {
-          // Check if we should auto-scroll (when near bottom)
+        // Only update if height actually changed
+        if (oldHeight !== newHeight) {
           const container = chatContainerRef.current;
           const { scrollTop, scrollHeight, clientHeight } = container;
           const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+          const scrollBottom = scrollHeight - scrollTop - clientHeight;
           
-          if (isNearBottom) {
-            container.scrollTop = container.scrollHeight;
+          setInputAreaHeight(newHeight);
+          
+          // Maintain scroll position relative to bottom
+          if (!isNearBottom) {
+            // User has scrolled up - maintain their position
+            requestAnimationFrame(() => {
+              if (chatContainerRef.current) {
+                const newScrollHeight = chatContainerRef.current.scrollHeight;
+                chatContainerRef.current.scrollTop = newScrollHeight - clientHeight - scrollBottom;
+              }
+            });
           }
         }
       }
@@ -928,7 +930,7 @@ export default function Chat() {
         resizeObserver.disconnect();
       }
     };
-  }, []); // Remove inputAreaHeight dependency to avoid recreating observer
+  }, [inputAreaHeight]); // Include inputAreaHeight to track changes
 
   // Force remeasure when image preview changes
   useEffect(() => {
@@ -1594,8 +1596,8 @@ export default function Chat() {
 
       {/* Chat Messages - Scrollable area */}
       <div className="flex-1 relative overflow-hidden">
-        <div ref={chatContainerRef} className="h-full overflow-y-auto overflow-x-hidden space-y-1">
-          <div className="max-w-lg mx-auto px-4 pt-4">
+        <div ref={chatContainerRef} className="h-full overflow-y-auto overflow-x-hidden">
+          <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
         <ClientOnly>
           
           {messages.map((message, index) => {
@@ -1632,7 +1634,7 @@ export default function Chat() {
               // Don't filter based on date here since we already handle that in loading
               
               return (
-                <div key={index} className="space-y-1">
+                <div key={index}>
                   {/* Food confirmation card only - no duplicate message */}
                   <div className="flex justify-start">
                     <ConfirmationBubble
@@ -1787,7 +1789,7 @@ export default function Chat() {
               key={message.toolCalls?.[0]?.toolCallId || `msg-${index}`}
               className={cn(
                 "flex flex-col gap-1",
-                message.role === "user" ? "items-end" : "items-start"
+                message.role === "user" ? "items-end -mr-2" : "items-start"
               )}
             >
               <ChatMessage 
@@ -1811,15 +1813,15 @@ export default function Chat() {
         )}
           <div ref={messagesEndRef} />
           </div>
-          {/* Dynamic spacer for input area - includes 76px bottom padding */}
-          <div style={{ height: `${(inputAreaHeight || 150) + 76}px` }} />
+          {/* Dynamic spacer for input area - includes bottom padding */}
+          <div style={{ height: `${(inputAreaHeight || 150) + 40}px` }} />
         </div>
       </div>
       
 
       {/* Quick Responses for Onboarding */}
       {isOnboarding && currentOnboardingStep && (
-        <div ref={onboardingRef} className="fixed left-0 right-0 bg-background/90 backdrop-blur-sm shadow-lg z-20" style={{ bottom: "calc(76px + 4rem + 2.5rem)" }}>
+        <div ref={onboardingRef} className="fixed left-0 right-0 bg-background/90 backdrop-blur-sm shadow-lg z-20" style={{ bottom: "calc(70px + 4rem + 2.5rem)" }}>
           <div className="max-w-lg mx-auto px-2 py-2">
           <OnboardingQuickResponses
             step={currentOnboardingStep}
@@ -1853,10 +1855,10 @@ export default function Chat() {
       {showScrollToBottom && (
         <button
           onClick={scrollToBottom}
-          className="fixed right-1/2 translate-x-1/2 bg-muted text-foreground rounded-full p-2.5 shadow-sm transition-all duration-200 focus:outline-none focus:ring-0 border border-border"
+          className="fixed right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0"
           style={{ 
-            zIndex: 10, 
-            bottom: `${(inputAreaHeight || 150) + 76 + 10}px` 
+            zIndex: 20, 
+            bottom: `${(inputAreaHeight || 150) + 60}px` 
           }}
         >
           <ChevronDown className="h-5 w-5" />
@@ -1864,7 +1866,7 @@ export default function Chat() {
       )}
       
       {/* Input Area - Fixed at bottom */}
-      <div ref={inputAreaRef} className="fixed bottom-0 left-0 right-0 bg-background border-t border-border" style={{ paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
+      <div ref={inputAreaRef} className="fixed bottom-0 left-0 right-0 bg-background border-t border-border" style={{ paddingBottom: "calc(70px + env(safe-area-inset-bottom))" }}>
         <div className="max-w-lg mx-auto px-4 py-4">
           <form
             onSubmit={handleSubmit}
