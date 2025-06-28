@@ -417,4 +417,20 @@ export default defineSchema({
     createdAt: v.number(),
   })
   .index("by_thread", ["threadId"]),
+
+  // Confirmed bubble states for persistence across devices
+  confirmedBubbles: defineTable({
+    userId: v.string(),
+    threadId: v.string(),
+    messageIndex: v.number(),
+    confirmationId: v.string(), // The generated ID for the confirmation
+    toolCallId: v.optional(v.string()), // Original tool call ID
+    foodDescription: v.string(),
+    status: v.string(), // "confirmed" or "rejected"
+    confirmedAt: v.number(),
+    expiresAt: v.number(), // Auto-cleanup after 7 days
+  })
+  .index("by_user_thread", ["userId", "threadId"])
+  .index("by_expires", ["expiresAt"])
+  .index("by_confirmation_id", ["confirmationId"]),
 });

@@ -12,7 +12,7 @@ import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
 import { Card, CardContent } from "~/app/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown, Target, Scale, Flame, Dumbbell, Wheat, Droplet, RefreshCw, Sparkles, HelpCircle, FileText, LogOut } from "lucide-react";
+import { Camera, Paperclip, ArrowUp, X, Check, Settings, PenSquare, ChevronDown, Target, Scale, Flame, Dumbbell, Wheat, Droplet, RefreshCw, Sparkles, HelpCircle, FileText, LogOut, Square } from "lucide-react";
 import { ClientOnly } from "~/app/components/ClientOnly";
 import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
@@ -260,7 +260,8 @@ export default function Chat() {
   } = useChat();
   
   // Convex queries - only run when authenticated (strict check)
-  const skipQueries = !isSignedIn || isSignedIn === undefined;
+  // Memoize to prevent recalculation on every render
+  const skipQueries = useMemo(() => !isSignedIn || isSignedIn === undefined, [isSignedIn]);
   
   const profile = useQuery(api.userProfiles.getUserProfile, skipQueries ? "skip" : {});
   const todayStats = useQuery(api.foodLogs.getTodayStats, skipQueries ? "skip" : undefined);
@@ -273,6 +274,9 @@ export default function Chat() {
   const subscription = useQuery(api.subscriptions.fetchUserSubscription, skipQueries ? "skip" : undefined);
   const subscriptionStatus = { hasActiveSubscription: subscription?.status === "active" };
   const pendingConfirmations = useQuery(api.pendingConfirmations.getLatestPendingConfirmation, 
+    skipQueries || !threadId ? "skip" : { threadId }
+  );
+  const confirmedBubblesFromDB = useQuery(api.confirmedBubbles.getConfirmedBubbles,
     skipQueries || !threadId ? "skip" : { threadId }
   );
   
@@ -294,6 +298,7 @@ export default function Chat() {
   const saveMessage = useMutation(api.threads.saveMessage);
   const confirmPendingConfirmation = useMutation(api.pendingConfirmations.confirmPendingConfirmation);
   const expirePendingConfirmation = useMutation(api.pendingConfirmations.expirePendingConfirmation);
+  const saveConfirmedBubble = useMutation(api.confirmedBubbles.saveConfirmedBubble);
   
   // Query for thread messages - load when we have a thread ID and are authenticated
   const [shouldLoadThreadMessages, setShouldLoadThreadMessages] = useState(true);
@@ -301,10 +306,20 @@ export default function Chat() {
     isSignedIn && threadId && shouldLoadThreadMessages ? { threadId } : "skip"
   );
   
-  // Get all storage IDs from messages that need image URLs
-  const storageIdsFromMessages = messages
-    .filter(msg => msg.storageId)
-    .map(msg => msg.storageId as Id<"_storage">);
+  // Get all storage IDs from messages that need image URLs - memoized to prevent unnecessary re-renders
+  const storageIdsFromMessages = useMemo(() => {
+    const ids = messages
+      .filter(msg => msg.storageId)
+      .map(msg => msg.storageId as Id<"_storage">);
+    // Remove duplicates to ensure stable array
+    return [...new Set(ids)];
+  }, [
+    // Create a stable dependency by joining the storage IDs
+    messages
+      .filter(msg => msg.storageId)
+      .map(msg => msg.storageId)
+      .join(',')
+  ]);
     
   // Query to get image URLs for all storage IDs
   const imageUrls = useQuery(
@@ -318,8 +333,8 @@ export default function Chat() {
   const isOnboarding = !onboardingStatus?.completed;
   const isStealthMode = preferences?.displayMode === "stealth";
 
-  // Detect current onboarding step from the last assistant message
-  const detectOnboardingStep = () => {
+  // Detect current onboarding step from the last assistant message - memoized to prevent recalculation
+  const currentOnboardingStep = useMemo(() => {
     if (!isOnboarding) return null;
     
     const lastAssistantMessage = [...messages].reverse().find(m => m.role === "assistant");
@@ -346,9 +361,7 @@ export default function Chat() {
     }
     
     return null;
-  };
-  
-  const currentOnboardingStep = detectOnboardingStep();
+  }, [isOnboarding, messages]);
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -458,126 +471,137 @@ export default function Chat() {
     }
   }, []);
   
+  // Generate a unique ID for each confirmation
+  const getConfirmationId = useCallback((args: any, messageIndex: number, messageContent?: string) => {
+    // Create a unique ID based on food content and timestamp from toolCallId if available
+    const foodNames = args.items?.map((item: any) => item.name).join('-') || '';
+    
+    // Try to extract timestamp from toolCallId first (e.g., "confirm_1751139824820_ybcyb")
+    // This ensures consistency across devices since the toolCallId is generated on the server
+    const toolCallId = args._toolCallId || args.toolCallId;
+    let timestamp = '';
+    if (toolCallId && toolCallId.includes('_')) {
+      const parts = toolCallId.split('_');
+      if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
+        timestamp = parts[1];
+      }
+    }
+    
+    // If no timestamp from toolCallId, use content hash with message index as fallback
+    if (!timestamp) {
+      const contentHash = `${args.mealType}-${args.totalCalories}-${foodNames}`.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      return `confirm-${Math.abs(contentHash)}-${messageIndex}`;
+    }
+    
+    // Use timestamp-based ID for consistency across devices
+    return `confirm-${timestamp}`;
+  }, []);
+  
   // Load thread messages from Convex when available or thread changes
   useEffect(() => {
-    // Skip if threadMessages is not ready yet
-    if (!threadMessages) return;
+    // Skip if threadMessages is not ready yet or we've already synced this thread
+    if (!threadMessages || syncedThreadId === threadId) return;
     
-    // If thread changed and we need to sync
-    if (threadId && syncedThreadId !== threadId) {
-      logger.info(`[Chat] Thread changed from ${syncedThreadId} to ${threadId}`);
-      
-      // If threadMessages is empty, this is a new thread - keep existing messages (like greeting)
-      if (threadMessages.length === 0) {
-        logger.info(`[Chat] New thread with no messages - keeping existing messages (${messages.length} messages)`);
-        setSyncedThreadId(threadId);
-        setHasLoadedHistory(true);
-        // Confirmed states are now initialized in ChatProvider from localStorage
-        return;
-      }
-      
-      // Load messages from Convex
-      logger.info(`[Chat] Loading ${threadMessages.length} messages from Convex for thread ${threadId}`);
-      
-      // Convert Convex messages to the format expected by the chat UI
-      const loadedMessages = threadMessages.map((msg: any) => {
-        // Log if we have toolCalls
-        if (msg.toolCalls && msg.toolCalls.length > 0) {
-          logger.info(`[Chat] Loading message with toolCalls:`, {
-            messageContent: msg.content.substring(0, 50),
-            toolCallCount: msg.toolCalls.length,
-            toolNames: msg.toolCalls.map((tc: any) => tc.toolName)
-          });
-        }
-        
-        return {
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-          toolCalls: msg.toolCalls || undefined, // Don't fallback to metadata.toolCalls
-          // Don't set imageUrl here - let the imageUrls query handle it
-          storageId: msg.metadata?.storageId
-        };
-      });
-      
-      setMessages(loadedMessages);
-      setHasLoadedHistory(true);
+    // Skip if no threadId
+    if (!threadId) return;
+    
+    logger.info(`[Chat] Thread changed from ${syncedThreadId} to ${threadId}`);
+    
+    // If threadMessages is empty, this is a new thread - keep existing messages (like greeting)
+    if (threadMessages.length === 0) {
+      logger.info(`[Chat] New thread with no messages - keeping existing messages`);
       setSyncedThreadId(threadId);
-      
-      // Scroll to bottom after loading messages from database
-      setTimeout(() => {
-        if (scrollAreaRef.current) {
-          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-        }
-      }, 100);
-      
-      // Restore confirmed/rejected states from localStorage after loading messages
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today) {
-            if (parsed.confirmed && parsed.confirmed.length > 0) {
-              logger.info('[Chat] Restoring confirmed states after loading messages:', parsed.confirmed);
-              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
-            }
-            if (parsed.rejected && parsed.rejected.length > 0) {
-              logger.info('[Chat] Restoring rejected states after loading messages:', parsed.rejected);
-              setRejectedFoodLogs(prev => new Set([...prev, ...parsed.rejected]));
-            }
-          }
-        } catch (e) {
-          logger.error('Error restoring confirmation states:', e);
-        }
-      }
+      setHasLoadedHistory(true);
+      return;
     }
     
-    // Also handle initial load when we have no messages at all
-    if (messages.length === 0 && threadMessages && threadMessages.length > 0) {
-      logger.info(`[Chat] Initial load: Loading ${threadMessages.length} messages from Convex`);
+    // Load messages from Convex
+    logger.info(`[Chat] Loading ${threadMessages.length} messages from Convex for thread ${threadId}`);
+    
+    // Convert Convex messages to the format expected by the chat UI
+    const loadedMessages = threadMessages.map((msg: any) => {
+      // Log if we have toolCalls
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        logger.info(`[Chat] Loading message with toolCalls:`, {
+          messageContent: msg.content.substring(0, 50),
+          toolCallCount: msg.toolCalls.length,
+          toolNames: msg.toolCalls.map((tc: any) => tc.toolName)
+        });
+      }
       
-      const loadedMessages = threadMessages.map((msg: any) => {
-        return {
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-          toolCalls: msg.toolCalls || undefined,
-          storageId: msg.metadata?.storageId
-        };
-      });
-      
-      setMessages(loadedMessages);
-      setHasLoadedHistory(true);
-      setSyncedThreadId(threadId);
-      
-      // Scroll to bottom after loading messages from database
-      setTimeout(() => {
-        if (scrollAreaRef.current) {
-          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-        }
-      }, 100);
-      
-      // Restore confirmed/rejected states from localStorage after loading messages
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today) {
-            if (parsed.confirmed && parsed.confirmed.length > 0) {
-              logger.info('[Chat] Restoring confirmed states after loading messages:', parsed.confirmed);
-              setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
-            }
-            if (parsed.rejected && parsed.rejected.length > 0) {
-              logger.info('[Chat] Restoring rejected states after loading messages:', parsed.rejected);
-              setRejectedFoodLogs(prev => new Set([...prev, ...parsed.rejected]));
-            }
+      return {
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+        toolCalls: msg.toolCalls || undefined,
+        storageId: msg.metadata?.storageId
+      };
+    });
+    
+    // Batch state updates
+    setMessages(loadedMessages);
+    setHasLoadedHistory(true);
+    setSyncedThreadId(threadId);
+    
+    // Scroll to bottom after loading messages from database
+    setTimeout(() => {
+      if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+      }
+    }, 100);
+    
+    // Restore confirmed/rejected states from localStorage after loading messages
+    const savedConfirmations = localStorage.getItem('foodConfirmations');
+    if (savedConfirmations) {
+      try {
+        const parsed = JSON.parse(savedConfirmations);
+        const today = new Date().toISOString().split('T')[0];
+        if (parsed.date === today) {
+          if (parsed.confirmed && parsed.confirmed.length > 0) {
+            logger.info('[Chat] Restoring confirmed states after loading messages:', parsed.confirmed);
+            setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
           }
-        } catch (e) {
-          logger.error('Error restoring confirmation states:', e);
+          if (parsed.rejected && parsed.rejected.length > 0) {
+            logger.info('[Chat] Restoring rejected states after loading messages:', parsed.rejected);
+            setRejectedFoodLogs(prev => new Set([...prev, ...parsed.rejected]));
+          }
         }
+      } catch (e) {
+        logger.error('Error restoring confirmation states:', e);
       }
     }
-  }, [threadMessages, messages.length, setMessages, threadId, syncedThreadId, scrollToBottom, setConfirmedFoodLogs, setRejectedFoodLogs]);
+  }, [threadMessages, threadId, syncedThreadId]);
+  
+  // Sync confirmed bubbles from database when they load
+  useEffect(() => {
+    if (!confirmedBubblesFromDB || confirmedBubblesFromDB.length === 0) return;
+    
+    logger.info('[Chat] Syncing confirmed bubbles from database:', {
+      count: confirmedBubblesFromDB.length,
+      bubbles: confirmedBubblesFromDB
+    });
+    
+    // Add confirmed/rejected bubbles from database
+    const confirmed = new Set<string>();
+    const rejected = new Set<string>();
+    
+    confirmedBubblesFromDB.forEach(bubble => {
+      if (bubble.status === 'confirmed') {
+        confirmed.add(bubble.confirmationId);
+      } else if (bubble.status === 'rejected') {
+        rejected.add(bubble.confirmationId);
+      }
+    });
+    
+    if (confirmed.size > 0) {
+      setConfirmedFoodLogs(prev => new Set([...prev, ...confirmed]));
+    }
+    if (rejected.size > 0) {
+      setRejectedFoodLogs(prev => new Set([...prev, ...rejected]));
+    }
+  }, [confirmedBubblesFromDB]);
   
   // Apply theme from preferences
   useEffect(() => {
@@ -647,6 +671,76 @@ export default function Chat() {
     initThread();
   }, [profile, threadId, preferences, getOrCreateDailyThread, setThreadId]);
 
+  // Function to save confirmation state immediately
+  const saveConfirmationStateImmediately = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get all current confirmations from messages with their generated IDs
+      const currentConfirmations = messages
+        .map((msg, idx) => {
+          const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
+          if (confirmCall) {
+            let args = confirmCall.args;
+            if (confirmCall.toolName === "analyzeAndConfirmPhoto" && args?.analysisComplete) {
+              const { analysisComplete, ...confirmationData } = args;
+              args = confirmationData;
+            }
+            
+            // Generate the same ID that would be used in the UI
+            const argsWithToolCallId = { ...args, _toolCallId: confirmCall.toolCallId };
+            const confirmId = getConfirmationId(argsWithToolCallId, idx);
+            
+            return {
+              index: idx,
+              content: msg.content,
+              args: confirmCall.args,
+              toolCallId: confirmCall.toolCallId,
+              confirmId: confirmId,
+              triggerContent: messages[idx - 1]?.content || ""
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+      
+      // Check if we have any messages with toolCalls
+      const hasToolCallsInMessages = messages.some(msg => msg.toolCalls && msg.toolCalls.length > 0);
+      
+      // Only save if:
+      // 1. We have confirmations in the current messages (with toolCalls), OR
+      // 2. We have confirmed food logs but NO toolCalls in messages (meaning messages were loaded from DB without toolCalls)
+      // This prevents clearing confirmations when messages are reloaded without toolCalls
+      if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages) || (rejectedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
+        const persistData = {
+          date: today,
+          confirmations: currentConfirmations,
+          confirmed: Array.from(confirmedFoodLogs),
+          rejected: Array.from(rejectedFoodLogs)
+        };
+        
+        // Check if the state has actually changed
+        const stateString = JSON.stringify(persistData);
+        if (stateString !== lastSavedStateRef.current) {
+          logger.debug('Saving confirmed/rejected bubbles to localStorage:', {
+            confirmed: Array.from(confirmedFoodLogs),
+            rejected: Array.from(rejectedFoodLogs),
+            confirmations: currentConfirmations.map(c => ({ confirmId: c.confirmId, toolCallId: c.toolCallId }))
+          });
+          localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
+          lastSavedStateRef.current = stateString;
+        }
+      } else if (hasToolCallsInMessages && currentConfirmations.length === 0 && confirmedFoodLogs.size === 0 && rejectedFoodLogs.size === 0) {
+        // Only clear if we have toolCalls in messages but no confirmations
+        // This means the user rejected all confirmations
+        logger.debug('Clearing food confirmations - no active confirmations');
+        localStorage.removeItem('foodConfirmations');
+        lastSavedStateRef.current = "";
+      }
+      // If no toolCalls in messages and no confirmed logs, do nothing (preserve existing localStorage)
+    }
+  }, [messages, confirmedFoodLogs, rejectedFoodLogs, getConfirmationId]);
+
   // Save confirmation state to localStorage whenever it changes (debounced)
   useEffect(() => {
     // Clear any existing timeout
@@ -654,71 +748,38 @@ export default function Chat() {
       clearTimeout(saveTimeoutRef.current);
     }
     
-    // Set a new timeout to save after 1500ms of no changes
+    // Set a new timeout to save after 300ms of no changes (reduced from 1500ms for better mobile responsiveness)
     saveTimeoutRef.current = setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Get all current confirmations from messages
-        const currentConfirmations = messages
-          .map((msg, idx) => {
-            const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
-            if (confirmCall) {
-              return {
-                index: idx,
-                content: msg.content,
-                args: confirmCall.args,
-                triggerContent: messages[idx - 1]?.content || ""
-              };
-            }
-            return null;
-          })
-          .filter(Boolean);
-        
-        // Check if we have any messages with toolCalls
-        const hasToolCallsInMessages = messages.some(msg => msg.toolCalls && msg.toolCalls.length > 0);
-        
-        // Only save if:
-        // 1. We have confirmations in the current messages (with toolCalls), OR
-        // 2. We have confirmed food logs but NO toolCalls in messages (meaning messages were loaded from DB without toolCalls)
-        // This prevents clearing confirmations when messages are reloaded without toolCalls
-        if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages) || (rejectedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
-          const persistData = {
-            date: today,
-            threadId: threadId, // Add thread ID to make confirmations thread-specific
-            confirmations: currentConfirmations,
-            confirmed: Array.from(confirmedFoodLogs),
-            rejected: Array.from(rejectedFoodLogs)
-          };
-          
-          // Check if the state has actually changed
-          const stateString = JSON.stringify(persistData);
-          if (stateString !== lastSavedStateRef.current) {
-            logger.debug('Saving confirmed/rejected bubbles to localStorage:', {
-              confirmed: Array.from(confirmedFoodLogs),
-              rejected: Array.from(rejectedFoodLogs)
-            });
-            localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
-            lastSavedStateRef.current = stateString;
-          }
-        } else if (hasToolCallsInMessages && currentConfirmations.length === 0 && confirmedFoodLogs.size === 0 && rejectedFoodLogs.size === 0) {
-          // Only clear if we have toolCalls in messages but no confirmations
-          // This means the user rejected all confirmations
-          logger.debug('Clearing food confirmations - no active confirmations');
-          localStorage.removeItem('foodConfirmations');
-          lastSavedStateRef.current = "";
-        }
-        // If no toolCalls in messages and no confirmed logs, do nothing (preserve existing localStorage)
-      }
-    }, 1500);
+      saveConfirmationStateImmediately();
+    }, 300);
     
     // Cleanup on unmount
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+        // Save immediately on unmount
+        saveConfirmationStateImmediately();
       }
     };
-  }, [confirmedFoodLogs, rejectedFoodLogs, messages, threadId]);
+  }, [confirmedFoodLogs, rejectedFoodLogs, messages, saveConfirmationStateImmediately]);
+
+  // Save confirmation state immediately when page is closing
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Clear any pending timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      // Save immediately
+      saveConfirmationStateImmediately();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [saveConfirmationStateImmediately]);
 
   // Load thread ID from preferences
   useEffect(() => {
@@ -1098,7 +1159,8 @@ export default function Chat() {
     const hasUnconfirmedFoodLogs = messages.some((msg, idx) => {
       const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
       if (confirmCall) {
-        const confirmId = getConfirmationId(confirmCall.args, idx);
+        const argsWithToolCallId = { ...confirmCall.args, _toolCallId: confirmCall.toolCallId };
+        const confirmId = getConfirmationId(argsWithToolCallId, idx);
         return !confirmedFoodLogs.has(confirmId);
       }
       return false;
@@ -1144,7 +1206,8 @@ export default function Chat() {
             tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
           );
           if (confirmCall && confirmCall.args && !confirmCall.args.error) {
-            const confirmId = getConfirmationId(confirmCall.args, idx);
+            const argsWithToolCallId = { ...confirmCall.args, _toolCallId: confirmCall.toolCallId };
+            const confirmId = getConfirmationId(argsWithToolCallId, idx);
             return !confirmedFoodLogs.has(confirmId) && !rejectedFoodLogs.has(confirmId);
           }
           return false;
@@ -1155,7 +1218,8 @@ export default function Chat() {
           tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
         );
         if (confirmCall) {
-          const confirmId = getConfirmationId(confirmCall.args, lastPendingConfirmation.idx);
+          const argsWithToolCallId = { ...confirmCall.args, _toolCallId: confirmCall.toolCallId };
+          const confirmId = getConfirmationId(argsWithToolCallId, lastPendingConfirmation.idx);
           logger.info('[Chat] Auto-rejecting confirmation due to correction:', confirmId);
           setRejectedFoodLogs(prev => new Set(prev).add(confirmId));
         }
@@ -1467,21 +1531,6 @@ export default function Chat() {
     return "text-destructive";
   };
   
-  // Generate a unique ID for each confirmation
-  const getConfirmationId = useCallback((args: any, messageIndex: number, messageContent?: string) => {
-    // Create a unique ID based on food content and message index
-    const foodNames = args.items?.map((item: any) => item.name).join('-') || '';
-    // Use a combination of food details to create a content hash
-    const contentHash = `${args.mealType}-${args.totalCalories}-${foodNames}`.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    // Include message index to ensure uniqueness for same food logged multiple times
-    // This allows persistence to work properly while preventing auto-confirmation
-    return `confirm-${Math.abs(contentHash)}-${messageIndex}`;
-  }, []);
-  
-
   // Persist confirmation states to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined' && messages.length > 0) {
@@ -1501,7 +1550,8 @@ export default function Chat() {
               args = confirmationData;
             }
             
-            const confirmId = getConfirmationId(args, idx);
+            const argsWithToolCallId = { ...args, _toolCallId: confirmCall?.toolCallId };
+            const confirmId = getConfirmationId(argsWithToolCallId, idx);
             return {
               index: idx,
               confirmId: confirmId,
@@ -1524,6 +1574,52 @@ export default function Chat() {
       return () => clearTimeout(timeoutId);
     }
   }, [messages, confirmedFoodLogs, rejectedFoodLogs, getConfirmationId]);
+  
+  // Additional effect to restore confirmation states when messages change
+  // This ensures confirmations are properly restored even if they were saved with different IDs
+  useEffect(() => {
+    if (messages.length === 0) return;
+    
+    const savedConfirmations = localStorage.getItem('foodConfirmations');
+    if (!savedConfirmations) return;
+    
+    try {
+      const parsed = JSON.parse(savedConfirmations);
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (parsed.date === today && parsed.confirmations) {
+        // Re-generate IDs for current messages and check if any match saved confirmations
+        messages.forEach((msg, idx) => {
+          const confirmCall = msg.toolCalls?.find(tc => 
+            tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
+          );
+          
+          if (confirmCall) {
+            let args = confirmCall.args;
+            if (confirmCall.toolName === "analyzeAndConfirmPhoto" && args?.analysisComplete) {
+              const { analysisComplete, ...confirmationData } = args;
+              args = confirmationData;
+            }
+            
+            const argsWithToolCallId = { ...args, _toolCallId: confirmCall.toolCallId };
+            const confirmId = getConfirmationId(argsWithToolCallId, idx);
+            
+            // Check if this confirmation was previously confirmed/rejected
+            if (parsed.confirmed?.includes(confirmId) && !confirmedFoodLogs.has(confirmId)) {
+              logger.info('[Chat] Restoring confirmed state for:', confirmId);
+              setConfirmedFoodLogs(prev => new Set(prev).add(confirmId));
+            }
+            if (parsed.rejected?.includes(confirmId) && !rejectedFoodLogs.has(confirmId)) {
+              logger.info('[Chat] Restoring rejected state for:', confirmId);
+              setRejectedFoodLogs(prev => new Set(prev).add(confirmId));
+            }
+          }
+        });
+      }
+    } catch (e) {
+      logger.error('[Chat] Error restoring confirmation states:', e);
+    }
+  }, [messages, getConfirmationId]);
 
   // Show loading state while checking auth
   if (isSignedIn === undefined) {
@@ -1547,9 +1643,9 @@ export default function Chat() {
         <div className="border-b border-border">
           <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="font-semibold text-lg text-foreground flex items-center gap-3 ml-4">
+            <h1 className="text-foreground flex items-center gap-3 ml-4">
               <img src="/logo.svg" alt="Bob" className="h-[60px] w-[60px]" />
-              Bob
+              <span className="text-3xl" style={{ fontFamily: '"Fugaz One", Inter, sans-serif', fontWeight: 400, fontStyle: 'normal' }}>BOB</span>
             </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -1620,7 +1716,8 @@ export default function Chat() {
                   tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto"
                 );
                 if (confirmCall && confirmCall.args && !confirmCall.args.error) {
-                  const confirmId = getConfirmationId(confirmCall.args, idx);
+                  const argsWithToolCallId = { ...confirmCall.args, _toolCallId: confirmCall.toolCallId };
+                  const confirmId = getConfirmationId(argsWithToolCallId, idx);
                   return !confirmedFoodLogs.has(confirmId) && !rejectedFoodLogs.has(confirmId);
                 }
                 return false;
@@ -1849,7 +1946,17 @@ export default function Chat() {
                 });
                 return null;
               }
-              const confirmId = getConfirmationId(args, index);
+              // Pass toolCallId to getConfirmationId for consistent IDs across devices
+              const argsWithToolCallId = { ...args, _toolCallId: confirmFoodCall.toolCallId };
+              const confirmId = getConfirmationId(argsWithToolCallId, index);
+              
+              // Debug log to understand the ID generation
+              logger.info('[Chat] Generating confirmation ID:', {
+                toolCallId: confirmFoodCall.toolCallId,
+                index,
+                confirmId,
+                foodItems: args.items?.map((item: any) => item.name)
+              });
               const isConfirmed = confirmedFoodLogs.has(confirmId);
               const isRejected = rejectedFoodLogs.has(confirmId);
               
@@ -1867,11 +1974,28 @@ export default function Chat() {
                       isRejected={isRejected}
                       isStealthMode={isStealthMode}
                       isStreaming={isStreaming}
-                      onReject={() => {
+                      onReject={async () => {
                         // Mark as rejected
                         flushSync(() => {
                           setRejectedFoodLogs(prev => new Set(prev).add(confirmId));
                         });
+                        
+                        // Save to Convex for cross-device sync
+                        if (threadId && saveConfirmedBubble) {
+                          try {
+                            await saveConfirmedBubble({
+                              threadId,
+                              messageIndex: index,
+                              confirmationId: confirmId,
+                              toolCallId: confirmFoodCall.toolCallId,
+                              foodDescription: args.description,
+                              status: "rejected"
+                            });
+                            logger.info('[Chat] Saved rejected bubble to Convex:', confirmId);
+                          } catch (error) {
+                            logger.error('[Chat] Failed to save rejected bubble to Convex:', error);
+                          }
+                        }
                         
                         // Add a message to guide the user
                         setMessages(prev => [...prev, {
@@ -1917,6 +2041,23 @@ export default function Chat() {
                             aiEstimated: true,
                             confidence: args.confidence || "medium"
                           });
+                          
+                          // Save to Convex for cross-device sync
+                          if (threadId && saveConfirmedBubble) {
+                            try {
+                              await saveConfirmedBubble({
+                                threadId,
+                                messageIndex: index,
+                                confirmationId: confirmId,
+                                toolCallId: confirmFoodCall.toolCallId,
+                                foodDescription: args.description,
+                                status: "confirmed"
+                              });
+                              logger.info('[Chat] Saved confirmed bubble to Convex:', confirmId);
+                            } catch (error) {
+                              logger.error('[Chat] Failed to save confirmed bubble to Convex:', error);
+                            }
+                          }
                           
                           // Add a success message with rounded numbers
                           const caloriesRemaining = Math.round((profile?.dailyCalorieTarget || 2000) - ((todayStats?.calories || 0) + finalCalories));
@@ -2172,23 +2313,36 @@ export default function Chat() {
                   style={{ WebkitAppearance: 'none' }}
                 />
                 
-                {/* Send button */}
-                <button
-                  type="submit"
-                  disabled={(!input.trim() && !selectedImage) || isStreaming || isUploading}
-                  className={cn(
-                    "ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80",
-                    (!input.trim() && !selectedImage) || isStreaming || isUploading
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-foreground text-background"
-                  )}
-                >
-                  {isUploading ? (
-                    <div className="h-4 w-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
-                  ) : (
-                    <ArrowUp className="h-4 w-4" />
-                  )}
-                </button>
+                {/* Send/Stop button */}
+                {isStreaming ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logger.info('[Chat] User requested to stop streaming');
+                      stopStreaming();
+                    }}
+                    className="ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80 bg-foreground text-background"
+                  >
+                    <Square className="h-4 w-4 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={(!input.trim() && !selectedImage) || isUploading}
+                    className={cn(
+                      "ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80",
+                      (!input.trim() && !selectedImage) || isUploading
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-foreground text-background"
+                    )}
+                  >
+                    {isUploading ? (
+                      <div className="h-4 w-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           </form>
