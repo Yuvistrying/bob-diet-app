@@ -1547,9 +1547,9 @@ export default function Chat() {
         <div className="border-b border-border">
           <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="font-semibold text-lg text-foreground flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Bob - Diet Coach
+            <h1 className="font-semibold text-lg text-foreground flex items-center gap-3 ml-4">
+              <img src="/logo.svg" alt="Bob" className="h-[60px] w-[60px]" />
+              Bob
             </h1>
           </div>
           <div className="flex items-center gap-2">
