@@ -35,7 +35,8 @@ export function NavigationBar({
         </button>
 
         {/* Center - Title */}
-        <div className="flex-1 text-center">
+        <div className="flex-1 flex items-center justify-center gap-3 ml-4">
+          <img src="/logo.svg" alt="Bob" className="h-[60px] w-[60px]" />
           <h1 className="text-body font-semibold text-foreground">
             {userName}
           </h1>
