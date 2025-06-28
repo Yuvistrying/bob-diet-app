@@ -12,7 +12,7 @@ import { rootAuthLoader } from "@clerk/react-router/ssr.server";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import type { Route } from "./+types/root";
-import "./app.css";
+import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from "~/app/components/ThemeProvider";
 
@@ -39,10 +39,14 @@ export const links: Route.LinksFunction = () => [
     crossOrigin: "anonymous",
   },
   
-  // Font with display=swap for performance
+  // Fonts with display=swap for performance
   {
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+  },
+  {
+    rel: "stylesheet", 
+    href: "https://fonts.googleapis.com/css2?family=Fugaz+One&display=swap",
   },
   
 ];

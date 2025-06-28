@@ -14,6 +14,7 @@ import type * as bob from "../bob.js";
 import type * as calibration from "../calibration.js";
 import type * as chatHistory from "../chatHistory.js";
 import type * as chatSessions from "../chatSessions.js";
+import type * as confirmedBubbles from "../confirmedBubbles.js";
 import type * as conversationSummary from "../conversationSummary.js";
 import type * as crons from "../crons.js";
 import type * as dailySummary from "../dailySummary.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   calibration: typeof calibration;
   chatHistory: typeof chatHistory;
   chatSessions: typeof chatSessions;
+  confirmedBubbles: typeof confirmedBubbles;
   conversationSummary: typeof conversationSummary;
   crons: typeof crons;
   dailySummary: typeof dailySummary;
