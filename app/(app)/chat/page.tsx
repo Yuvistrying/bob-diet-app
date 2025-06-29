@@ -2178,7 +2178,7 @@ export default function Chat() {
                     }}
                     className="ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80 bg-foreground text-background"
                   >
-                    <Square className="h-4 w-4 fill-current" />
+                    <Square className="h-4 w-4" />
                   </button>
                 ) : (
                   <button
