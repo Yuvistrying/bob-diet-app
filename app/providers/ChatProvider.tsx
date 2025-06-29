@@ -42,45 +42,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const onCompleteCallbackRef = useRef<((threadId: string) => void) | null>(null);
   
   // Confirmation bubble state that persists across tab switches
-  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(() => {
-    // Initialize from localStorage on mount
-    if (typeof window !== 'undefined') {
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today && parsed.confirmed && parsed.confirmed.length > 0) {
-            logger.info('[ChatProvider] Initializing confirmed states from localStorage:', parsed.confirmed);
-            return new Set(parsed.confirmed);
-          }
-        } catch (e) {
-          logger.error('[ChatProvider] Error loading saved confirmations:', e);
-        }
-      }
-    }
-    return new Set();
-  });
-  
-  const [rejectedFoodLogs, setRejectedFoodLogs] = useState<Set<string>>(() => {
-    // Initialize from localStorage on mount
-    if (typeof window !== 'undefined') {
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split('T')[0];
-          if (parsed.date === today && parsed.rejected && parsed.rejected.length > 0) {
-            logger.info('[ChatProvider] Initializing rejected states from localStorage:', parsed.rejected);
-            return new Set(parsed.rejected);
-          }
-        } catch (e) {
-          logger.error('[ChatProvider] Error loading saved rejections:', e);
-        }
-      }
-    }
-    return new Set();
-  });
+  // Now initialized empty - will be populated from Convex
+  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(new Set());
+  const [rejectedFoodLogs, setRejectedFoodLogs] = useState<Set<string>>(new Set());
   
   // This state will persist across tab switches
   const streamingChat = useStreamingChat({

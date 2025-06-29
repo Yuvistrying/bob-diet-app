@@ -221,8 +221,6 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
   const loadingRef = useRef(false); // Prevent double loads in StrictMode
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedStateRef = useRef<string>(""); // Track last saved state to prevent duplicates
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -671,115 +669,6 @@ export default function Chat() {
     initThread();
   }, [profile, threadId, preferences, getOrCreateDailyThread, setThreadId]);
 
-  // Function to save confirmation state immediately
-  const saveConfirmationStateImmediately = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Get all current confirmations from messages with their generated IDs
-      const currentConfirmations = messages
-        .map((msg, idx) => {
-          const confirmCall = msg.toolCalls?.find(tc => tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto");
-          if (confirmCall) {
-            let args = confirmCall.args;
-            if (confirmCall.toolName === "analyzeAndConfirmPhoto" && args?.analysisComplete) {
-              const { analysisComplete, ...confirmationData } = args;
-              args = confirmationData;
-            }
-            
-            // Generate the same ID that would be used in the UI
-            const argsWithToolCallId = { ...args, _toolCallId: confirmCall.toolCallId };
-            const confirmId = getConfirmationId(argsWithToolCallId, idx);
-            
-            return {
-              index: idx,
-              content: msg.content,
-              args: confirmCall.args,
-              toolCallId: confirmCall.toolCallId,
-              confirmId: confirmId,
-              triggerContent: messages[idx - 1]?.content || ""
-            };
-          }
-          return null;
-        })
-        .filter(Boolean);
-      
-      // Check if we have any messages with toolCalls
-      const hasToolCallsInMessages = messages.some(msg => msg.toolCalls && msg.toolCalls.length > 0);
-      
-      // Only save if:
-      // 1. We have confirmations in the current messages (with toolCalls), OR
-      // 2. We have confirmed food logs but NO toolCalls in messages (meaning messages were loaded from DB without toolCalls)
-      // This prevents clearing confirmations when messages are reloaded without toolCalls
-      if (currentConfirmations.length > 0 || (confirmedFoodLogs.size > 0 && !hasToolCallsInMessages) || (rejectedFoodLogs.size > 0 && !hasToolCallsInMessages)) {
-        const persistData = {
-          date: today,
-          confirmations: currentConfirmations,
-          confirmed: Array.from(confirmedFoodLogs),
-          rejected: Array.from(rejectedFoodLogs)
-        };
-        
-        // Check if the state has actually changed
-        const stateString = JSON.stringify(persistData);
-        if (stateString !== lastSavedStateRef.current) {
-          logger.debug('Saving confirmed/rejected bubbles to localStorage:', {
-            confirmed: Array.from(confirmedFoodLogs),
-            rejected: Array.from(rejectedFoodLogs),
-            confirmations: currentConfirmations.map(c => ({ confirmId: c.confirmId, toolCallId: c.toolCallId }))
-          });
-          localStorage.setItem('foodConfirmations', JSON.stringify(persistData));
-          lastSavedStateRef.current = stateString;
-        }
-      } else if (hasToolCallsInMessages && currentConfirmations.length === 0 && confirmedFoodLogs.size === 0 && rejectedFoodLogs.size === 0) {
-        // Only clear if we have toolCalls in messages but no confirmations
-        // This means the user rejected all confirmations
-        logger.debug('Clearing food confirmations - no active confirmations');
-        localStorage.removeItem('foodConfirmations');
-        lastSavedStateRef.current = "";
-      }
-      // If no toolCalls in messages and no confirmed logs, do nothing (preserve existing localStorage)
-    }
-  }, [messages, confirmedFoodLogs, rejectedFoodLogs, getConfirmationId]);
-
-  // Save confirmation state to localStorage whenever it changes (debounced)
-  useEffect(() => {
-    // Clear any existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    // Set a new timeout to save after 300ms of no changes (reduced from 1500ms for better mobile responsiveness)
-    saveTimeoutRef.current = setTimeout(() => {
-      saveConfirmationStateImmediately();
-    }, 300);
-    
-    // Cleanup on unmount
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        // Save immediately on unmount
-        saveConfirmationStateImmediately();
-      }
-    };
-  }, [confirmedFoodLogs, rejectedFoodLogs, messages, saveConfirmationStateImmediately]);
-
-  // Save confirmation state immediately when page is closing
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Clear any pending timeout
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      // Save immediately
-      saveConfirmationStateImmediately();
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [saveConfirmationStateImmediately]);
 
   // Load thread ID from preferences
   useEffect(() => {
@@ -879,7 +768,6 @@ export default function Chat() {
             }
             
             // Clear any persisted confirmations from previous day to prevent auto-confirm bug
-            localStorage.removeItem('foodConfirmations');
             setConfirmedFoodLogs(new Set());
             setRejectedFoodLogs(new Set());
           }
@@ -979,8 +867,6 @@ export default function Chat() {
         }
       }
       
-      // Check for pending confirmations from localStorage
-      const savedConfirmations = localStorage.getItem('foodConfirmations');
       const initialMessages: Message[] = [];
       
       if (!isOnboarding && greeting) {
@@ -989,37 +875,6 @@ export default function Chat() {
           role: "assistant",
           content: greeting
         });
-        
-        // Then restore any pending confirmations
-        if (savedConfirmations) {
-          try {
-            const parsed = JSON.parse(savedConfirmations);
-            const today = new Date().toISOString().split('T')[0];
-            
-            if (parsed.date === today && parsed.confirmations?.length > 0) {
-              logger.info('Restoring pending confirmations:', parsed.confirmations.length);
-              
-              // Add pending confirmations after greeting
-              parsed.confirmations.forEach((conf: any) => {
-                initialMessages.push({
-                  role: "assistant",
-                  content: conf.content,
-                  toolCalls: [{
-                    toolName: "confirmFood",
-                    args: conf.args
-                  }]
-                });
-              });
-              
-              // Restore confirmed states
-              if (parsed.confirmed?.length > 0) {
-                setConfirmedFoodLogs(prev => new Set([...prev, ...parsed.confirmed]));
-              }
-            }
-          } catch (e) {
-            logger.error('Error loading confirmations:', e);
-          }
-        }
       } else {
         // Onboarding welcome message - ONLY if we don't already have messages
         if (messages.length === 0) {
