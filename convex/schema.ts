@@ -55,6 +55,7 @@ export default defineSchema({
     targetWeight: v.number(),
     height: v.number(),
     age: v.number(),
+    birthDate: v.optional(v.string()), // YYYY-MM-DD format, will replace age field
     gender: v.string(), // "male", "female", "other"
     activityLevel: v.string(), // "sedentary", "light", "moderate", "active"
     goal: v.string(), // "cut", "gain", "maintain"
@@ -112,22 +113,6 @@ export default defineSchema({
     dimensions: 1536,
     filterFields: ["userId"]
   }),
-
-  // Goal history tracking
-  goalHistory: defineTable({
-    userId: v.string(),
-    goal: v.string(), // "cut", "gain", "maintain"
-    startingWeight: v.number(),
-    targetWeight: v.number(),
-    startingUnit: v.string(), // "kg" or "lbs"
-    startedAt: v.number(),
-    completedAt: v.optional(v.number()),
-    status: v.string(), // "active", "completed", "abandoned"
-    createdAt: v.number()
-  })
-  .index("by_user", ["userId"])
-  .index("by_user_status", ["userId", "status"])
-  .index("by_user_created", ["userId", "createdAt"]),
 
   // Food logging
   foodLogs: defineTable({
@@ -433,4 +418,35 @@ export default defineSchema({
   .index("by_user_thread", ["userId", "threadId"])
   .index("by_expires", ["expiresAt"])
   .index("by_confirmation_id", ["confirmationId"]),
+  
+  // Goal change history for tracking user progress
+  goalHistory: defineTable({
+    userId: v.string(),
+    previousGoal: v.string(), // "cut", "gain", "maintain"
+    newGoal: v.string(), // "cut", "gain", "maintain"
+    previousTargetWeight: v.number(),
+    newTargetWeight: v.number(),
+    currentWeight: v.number(), // Weight at time of goal change
+    reason: v.optional(v.string()), // Why they changed goals
+    triggeredBy: v.string(), // "user_request", "goal_reached", "bob_suggestion"
+    changedAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_date", ["userId", "changedAt"]),
+  
+  // Goal achievements tracking
+  goalAchievements: defineTable({
+    userId: v.string(),
+    goalType: v.string(), // "cut", "gain", "maintain"
+    targetWeight: v.number(),
+    achievedWeight: v.number(), // Weekly average when achieved
+    weeklyAverage: v.number(), // The weekly average that triggered achievement
+    achievedAt: v.number(),
+    bobSuggested: v.boolean(), // Has Bob suggested a new goal?
+    newGoalSet: v.optional(v.boolean()), // Did user accept new goal?
+    daysAtGoal: v.optional(v.number()), // For maintenance goals
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_triggered", ["userId", "bobSuggested"])
+  .index("by_achieved_date", ["achievedAt"]),
 });

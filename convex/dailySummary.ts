@@ -26,6 +26,14 @@ export const getDailySummary = query({
       proteinTarget: number;
     } | null;
     hasPendingConfirmations: boolean;
+    achievement: {
+      goalType: string;
+      targetWeight: number;
+      achievedWeight: number;
+      weeklyAverage: number;
+      daysSinceAchieved: number;
+      achievedAt: number;
+    } | null;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -45,7 +53,8 @@ export const getDailySummary = query({
           total: "0cal (0p/0c/0f)"
         },
         profile: null,
-        hasPendingConfirmations: false
+        hasPendingConfirmations: false,
+        achievement: null
       };
     }
     const userId = identity.subject;
@@ -127,7 +136,7 @@ export const getDailySummary = query({
       : "No food logged yet today";
 
     // Build context object
-    return {
+    const result = {
       today: {
         date: today,
         stats: todayStats || { calories: 0, protein: 0, carbs: 0, fat: 0 },
@@ -151,6 +160,32 @@ export const getDailySummary = query({
         proteinTarget: profile.proteinTarget
       } : null,
       hasPendingConfirmations: pendingConfirmations.length > 0
+    };
+    
+    // Check for unhandled goal achievements
+    const achievement = await ctx.db
+      .query("goalAchievements")
+      .withIndex("by_user_triggered", (q: any) => 
+        q.eq("userId", identity.subject).eq("bobSuggested", false)
+      )
+      .order("desc")
+      .first();
+    
+    let achievementData = null;
+    if (achievement) {
+      achievementData = {
+        goalType: achievement.goalType,
+        targetWeight: achievement.targetWeight,
+        achievedWeight: achievement.achievedWeight,
+        weeklyAverage: achievement.weeklyAverage,
+        daysSinceAchieved: Math.floor((Date.now() - achievement.achievedAt) / (1000 * 60 * 60 * 24)),
+        achievedAt: achievement.achievedAt
+      };
+    }
+    
+    return {
+      ...result,
+      achievement: achievementData
     };
   },
 });

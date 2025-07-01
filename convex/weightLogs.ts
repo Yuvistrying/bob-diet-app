@@ -129,6 +129,50 @@ export const logWeight = mutation({
       cacheKey: "chat_context"
     });
     
+    // Check for goal achievement using weekly average
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .first();
+    
+    if (profile && profile.goal && profile.targetWeight) {
+      // Get this week's average
+      const weekAverage = await ctx.runQuery(api.weightLogs.getThisWeekAverage);
+      
+      // Need at least 3 logs in the week for valid average
+      if (weekAverage && weekAverage.count >= 3) {
+        // Import the check function
+        const { checkGoalAchievement } = await import("./goalAchievements");
+        
+        // For maintenance goals, also get previous week's average
+        let previousWeekAverage;
+        if (profile.goal === "maintain") {
+          const pastWeeks = await ctx.runQuery(api.weightLogs.getPast4WeeksAverages);
+          if (pastWeeks && pastWeeks.length >= 2) {
+            previousWeekAverage = pastWeeks[1].average;
+          }
+        }
+        
+        const achieved = checkGoalAchievement(
+          profile.goal,
+          weekAverage.average,
+          profile.targetWeight,
+          previousWeekAverage
+        );
+        
+        if (achieved) {
+          // Create achievement record
+          await ctx.runMutation(api.goalAchievements.createAchievement, {
+            goalType: profile.goal,
+            targetWeight: profile.targetWeight,
+            achievedWeight: args.weight,
+            weeklyAverage: weekAverage.average,
+            daysAtGoal: profile.goal === "maintain" ? 14 : undefined,
+          });
+        }
+      }
+    }
+    
     return logId;
   },
 });
