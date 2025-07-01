@@ -21,11 +21,9 @@ export default function Profile() {
   const profile = useQuery(api.userProfiles.getUserProfile, {});
   const preferences = useQuery(api.userPreferences.getUserPreferences);
   const latestWeight = useQuery(api.weightLogs.getLatestWeight);
-  const activeGoal = useQuery(api.goalHistory.getActiveGoal);
   
   const updateProfile = useMutation(api.userProfiles.updateProfileField);
   const updatePreferences = useMutation(api.userPreferences.updatePreferences);
-  const createGoal = useMutation(api.goalHistory.createGoal);
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -70,15 +68,7 @@ export default function Profile() {
       await updateProfile({ field: "targetWeight", value: finalFormData.targetWeight });
     }
     
-    // Check if we need to create/update goal history
-    if (finalFormData.goal !== profile?.goal || !activeGoal) {
-      await createGoal({
-        goal: finalFormData.goal,
-        startingWeight: currentWeight,
-        targetWeight: finalFormData.targetWeight,
-        startingUnit: profile?.preferredUnits === "imperial" ? "lbs" : "kg"
-      });
-    }
+    // Goal will be updated as part of profile update
     if (finalFormData.gender !== profile?.gender) {
       await updateProfile({ field: "gender", value: finalFormData.gender });
     }
@@ -186,14 +176,9 @@ export default function Profile() {
               <div className="text-lg font-semibold text-foreground">
                 <span className="flex items-center gap-1">
                   <Flag className="h-4 w-4" />
-                  {activeGoal?.startingWeight || profile?.currentWeight || "—"} {activeGoal?.startingUnit || (profile?.preferredUnits === "imperial" ? "lbs" : "kg")}
+                  {profile?.currentWeight || "—"} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
                 </span>
               </div>
-              {activeGoal && (
-                <div className="text-xs text-muted-foreground">
-                  Goal started: {new Date(activeGoal.startedAt).toLocaleDateString()}
-                </div>
-              )}
             </div>
           </div>
 

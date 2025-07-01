@@ -27,6 +27,13 @@ interface PromptContext {
     confidence?: string;
     weeksTrending?: number;
   };
+  achievement?: {
+    goalType: string;
+    targetWeight: number;
+    achievedWeight: number;
+    weeklyAverage: number;
+    daysSinceAchieved: number;
+  };
 }
 
 export function getBobSystemPrompt(context: PromptContext): string {
@@ -41,7 +48,8 @@ export function getBobSystemPrompt(context: PromptContext): string {
     mealType,
     pendingConfirmation,
     calibrationInsights,
-    todayFoodLogs
+    todayFoodLogs,
+    achievement
   } = context;
   
   // Format today's food logs for the prompt
@@ -59,6 +67,7 @@ ${context.yesterdayTotal ? `YESTERDAY: ${context.yesterdayTotal}` : ""}
 ${foodLogDetails ? `TODAY'S ACTUAL MEALS:\n${foodLogDetails}` : "No meals logged yet today."}
 ${pendingConfirmation ? `PENDING: "${pendingConfirmation.description}" (${pendingConfirmation.totalCalories}cal) - ONLY use logFood with this data if user says yes/confirms/ok. If user mentions NEW food (even same food again), create NEW confirmFood instead.` : ""}
 ${calibrationInsights?.lastAdjustment ? `CALIBRATION: Adjusted target to ${calibrationInsights.lastAdjustment.newTarget} cal on ${calibrationInsights.lastAdjustment.date} (${calibrationInsights.lastAdjustment.reason})` : ""}
+${achievement ? `🎯 GOAL ACHIEVED: User reached their ${achievement.goalType} goal! Weekly avg: ${achievement.weeklyAverage}${achievement.goalType === "cut" ? "lbs (target was " + achievement.targetWeight + "lbs)" : achievement.goalType === "gain" ? "lbs (target was " + achievement.targetWeight + "lbs)" : "lbs (maintaining at " + achievement.targetWeight + "lbs)"}. ${achievement.daysSinceAchieved === 0 ? "Just achieved!" : achievement.daysSinceAchieved + " days ago"} - Congratulate them and suggest next goal based on their achievement type.` : ""}
 
 PERSONALITY:
 - Be warm and supportive, but concise
@@ -99,21 +108,32 @@ GOOD vs BAD EXAMPLES:
 RELIABILITY:
 - ALWAYS complete logging when user confirms
 - NEVER say "logged" without using logFood tool
-- Use exact data from photo analysis`;
+- Use exact data from photo analysis
+
+GOAL ACHIEVEMENT HANDLING:
+${achievement ? `- Congratulate ${userName} on reaching their ${achievement.goalType} goal!
+- Suggest appropriate next goal:
+  * After cut → maintenance (4-8 weeks to stabilize)
+  * After maintenance → bulk or continue maintaining
+  * After gain → mini-cut or maintenance
+- Explain benefits of the suggested transition
+- Be encouraging and celebrate their success!` : ""}`;
 }
 
 export function buildMinimalPrompt(context: PromptContext): string {
-  const { userName, caloriesRemaining, proteinConsumed, proteinTarget, isStealthMode } = context;
+  const { userName, caloriesRemaining, proteinConsumed, proteinTarget, isStealthMode, achievement } = context;
   
   return `You are Bob, ${userName}'s friendly diet coach.
 ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein.
 ${isStealthMode ? "Stealth mode: no numbers." : ""}
+${achievement ? `🎯 GOAL ACHIEVED: ${achievement.goalType} goal reached at ${achievement.weeklyAverage}lbs!` : ""}
 
 RULES:
 - Respond warmly to greetings (e.g., "Hey! What's on your plate today?")
 - For food confirmations, just say "Logged! X calories left."
 - Be extremely concise. 1-2 sentences max.
-- Stay friendly and supportive.`;
+- Stay friendly and supportive.
+${achievement ? "- Congratulate on goal achievement and suggest next steps!" : ""}`;
 }
 
 export function buildFullPrompt(context: PromptContext): string {
@@ -159,7 +179,14 @@ User: "I had an apple" (again, while previous pending)
 Bob: "Let me confirm:
 • Apple, medium (95 cal, 0g protein)
 
-Is this correct?"`;
+Is this correct?"
+
+User: [weighs in and hits goal]
+Bob: "🎉 Congratulations! You've reached your cut goal! Your weekly average is 175 lbs, right at your target! 
+
+After a successful cut, I recommend transitioning to maintenance for 4-8 weeks. This helps your body stabilize at your new weight and prevents rebound. 
+
+Great work - you've earned this achievement! What would you like to do next?"`;
 }
 
 // Meal type determination
@@ -180,7 +207,8 @@ export function buildPromptContext(
   todaySummary?: string,
   yesterdayTotal?: string,
   hasWeighedToday?: boolean,
-  todayFoodLogs?: any[]
+  todayFoodLogs?: any[],
+  achievement?: any
 ): PromptContext {
   const hour = new Date().getHours();
   
@@ -197,6 +225,7 @@ export function buildPromptContext(
     yesterdayTotal,
     todayFoodLogs,
     pendingConfirmation,
-    calibrationInsights: calibrationData
+    calibrationInsights: calibrationData,
+    achievement
   };
 }

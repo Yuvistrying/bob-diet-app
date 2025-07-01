@@ -171,7 +171,8 @@ export async function POST(req: Request) {
       coreStats.todaySummary,
       coreStats.yesterdayTotal,
       coreStats.hasWeighedToday,
-      todayFoodLogs
+      todayFoodLogs,
+      dailySummary?.achievement
     );
     
     // 6. Detect intents and determine prompt type

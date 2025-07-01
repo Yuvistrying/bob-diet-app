@@ -28,6 +28,15 @@ export const getOnboardingStatus = query({
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
     
+    // If profile has all required data but onboarding not marked complete, treat as complete
+    if (profile && profile.name && profile.currentWeight && profile.dailyCalorieTarget) {
+      return {
+        completed: true,
+        currentStep: "complete",
+        profile: profile
+      };
+    }
+    
     if (profile?.onboardingCompleted) {
       return {
         completed: true,
