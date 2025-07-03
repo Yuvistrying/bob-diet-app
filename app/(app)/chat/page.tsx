@@ -1735,7 +1735,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col bg-background fixed inset-0 overflow-hidden">
+    <div className="flex flex-col bg-background h-full overflow-hidden">
       {/* Fixed Header Container */}
       <div className="flex-shrink-0">
         {/* Header */}
@@ -2100,9 +2100,10 @@ export default function Chat() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Chat Messages - Scrollable area */}
-        <div className="flex-1 relative overflow-hidden">
+      {/* Chat Messages - Scrollable area */}
+      <div className="flex-1 relative overflow-hidden">
           <div
             ref={scrollAreaRef}
             className="h-full overflow-y-auto overflow-x-hidden"
@@ -2468,37 +2469,35 @@ export default function Chat() {
               )}
               <div ref={messagesEndRef} />
             </div>
-            {/* Dynamic spacer for input area - includes bottom padding */}
-            <div style={{ height: `${(inputAreaHeight || 150) + 40}px` }} />
           </div>
+          
+          {/* Scroll to bottom button */}
+          {!isAtBottom && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => {
+                scrollToBottom();
+                setIsAtBottom(true);
+              }}
+              className="absolute right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0"
+              style={{
+                zIndex: 20,
+                bottom: "20px",
+              }}
+            >
+              <ChevronDown className="h-5 w-5" />
+            </motion.button>
+          )}
         </div>
 
-        {/* Scroll to bottom button */}
-        {!isAtBottom && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={() => {
-              scrollToBottom();
-              setIsAtBottom(true);
-            }}
-            className="fixed right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0"
-            style={{
-              zIndex: 20,
-              bottom: `${(inputAreaHeight || 150) + 60}px`,
-            }}
-          >
-            <ChevronDown className="h-5 w-5" />
-          </motion.button>
-        )}
-
-        {/* Input Area - Fixed at bottom */}
-        <div
-          ref={inputAreaRef}
-          className="fixed bottom-0 left-0 right-0 bg-background border-t border-border"
-          style={{ paddingBottom: "calc(70px + env(safe-area-inset-bottom))" }}
-        >
+      {/* Input Area */}
+      <div
+        ref={inputAreaRef}
+        className="flex-shrink-0 bg-background border-t border-border"
+        style={{ marginBottom: "64px" }}
+      >
           <div className="max-w-lg mx-auto px-4 py-4">
             <form
               onSubmit={handleSubmit}
@@ -2613,6 +2612,5 @@ export default function Chat() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
