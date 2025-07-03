@@ -1474,23 +1474,23 @@ export default function Chat() {
     previousMessageCount.current = messages.length;
   }, [messages]);
 
-  // Scroll to bottom when input area changes (if at bottom)
-  useEffect(() => {
-    if (inputAreaHeight > 0 && isAtBottom) {
-      requestAnimationFrame(() => {
-        scrollToBottom();
-      });
-    }
-  }, [inputAreaHeight, isAtBottom, scrollToBottom]);
+  // Scroll to bottom when input area changes (if at bottom) - Disabled for mobile UX
+  // useEffect(() => {
+  //   if (inputAreaHeight > 0 && isAtBottom) {
+  //     requestAnimationFrame(() => {
+  //       scrollToBottom();
+  //     });
+  //   }
+  // }, [inputAreaHeight, isAtBottom, scrollToBottom]);
 
-  // Additional auto-scroll check (this might be the missing one)
-  useEffect(() => {
-    if (messages.length > 0 && isAtBottom) {
-      requestAnimationFrame(() => {
-        scrollToBottom();
-      });
-    }
-  }, [messages, isAtBottom, scrollToBottom]);
+  // Auto-scroll disabled for better mobile UX
+  // useEffect(() => {
+  //   if (messages.length > 0 && isAtBottom) {
+  //     requestAnimationFrame(() => {
+  //       scrollToBottom();
+  //     });
+  //   }
+  // }, [messages, isAtBottom, scrollToBottom]);
 
   // Handle file processing
   const processImageFile = (file: File) => {
@@ -1735,7 +1735,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col bg-background h-full overflow-hidden">
+    <div className="flex flex-col bg-background h-full overflow-hidden" style={{ overscrollBehavior: "contain" }}>
       {/* Fixed Header Container */}
       <div className="flex-shrink-0">
         {/* Header */}
@@ -2469,6 +2469,8 @@ export default function Chat() {
               )}
               <div ref={messagesEndRef} />
             </div>
+            {/* Spacer for fixed input area */}
+            <div style={{ height: `${inputAreaHeight || 120}px` }} />
           </div>
           
           {/* Scroll to bottom button */}
@@ -2492,13 +2494,13 @@ export default function Chat() {
           )}
         </div>
 
-      {/* Input Area */}
+      {/* Input Area - Fixed at bottom */}
       <div
         ref={inputAreaRef}
-        className="flex-shrink-0 bg-background border-t border-border"
-        style={{ marginBottom: "64px" }}
+        className="fixed bottom-0 left-0 right-0 bg-background overflow-hidden"
+        style={{ bottom: "64px", maxHeight: "200px", zIndex: 10 }}
       >
-          <div className="max-w-lg mx-auto px-4 py-4">
+          <div className="max-w-lg mx-auto px-4 pt-2" style={{ paddingBottom: "10px" }}>
             <form
               onSubmit={handleSubmit}
               className="relative focus:outline-none"
@@ -2523,9 +2525,9 @@ export default function Chat() {
                 )}
 
                 {/* Bottom row with icons, input, and send button */}
-                <div className="flex items-center">
+                <div className="flex items-center overflow-hidden">
                   {/* Left side icons */}
-                  <div className="flex items-center gap-3 mr-3">
+                  <div className="flex items-center gap-3 mr-3 flex-shrink-0">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -2569,9 +2571,9 @@ export default function Chat() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Ask Bob anything"
-                    className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none focus:outline-none focus:ring-0 text-[15px]"
+                    className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none focus:outline-none focus:ring-0 text-[15px] min-w-0"
                     disabled={isStreaming}
-                    style={{ WebkitAppearance: "none" }}
+                    style={{ WebkitAppearance: "none", overflow: "hidden" }}
                   />
 
                   {/* Send/Stop button */}
@@ -2582,7 +2584,7 @@ export default function Chat() {
                         logger.info("[Chat] User requested to stop streaming");
                         stopStreaming();
                       }}
-                      className="ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80 bg-foreground text-background"
+                      className="ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80 bg-foreground text-background flex-shrink-0"
                     >
                       <Square className="h-4 w-4" />
                     </button>
@@ -2593,7 +2595,7 @@ export default function Chat() {
                         (!input.trim() && !selectedImage) || isUploading
                       }
                       className={cn(
-                        "ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80",
+                        "ml-2 rounded-full p-1.5 transition-opacity focus:outline-none focus:ring-0 hover:opacity-80 flex-shrink-0",
                         (!input.trim() && !selectedImage) || isUploading
                           ? "bg-muted text-muted-foreground cursor-not-allowed"
                           : "bg-foreground text-background",

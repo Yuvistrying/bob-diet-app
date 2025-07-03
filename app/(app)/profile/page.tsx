@@ -100,8 +100,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100vh", minHeight: "-webkit-fill-available" }}>
-      <div className="flex-1 overflow-y-auto bg-background" style={{ paddingBottom: "60px" }}>
+    <div className="flex flex-col bg-background h-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background" style={{ paddingBottom: "100px", overscrollBehavior: "contain" }}>
         <div className="max-w-lg mx-auto px-4">
       {/* Always show sign out button at the top */}
       <div className="pt-4">
