@@ -1277,6 +1277,11 @@ export default function Chat() {
     // Don't add message here - the streaming hook will add it
     setInput("");
     lastSentMessageRef.current = { content: messageContent, timestamp: now };
+    
+    // Auto-scroll to bottom immediately when user sends message
+    requestAnimationFrame(() => {
+      scrollToBottom();
+    });
 
     try {
       let finalMessage = userMessage;
@@ -1343,8 +1348,6 @@ export default function Chat() {
         threadId || undefined,
         storageId || undefined,
       );
-
-      // The transform will be handled by the useEffect that watches for new user messages
     } catch (error) {
       logger.error("Error sending message:", error);
       // Add error message
