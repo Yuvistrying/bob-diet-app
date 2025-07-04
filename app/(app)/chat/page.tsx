@@ -507,30 +507,8 @@ export default function Chat() {
     skipQueries,
   ]);
 
-  // Clear any old localStorage data on mount to prevent cross-user data leakage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Check for old confirmations from previous days and clear them
-      const savedConfirmations = localStorage.getItem("foodConfirmations");
-      if (savedConfirmations) {
-        try {
-          const parsed = JSON.parse(savedConfirmations);
-          const today = new Date().toISOString().split("T")[0];
-          // Only keep today's confirmations
-          if (parsed.date !== today) {
-            logger.info(
-              "[Chat] Clearing old confirmations from previous day:",
-              parsed.date,
-            );
-            localStorage.removeItem("foodConfirmations");
-          }
-        } catch (e) {
-          logger.error("[Chat] Error checking saved confirmations:", e);
-          localStorage.removeItem("foodConfirmations");
-        }
-      }
-    }
-  }, []);
+  // Note: Confirmation state is now managed entirely through Convex
+  // No localStorage is used for food confirmations to ensure cross-device consistency
 
   // Track if we've synced messages for this thread
   const [syncedThreadId, setSyncedThreadId] = useState<string | null>(null);
@@ -579,11 +557,26 @@ export default function Chat() {
               a = (a << 5) - a + b.charCodeAt(0);
               return a & a;
             }, 0);
-        return `confirm-${Math.abs(contentHash)}-${messageIndex}`;
+        const fallbackId = `confirm-${Math.abs(contentHash)}-${messageIndex}`;
+        logger.info("[Chat] Generating confirmation ID:", {
+          toolCallId: toolCallId || "none",
+          fallbackId,
+          mealType: args.mealType,
+          totalCalories: args.totalCalories,
+          foodItems: args.items,
+        });
+        return fallbackId;
       }
 
       // Use timestamp-based ID for consistency across devices
-      return `confirm-${timestamp}`;
+      const confirmId = `confirm-${timestamp}`;
+      logger.info("[Chat] Generating confirmation ID:", {
+        toolCallId,
+        timestamp,
+        confirmId,
+        foodItems: args.items,
+      });
+      return confirmId;
     },
     [],
   );
@@ -644,36 +637,7 @@ export default function Chat() {
       }
     }, 100);
 
-    // Restore confirmed/rejected states from localStorage after loading messages
-    const savedConfirmations = localStorage.getItem("foodConfirmations");
-    if (savedConfirmations) {
-      try {
-        const parsed = JSON.parse(savedConfirmations);
-        const today = new Date().toISOString().split("T")[0];
-        if (parsed.date === today) {
-          if (parsed.confirmed && parsed.confirmed.length > 0) {
-            logger.info(
-              "[Chat] Restoring confirmed states after loading messages:",
-              parsed.confirmed,
-            );
-            setConfirmedFoodLogs(
-              (prev) => new Set([...prev, ...parsed.confirmed]),
-            );
-          }
-          if (parsed.rejected && parsed.rejected.length > 0) {
-            logger.info(
-              "[Chat] Restoring rejected states after loading messages:",
-              parsed.rejected,
-            );
-            setRejectedFoodLogs(
-              (prev) => new Set([...prev, ...parsed.rejected]),
-            );
-          }
-        }
-      } catch (e) {
-        logger.error("Error restoring confirmation states:", e);
-      }
-    }
+    // Confirmation states are now loaded from Convex via confirmedBubblesFromDB subscription
   }, [threadMessages, threadId, syncedThreadId]);
 
   // Sync confirmed bubbles from database when they load
@@ -698,9 +662,11 @@ export default function Chat() {
     });
 
     if (confirmed.size > 0) {
+      console.log("[Chat] Adding confirmed IDs from DB:", Array.from(confirmed));
       setConfirmedFoodLogs((prev) => new Set([...prev, ...confirmed]));
     }
     if (rejected.size > 0) {
+      console.log("[Chat] Adding rejected IDs from DB:", Array.from(rejected));
       setRejectedFoodLogs((prev) => new Set([...prev, ...rejected]));
     }
   }, [confirmedBubblesFromDB]);
@@ -1600,128 +1566,10 @@ export default function Chat() {
     return "text-destructive";
   };
 
-  // Persist confirmation states to localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined" && messages.length > 0) {
-      // Debounce the localStorage save
-      const timeoutId = setTimeout(() => {
-        // Find all confirmation messages with their IDs
-        const confirmations = messages
-          .map((msg, idx) => ({ msg, idx }))
-          .filter(({ msg }) =>
-            msg.toolCalls?.some(
-              (tc) =>
-                tc.toolName === "confirmFood" ||
-                tc.toolName === "analyzeAndConfirmPhoto",
-            ),
-          )
-          .map(({ msg, idx }) => {
-            const confirmCall = msg.toolCalls?.find(
-              (tc) =>
-                tc.toolName === "confirmFood" ||
-                tc.toolName === "analyzeAndConfirmPhoto",
-            );
+  // Note: Confirmation states are persisted only to Convex via saveConfirmedBubble mutation
+  // This ensures consistency across all devices and sessions
 
-            // Extract args properly for both tool types
-            let args = confirmCall?.args;
-            if (
-              confirmCall?.toolName === "analyzeAndConfirmPhoto" &&
-              args?.analysisComplete
-            ) {
-              const { analysisComplete, ...confirmationData } = args;
-              args = confirmationData;
-            }
-
-            const argsWithToolCallId = {
-              ...args,
-              _toolCallId: confirmCall?.toolCallId,
-            };
-            const confirmId = getConfirmationId(argsWithToolCallId, idx);
-            return {
-              index: idx,
-              confirmId: confirmId,
-              content: msg.content,
-              args: args,
-              triggerContent: messages[idx - 1]?.content || "",
-              isConfirmed: confirmedFoodLogs.has(confirmId),
-            };
-          });
-
-        // Save to localStorage
-        localStorage.setItem(
-          "foodConfirmations",
-          JSON.stringify({
-            date: new Date().toISOString().split("T")[0],
-            confirmations: confirmations,
-            confirmed: Array.from(confirmedFoodLogs),
-            rejected: Array.from(rejectedFoodLogs),
-          }),
-        );
-      }, 500); // Wait 500ms before saving
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [messages, confirmedFoodLogs, rejectedFoodLogs, getConfirmationId]);
-
-  // Additional effect to restore confirmation states when messages change
-  // This ensures confirmations are properly restored even if they were saved with different IDs
-  useEffect(() => {
-    if (messages.length === 0) return;
-
-    const savedConfirmations = localStorage.getItem("foodConfirmations");
-    if (!savedConfirmations) return;
-
-    try {
-      const parsed = JSON.parse(savedConfirmations);
-      const today = new Date().toISOString().split("T")[0];
-
-      if (parsed.date === today && parsed.confirmations) {
-        // Re-generate IDs for current messages and check if any match saved confirmations
-        messages.forEach((msg, idx) => {
-          const confirmCall = msg.toolCalls?.find(
-            (tc) =>
-              tc.toolName === "confirmFood" ||
-              tc.toolName === "analyzeAndConfirmPhoto",
-          );
-
-          if (confirmCall) {
-            let args = confirmCall.args;
-            if (
-              confirmCall.toolName === "analyzeAndConfirmPhoto" &&
-              args?.analysisComplete
-            ) {
-              const { analysisComplete, ...confirmationData } = args;
-              args = confirmationData;
-            }
-
-            const argsWithToolCallId = {
-              ...args,
-              _toolCallId: confirmCall.toolCallId,
-            };
-            const confirmId = getConfirmationId(argsWithToolCallId, idx);
-
-            // Check if this confirmation was previously confirmed/rejected
-            if (
-              parsed.confirmed?.includes(confirmId) &&
-              !confirmedFoodLogs.has(confirmId)
-            ) {
-              logger.info("[Chat] Restoring confirmed state for:", confirmId);
-              setConfirmedFoodLogs((prev) => new Set(prev).add(confirmId));
-            }
-            if (
-              parsed.rejected?.includes(confirmId) &&
-              !rejectedFoodLogs.has(confirmId)
-            ) {
-              logger.info("[Chat] Restoring rejected state for:", confirmId);
-              setRejectedFoodLogs((prev) => new Set(prev).add(confirmId));
-            }
-          }
-        });
-      }
-    } catch (e) {
-      logger.error("[Chat] Error restoring confirmation states:", e);
-    }
-  }, [messages, getConfirmationId, confirmedFoodLogs, rejectedFoodLogs]);
+  // Confirmation states are loaded from Convex and synced via confirmedBubblesFromDB
 
   // Show loading state while checking auth
   if (isSignedIn === undefined) {
@@ -2168,8 +2016,40 @@ export default function Chat() {
                           confirmId,
                           foodItems: args.items?.map((item: any) => item.name),
                         });
-                        const isConfirmed = confirmedFoodLogs.has(confirmId);
-                        const isRejected = rejectedFoodLogs.has(confirmId);
+                        
+                        // Check if we're still loading confirmed bubbles from database
+                        // If so, check if this bubble exists in the DB to prevent flash of pending state
+                        const isLoadingBubbles = confirmedBubblesFromDB === undefined && threadId;
+                        let isConfirmedInDB = false;
+                        let isRejectedInDB = false;
+                        
+                        if (confirmedBubblesFromDB) {
+                          const bubbleInDB = confirmedBubblesFromDB.find(
+                            (b) => b.confirmationId === confirmId
+                          );
+                          if (bubbleInDB) {
+                            isConfirmedInDB = bubbleInDB.status === "confirmed";
+                            isRejectedInDB = bubbleInDB.status === "rejected";
+                          }
+                        }
+                        
+                        // Use local state if available, otherwise use DB state
+                        const isConfirmed = confirmedFoodLogs.has(confirmId) || isConfirmedInDB;
+                        const isRejected = rejectedFoodLogs.has(confirmId) || isRejectedInDB;
+                        
+                        // Enhanced logging for debugging persistence
+                        console.log("[Chat] Bubble state check:", {
+                          confirmId,
+                          isConfirmedInDB,
+                          isRejectedInDB,
+                          localConfirmed: confirmedFoodLogs.has(confirmId),
+                          localRejected: rejectedFoodLogs.has(confirmId),
+                          toolCallId: confirmFoodCall?.toolCallId,
+                          messageIndex: index,
+                          threadId,
+                          dbLoaded: confirmedBubblesFromDB !== undefined,
+                        });
+                        
 
                         // Always show confirmations - persistence handles old ones
                         // Don't filter based on date here since we already handle that in loading
