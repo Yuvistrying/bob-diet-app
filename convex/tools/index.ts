@@ -293,6 +293,74 @@ export function createTools(
     },
   });
 
+  // Weekly insights tool (for Sunday summaries)
+  tools.weeklyInsights = tool({
+    description: "Show weekly summary with progress, insights, and calibration updates",
+    parameters: z.object({
+      showCalibration: z.boolean().default(true).describe("Whether to include calibration update if applicable"),
+    }),
+    execute: async (args) => {
+      // Get user profile
+      const profile = await convexClient.query(api.userProfiles.getUserProfile, {});
+      if (!profile) {
+        return { error: "No user profile found" };
+      }
+
+      // Get week dates
+      const now = new Date();
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() - now.getDay()); // Last Sunday
+      const monday = new Date(sunday);
+      monday.setDate(sunday.getDate() - 6); // Monday before
+      
+      const weekStartStr = monday.toISOString().split('T')[0];
+      const weekEndStr = sunday.toISOString().split('T')[0];
+
+      // Get weight data for the week
+      const weightLogs = await convexClient.query(api.weightLogs.getWeightLogsRange, {
+        startDate: weekStartStr,
+        endDate: weekEndStr,
+      });
+
+      // Get food logs for the week
+      const foodStats = await convexClient.query(api.foodLogs.getWeeklyStats, {
+        weekStartDate: weekStartStr,
+      });
+
+      // Get calibration data
+      const calibrationData = await convexClient.query(api.calibration.getLatestCalibration, {});
+
+      // Calculate metrics
+      const startWeight = weightLogs[0]?.weight || profile.currentWeight;
+      const endWeight = weightLogs[weightLogs.length - 1]?.weight || startWeight;
+      const weightChange = endWeight - startWeight;
+      const loggingConsistency = foodStats ? Math.round((foodStats.mealsLogged / 21) * 100) : 0;
+
+      // Build summary data
+      const summaryData = {
+        weekStartDate: weekStartStr,
+        weekEndDate: weekEndStr,
+        startWeight,
+        endWeight,
+        weightChange,
+        averageDailyCalories: foodStats?.averageCalories || 0,
+        targetDailyCalories: profile.dailyCalorieTarget,
+        mealsLogged: foodStats?.mealsLogged || 0,
+        totalMealsPossible: 21,
+        loggingConsistency,
+        weightTrackingDays: weightLogs.length,
+        expectedWeightChange: foodStats?.expectedWeightChange || 0,
+        actualWeightChange: weightChange,
+        calibrationAdjustment: calibrationData?.adjustment || undefined,
+      };
+
+      // Save summary to database
+      await convexClient.mutation(api.weeklySummaries.saveWeeklySummary, summaryData);
+
+      return summaryData;
+    },
+  });
+
   return tools;
 }
 

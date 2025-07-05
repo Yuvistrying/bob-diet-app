@@ -464,4 +464,32 @@ export default defineSchema({
   .index("by_user", ["userId"])
   .index("by_user_triggered", ["userId", "bobSuggested"])
   .index("by_achieved_date", ["achievedAt"]),
+  
+  // Weekly summaries for user progress tracking
+  weeklySummaries: defineTable({
+    userId: v.string(),
+    weekStartDate: v.string(), // YYYY-MM-DD of the Monday
+    weekEndDate: v.string(), // YYYY-MM-DD of the Sunday
+    startWeight: v.number(),
+    endWeight: v.number(),
+    weightChange: v.number(),
+    averageDailyCalories: v.number(),
+    targetDailyCalories: v.number(),
+    mealsLogged: v.number(),
+    totalMealsPossible: v.number(), // Usually 21 (3 meals x 7 days)
+    loggingConsistency: v.number(), // Percentage
+    weightTrackingDays: v.number(),
+    expectedWeightChange: v.number(), // Based on calorie deficit/surplus
+    actualWeightChange: v.number(),
+    calibrationAdjustment: v.optional(v.object({
+      oldTarget: v.number(),
+      newTarget: v.number(),
+      reason: v.string(),
+    })),
+    insights: v.string(), // The full text Bob shares
+    createdAt: v.number(),
+  })
+  .index("by_user", ["userId"])
+  .index("by_user_week", ["userId", "weekStartDate"])
+  .index("by_created", ["createdAt"]),
 });
