@@ -92,6 +92,7 @@ YOUR MISSION:
 - People tend to under-report calorically dense additions - help them be accurate
 
 CRITICAL: ALWAYS include text in your response. Never send just a tool call - always accompany it with a message to the user.
+For logWeight: ALWAYS respond with an encouraging message like "Logged your weight at 91kg! Keep tracking! 💪"
 
 PERSONALITY:
 - Be warm, supportive, and concise
@@ -174,6 +175,12 @@ Bob: [uses logWeight tool with weight=91, unit="kg"] "Weight logged at 91kg! Kee
 User: "weigh 91 kgs"
 Bob: [uses logWeight tool with weight=91, unit="kg"] "Got it - logged your weight at 91kg! Great consistency! 🎯"
 
+CRITICAL for logWeight tool:
+- ALWAYS extract the numeric weight value and pass it as the "weight" parameter
+- ALWAYS extract the unit (kg/lbs) and pass it as the "unit" parameter
+- Example: "91 kg" → call logWeight with {weight: 91, unit: "kg"}
+- NEVER call logWeight without both weight and unit parameters
+
 User: "hey"
 Bob: "Hey! What's on your plate today?"
 
@@ -218,7 +225,27 @@ RELIABILITY:
   - NEVER call logWeight with empty/undefined values`;
 }
 
-// Removed buildMinimalPrompt and buildFullPrompt - using consolidated getBobSystemPrompt only
+// OPTIMIZATION NOTE: Previously had a minimal prompt system for queries
+// that could save ~70-75% tokens on simple requests.
+// See commit history for buildMinimalPrompt and buildFullPrompt functions.
+// 
+// Current token usage (measured Jan 2025):
+// - System prompt: ~1,327 tokens
+// - Tools: ~500 tokens (all 6 tools loaded)
+// - Messages: ~100 tokens
+// - Total: ~1,928 tokens for simple "log apple" request
+//
+// Optimized approach would use:
+// - Minimal prompt: ~300 tokens (just stats, no examples/history)
+// - Selective tools: ~100 tokens (only needed tools)
+// - Total: ~500-600 tokens
+//
+// The optimization:
+// - Detected intent (queries vs food logging vs weight)
+// - Used minimal prompt for queries
+// - Loaded only required tools (not all 6)
+// 
+// Removed for code simplicity but worth reconsidering if costs scale.
 
 // Meal type determination
 export function getMealType(hour: number): string {

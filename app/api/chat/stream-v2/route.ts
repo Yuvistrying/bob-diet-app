@@ -3,10 +3,9 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import { api, internal } from "../../../../convex/_generated/api";
-import { getBobSystemPrompt, buildPromptContext, buildMinimalPrompt } from "../../../../convex/prompts";
+import { getBobSystemPrompt, buildPromptContext } from "../../../../convex/prompts";
 import { createTools, detectIntent, getToolsForIntent } from "../../../../convex/tools";
 import { StreamDebugger } from "./debug";
-import { getCached, CACHE_KEYS, CACHE_TTL } from "../../../utils/queryCache";
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -94,39 +93,33 @@ export async function POST(req: Request) {
     // 3. Get daily summary and other context in parallel
     console.log("[stream-v2] Fetching context data for thread:", threadId);
     
-    let dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs;
+    let dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs, dietaryPreferences;
     
     try {
-      [dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs] = await Promise.all([
-      // Daily summary (includes profile, stats, yesterday summary) - CACHED
-      getCached(
-        CACHE_KEYS.dailySummary(userId),
-        () => convexClient.query(api.dailySummary.getDailySummary, {}),
-        CACHE_TTL.dailySummary
-      ),
-      // User preferences - CACHED
-      getCached(
-        CACHE_KEYS.preferences(userId),
-        () => convexClient.query(api.userPreferences.getUserPreferences, {}),
-        CACHE_TTL.preferences
-      ),
-      // Pending confirmations - NOT CACHED (needs to be real-time)
+      [dailySummary, preferences, pendingConfirmation, threadMessages, threadSummaries, calibrationData, todayFoodLogs, dietaryPreferences] = await Promise.all([
+      // Daily summary (includes profile, stats, yesterday summary)
+      convexClient.query(api.dailySummary.getDailySummary, {}),
+      // User preferences
+      convexClient.query(api.userPreferences.getUserPreferences, {}),
+      // Pending confirmations - needs to be real-time
       convexClient.query(api.pendingConfirmations.getLatestPendingConfirmation, {
         threadId
       }),
-      // Get recent messages - NOT CACHED (needs to be real-time)
+      // Get recent messages - needs to be real-time
       convexClient.query(api.threads.getThreadMessages, {
         threadId,
         limit: 5  // Only recent messages, summaries will provide older context
       }),
-      // Get thread summaries - NOT CACHED (needs to be real-time)
+      // Get thread summaries - needs to be real-time
       convexClient.query(api.threads.getThreadSummaries, {
         threadId
       }),
-      // Calibration insights - NOT CACHED (updated infrequently)
+      // Calibration insights
       convexClient.query(api.calibration.getLatestCalibration, {}),
-      // Get today's actual food logs - NOT CACHED (needs to be real-time for confirmations)
-      convexClient.query(api.foodLogs.getTodayLogs, {})
+      // Get today's actual food logs - needs to be real-time for confirmations
+      convexClient.query(api.foodLogs.getTodayLogs, {}),
+      // Get dietary preferences
+      convexClient.query(api.dietaryPreferences.getUserDietaryPreferences, {})
     ]);
     } catch (queryError: any) {
       console.error("[stream-v2] Error fetching context data:", queryError);
@@ -172,28 +165,15 @@ export async function POST(req: Request) {
       coreStats.yesterdayTotal,
       coreStats.hasWeighedToday,
       todayFoodLogs,
-      dailySummary?.achievement
+      dailySummary?.achievement,
+      dietaryPreferences
     );
     
-    // 6. Detect intents and determine prompt type
+    // 6. Detect intents for tool selection only
     const intents = detectIntent(prompt);
     
-    // Smart prompt selection - greetings should use full prompt for better personality
-    const isSimpleQuery = 
-      (prompt.toLowerCase().trim().length < 20 && 
-       ['yes', 'no', 'ok', 'thanks', 'yeah', 'yep', 'sure', 'correct'].includes(prompt.toLowerCase().trim())) ||
-      (intents.includes('confirmation') && pendingConfirmation);
-    
-    // Override: greetings should always use full prompt for personality
-    const isGreeting = intents.includes('greeting') || 
-                      ['hi', 'hey', 'hello', 'morning', 'evening'].includes(prompt.toLowerCase().trim());
-    
-    const useMinimalPrompt = isSimpleQuery && !isGreeting;
-    
-    // Use minimal prompt for simple queries, full prompt for complex ones
-    let systemPrompt = useMinimalPrompt 
-      ? buildMinimalPrompt(promptContext)
-      : getBobSystemPrompt(promptContext);
+    // Always use the consolidated prompt
+    let systemPrompt = getBobSystemPrompt(promptContext);
     
     // Add photo analysis instruction if storageId is present
     if (storageId) {
@@ -202,14 +182,11 @@ export async function POST(req: Request) {
       console.log("[stream-v2] Photo upload detected with storageId:", storageId);
     }
     
-    console.log("[stream-v2] Prompt selection:", {
-      isSimpleQuery,
-      isGreeting,
-      useMinimalPrompt,
-      promptType: useMinimalPrompt ? "minimal" : "full",
+    console.log("[stream-v2] Prompt info:", {
       promptLength: systemPrompt.length,
       intents,
-      userPrompt: prompt
+      userPrompt: prompt,
+      hasDietaryPreferences: !!dietaryPreferences
     });
     
     // 7. Create tools based on intent
@@ -217,17 +194,11 @@ export async function POST(req: Request) {
     
     let tools;
     try {
-      // Only load tools if needed
+      // Only load tools if needed based on intent
       const toolsNeeded = getToolsForIntent(intents, !!pendingConfirmation);
       
-      // For simple confirmations with pending food, only load logFood tool
-      if (useMinimalPrompt && pendingConfirmation) {
-        tools = {
-          logFood: createTools(convexClient, userId, threadId, storageId, pendingConfirmation).logFood
-        };
-      } else if (useMinimalPrompt && !pendingConfirmation) {
-        tools = {}; // No tools for simple non-confirmation queries
-      } else if (!useMinimalPrompt || toolsNeeded.needsFoodTools || toolsNeeded.needsWeightTool || toolsNeeded.needsProgressTool) {
+      // Load all tools when needed
+      if (toolsNeeded.needsFoodTools || toolsNeeded.needsWeightTool || toolsNeeded.needsProgressTool || toolsNeeded.needsSearchTool) {
         tools = createTools(
           convexClient,
           userId,
@@ -296,8 +267,7 @@ export async function POST(req: Request) {
         messagesCount: messages.length,
         systemPromptLength: systemPrompt.length,
         hasStorageId: !!storageId,
-        useMinimalPrompt,
-        promptType: useMinimalPrompt ? "minimal" : "full"
+        hasDietaryPreferences: !!dietaryPreferences
       });
 
       // Log the actual messages being sent

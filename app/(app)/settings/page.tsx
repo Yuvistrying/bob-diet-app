@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Mail,
   Shield,
-  Bell
+  Bell,
+  Utensils
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ClientOnly } from "~/app/components/ClientOnly";
@@ -67,6 +68,12 @@ export default function Settings() {
     {
       title: "Preferences",
       items: [
+        {
+          icon: Utensils,
+          label: "Dietary Preferences",
+          description: "Manage your dietary restrictions and preferences",
+          href: "/settings/dietary",
+        },
         {
           icon: theme === "dark" ? Moon : Sun,
           label: "Theme",

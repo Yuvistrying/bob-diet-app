@@ -421,16 +421,6 @@ export default function Chat() {
   const isOnboarding = !onboardingStatus?.completed;
   const isStealthMode = preferences?.displayMode === "stealth";
 
-  // Debug logging for stats cards
-  logger.info("[Chat] Stats cards visibility check:", {
-    isSignedIn,
-    isOnboarding,
-    onboardingCompleted: onboardingStatus?.completed,
-    hasProfile: !!profile,
-    hasTodayStats: !!todayStats,
-    skipQueries,
-  });
-
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (isSignedIn === false) {
@@ -591,13 +581,14 @@ export default function Chat() {
 
     logger.info(`[Chat] Thread changed from ${syncedThreadId} to ${threadId}`);
 
-    // If threadMessages is empty, this is a new thread - keep existing messages (like greeting)
+    // If threadMessages is empty, this is a new thread
     if (threadMessages.length === 0) {
       logger.info(
-        `[Chat] New thread with no messages - keeping existing messages`,
+        `[Chat] New thread with no messages in database`,
       );
       setSyncedThreadId(threadId);
       setHasLoadedHistory(true);
+      // Don't overwrite existing messages (like greeting) with empty array
       return;
     }
 
@@ -787,19 +778,21 @@ export default function Chat() {
         profile &&
         hasLoadedHistory &&
         dailySummary !== undefined &&
-        threadId
+        threadId &&
+        threadMessages !== undefined // Wait for threadMessages to be loaded
       ) {
         try {
           // This will create a new session if needed or return existing one
           const session = await getOrCreateDailySession({});
 
-          // Check if this is a new session for today AND we have no messages
+          // Check if this is a new session for today AND we have no messages in database
           const today = new Date().toISOString().split("T")[0];
           if (
             session &&
             session.messageCount === 0 &&
             session.startDate === today &&
-            messages.length === 0
+            messages.length === 0 &&
+            threadMessages?.length === 0 // Check database messages too
           ) {
             // New session with no history - show greeting
             let greeting = `Good morning ${profile?.name || "there"}! 🌅`;
@@ -886,6 +879,7 @@ export default function Chat() {
     messages.length,
     preferences,
     threadId,
+    threadMessages,
     saveMessage,
     getOrCreateDailySession,
     setMessages,
@@ -1970,6 +1964,11 @@ export default function Chat() {
                           tc.toolName === "confirmFood" ||
                           tc.toolName === "analyzeAndConfirmPhoto",
                       );
+
+                      // Skip messages that only have non-confirmation tool calls and no content
+                      if (!confirmFoodCall && !message.content) {
+                        return null;
+                      }
 
                       if (confirmFoodCall) {
                         // For analyzeAndConfirmPhoto, the confirmation data is in args, not result

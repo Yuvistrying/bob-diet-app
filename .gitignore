@@ -16,3 +16,6 @@ next-env.d.ts
 # Temporary directories
 temp/
 temp-bob-diet-app/
+
+# Project documentation with secrets
+CLAUDE.md

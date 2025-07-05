@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { checkGoalAchievement } from "./goalAchievements";
 
 // Get latest weight entry
 export const getLatestWeight = query({
@@ -141,9 +142,6 @@ export const logWeight = mutation({
       
       // Need at least 3 logs in the week for valid average
       if (weekAverage && weekAverage.count >= 3) {
-        // Import the check function
-        const { checkGoalAchievement } = await import("./goalAchievements");
-        
         // For maintenance goals, also get previous week's average
         let previousWeekAverage;
         if (profile.goal === "maintain") {

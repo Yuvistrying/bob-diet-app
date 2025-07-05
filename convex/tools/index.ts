@@ -207,8 +207,32 @@ export function createTools(
       notes: z.string().optional().describe("Any notes about the weight"),
     }),
     execute: async (args) => {
-      const logId = await convexClient.mutation(api.weightLogs.logWeight, args);
-      return { success: true, logId };
+      console.log("[logWeight tool] Execute called with args:", args);
+      console.log("[logWeight tool] Weight:", args.weight, "Unit:", args.unit);
+      
+      if (!args.weight || !args.unit) {
+        console.error("[logWeight tool] ERROR: Missing required parameters!", {
+          weight: args.weight,
+          unit: args.unit,
+          fullArgs: args
+        });
+        return { 
+          success: false, 
+          error: `Missing required parameters: weight=${args.weight}, unit=${args.unit}` 
+        };
+      }
+      
+      try {
+        const logId = await convexClient.mutation(api.weightLogs.logWeight, args);
+        console.log("[logWeight tool] Successfully logged weight with ID:", logId);
+        return { success: true, logId };
+      } catch (error) {
+        console.error("[logWeight tool] ERROR calling mutation:", error);
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : "Unknown error" 
+        };
+      }
     },
   });
 
