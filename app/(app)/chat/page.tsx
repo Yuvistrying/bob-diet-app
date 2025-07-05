@@ -671,6 +671,93 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
+  // Auto-refresh at 3:30 AM local time
+  useEffect(() => {
+    if (!threadId) return;
+
+    // Calculate time until next 3:30 AM
+    const getTimeUntilRefresh = () => {
+      const now = new Date();
+      const next330AM = new Date();
+      next330AM.setHours(3, 30, 0, 0);
+      
+      // If it's already past 3:30 AM today, set for tomorrow
+      if (now > next330AM) {
+        next330AM.setDate(next330AM.getDate() + 1);
+      }
+      
+      return next330AM.getTime() - now.getTime();
+    };
+
+    // Check if thread is from a different day
+    const checkIfNewDay = () => {
+      const threadDate = threadId.split('_').pop();
+      if (!threadDate) return false;
+      
+      const threadDay = new Date(parseInt(threadDate)).toDateString();
+      const today = new Date().toDateString();
+      
+      return threadDay !== today;
+    };
+
+    // If it's already a new day, refresh immediately
+    if (checkIfNewDay()) {
+      logger.info('[Chat] Thread is from a different day, refreshing...');
+      window.location.reload();
+      return;
+    }
+
+    // Set timer for 3:30 AM refresh
+    const timeUntilRefresh = getTimeUntilRefresh();
+    logger.info('[Chat] Setting auto-refresh timer', {
+      timeUntilRefresh,
+      refreshAt: new Date(Date.now() + timeUntilRefresh).toLocaleString()
+    });
+
+    const refreshTimer = setTimeout(() => {
+      logger.info('[Chat] Auto-refreshing at 3:30 AM...');
+      window.location.reload();
+    }, timeUntilRefresh);
+
+    // Also check for warning period (3:25-3:30 AM)
+    const checkWarningPeriod = () => {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      
+      if (hours === 3 && minutes >= 25 && minutes < 30) {
+        const minutesLeft = 30 - minutes;
+        // Add system message warning
+        const warningMessage: Message = {
+          role: "assistant",
+          content: `🌙 Heads up! Chat will refresh in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} to start the new day fresh.`,
+          isStreaming: false,
+        };
+        setMessages(prev => [...prev, warningMessage]);
+      }
+    };
+
+    // Check if we're in warning period on mount
+    checkWarningPeriod();
+
+    // Check every minute if we should show warning
+    const warningInterval = setInterval(() => {
+      const lastMessage = messages[messages.length - 1];
+      const lastMessageTime = Date.now(); // Would be better to track actual message timestamps
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      
+      // Only show warning if user sent a message in last 5 minutes
+      if (lastMessage && lastMessage.role === 'user' && lastMessageTime > fiveMinutesAgo) {
+        checkWarningPeriod();
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      clearTimeout(refreshTimer);
+      clearInterval(warningInterval);
+    };
+  }, [threadId, messages]);
+
   // Check if user is at bottom of scroll
   const checkIfAtBottom = useCallback(() => {
     if (!scrollAreaRef.current) return;

@@ -298,3 +298,62 @@ export const getFoodLogsRange = query({
     return logs;
   },
 });
+
+// Get weekly food statistics
+export const getWeeklyStats = query({
+  args: {
+    weekStartDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    
+    // Get user profile for calorie target
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
+      .first();
+    
+    if (!profile) return null;
+    
+    // Calculate week end date (6 days after start)
+    const startDate = new Date(args.weekStartDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    const weekEndDate = endDate.toISOString().split('T')[0];
+    
+    // Get all food logs for the week
+    const logs = await ctx.db
+      .query("foodLogs")
+      .withIndex("by_user_date")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), identity.subject),
+          q.gte(q.field("date"), args.weekStartDate),
+          q.lte(q.field("date"), weekEndDate)
+        )
+      )
+      .collect();
+    
+    // Calculate statistics
+    const totalCalories = logs.reduce((sum, log) => sum + log.totalCalories, 0);
+    const daysWithLogs = new Set(logs.map(log => log.date)).size;
+    const averageCalories = daysWithLogs > 0 ? totalCalories / daysWithLogs : 0;
+    
+    // Count meals logged (assuming 3 meals per day)
+    const mealsLogged = logs.length;
+    
+    // Calculate expected weight change based on deficit/surplus
+    const dailyDeficit = profile.dailyCalorieTarget - averageCalories;
+    const weeklyDeficit = dailyDeficit * 7;
+    const expectedWeightChange = -(weeklyDeficit / 7700); // 7700 cal = 1kg
+    
+    return {
+      totalCalories,
+      averageCalories: Math.round(averageCalories),
+      mealsLogged,
+      daysWithLogs,
+      expectedWeightChange: Math.round(expectedWeightChange * 100) / 100,
+    };
+  },
+});

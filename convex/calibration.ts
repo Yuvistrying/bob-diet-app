@@ -279,7 +279,12 @@ export const getLatestCalibration = query({
     return {
       ...latest,
       isRecent,
-      weeksSince: Math.floor((Date.now() - latest.createdAt) / (7 * 24 * 60 * 60 * 1000))
+      weeksSince: Math.floor((Date.now() - latest.createdAt) / (7 * 24 * 60 * 60 * 1000)),
+      adjustment: latest.newCalorieTarget && latest.oldCalorieTarget ? {
+        oldTarget: latest.oldCalorieTarget,
+        newTarget: latest.newCalorieTarget,
+        reason: latest.reason,
+      } : null,
     };
   },
 });
