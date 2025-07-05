@@ -1,6 +1,7 @@
 import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
 import { useState } from "react";
+import { DietaryPreferencesCard } from "~/app/components/DietaryPreferencesCard";
 
 interface QuickResponseOption {
   label: string;
@@ -45,6 +46,10 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
     display_mode: [
       { label: "Show All Numbers", value: "standard", icon: "📊" },
       { label: "Stealth Mode", value: "stealth", icon: "🤫" }
+    ],
+    dietary_setup: [
+      { label: "Set Dietary Preferences", value: "set_preferences", icon: "🥗" },
+      { label: "Skip for Now", value: "skip_preferences", icon: "⏭️" }
     ],
     current_weight: [
       { label: "kg", value: "kg" },
@@ -162,6 +167,19 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
         >
           Continue →
         </Button>
+      </div>
+    );
+  }
+
+  // Special handling for dietary preferences
+  if (step === "dietary_preferences") {
+    return (
+      <div className="p-3">
+        <DietaryPreferencesCard 
+          showTitle={false}
+          compact={true}
+          onComplete={() => onSelect("preferences_saved")}
+        />
       </div>
     );
   }

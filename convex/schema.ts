@@ -95,6 +95,21 @@ export default defineSchema({
     updatedAt: v.number()
   }).index("by_user", ["userId"]),
 
+  // Dietary preferences and restrictions
+  dietaryPreferences: defineTable({
+    userId: v.string(),
+    restrictions: v.array(v.string()), // ["vegan", "vegetarian", "gluten-free", "dairy-free", "nut-free", "keto", "diabetic", etc.]
+    customNotes: v.optional(v.string()), // Free text for other restrictions/preferences
+    intermittentFasting: v.optional(v.object({
+      enabled: v.boolean(),
+      startHour: v.number(), // 0-23
+      endHour: v.number(), // 0-23
+      daysOfWeek: v.optional(v.array(v.number())), // 0-6 (Sun-Sat), if not provided = all days
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number()
+  }).index("by_user", ["userId"]),
+
   // Weight tracking
   weightLogs: defineTable({
     userId: v.string(),

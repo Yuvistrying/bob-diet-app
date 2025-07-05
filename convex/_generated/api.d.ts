@@ -20,6 +20,7 @@ import type * as crons from "../crons.js";
 import type * as dailySummary from "../dailySummary.js";
 import type * as dataCollectionTools from "../dataCollectionTools.js";
 import type * as debugSubscription from "../debugSubscription.js";
+import type * as dietaryPreferences from "../dietaryPreferences.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as fixOnboardingStatus from "../fixOnboardingStatus.js";
@@ -79,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   dailySummary: typeof dailySummary;
   dataCollectionTools: typeof dataCollectionTools;
   debugSubscription: typeof debugSubscription;
+  dietaryPreferences: typeof dietaryPreferences;
   embeddings: typeof embeddings;
   files: typeof files;
   fixOnboardingStatus: typeof fixOnboardingStatus;
