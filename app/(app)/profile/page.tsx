@@ -14,6 +14,7 @@ import { useAuth } from "@clerk/nextjs";
 import { cn } from "~/lib/utils";
 import { useRouter } from "next/navigation";
 import { LogOut, User, Settings, Flag, Scale, CreditCard, AlertTriangle } from "lucide-react";
+import { BottomNav } from "~/app/components/BottomNav";
 
 export default function Profile() {
   const { signOut } = useAuth();
@@ -101,7 +102,7 @@ export default function Profile() {
 
   return (
     <div className="flex flex-col bg-background h-full">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background" style={{ paddingBottom: "100px", overscrollBehavior: "contain" }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background pb-20" style={{ overscrollBehavior: "contain" }}>
         <div className="max-w-lg mx-auto px-4">
       {/* Always show sign out button at the top */}
       <div className="pt-4">
@@ -475,6 +476,9 @@ export default function Profile() {
       )}
         </div>
       </div>
+      
+      {/* Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
