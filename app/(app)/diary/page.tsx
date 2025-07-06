@@ -13,6 +13,7 @@ import { Label } from "~/app/components/ui/label";
 import { Plus, Utensils, Weight, Pencil, Trash2, TrendingDown, TrendingUp, ChevronLeft, ChevronRight, Flame, Beef, Wheat, Droplet, Calendar, BarChart3, LineChart as LineChartIcon } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BottomNav } from "~/app/components/BottomNav";
 
 export default function Logs() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -184,9 +185,9 @@ export default function Logs() {
   };
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100vh", minHeight: "-webkit-fill-available" }}>
+    <div className="flex flex-col bg-background h-full">
       <Tabs defaultValue="food" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-        <div className="border-b border-border">
+        <div className="border-b border-border flex-shrink-0">
           <div className="max-w-lg mx-auto px-4 pt-4 pb-2">
             <TabsList className="grid w-full grid-cols-2 bg-muted p-1 h-auto">
             <TabsTrigger 
@@ -208,7 +209,7 @@ export default function Logs() {
         </div>
 
         <TabsContent value="food" className="mt-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto" style={{ paddingBottom: "80px" }}>
+          <div className="h-full overflow-y-auto pb-20">
             <div className="max-w-lg mx-auto">
               {/* Today's Summary */}
               {isToday && (
@@ -388,7 +389,7 @@ export default function Logs() {
         </TabsContent>
 
         <TabsContent value="weight" className="mt-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto" style={{ paddingBottom: "140px" }}>
+          <div className="h-full overflow-y-auto pb-24">
             <div className="max-w-lg mx-auto px-3 py-3 space-y-4">
             {/* Current Week Section */}
             {currentWeekData && (
@@ -656,7 +657,7 @@ export default function Logs() {
             )}
 
             {/* Full Log History (Collapsible) */}
-            <div className="max-w-lg mx-auto mb-16 border border-border rounded-lg">
+            <div className="max-w-lg mx-auto mb-4 border border-border rounded-lg">
               <div className="p-4">
                 <button
                   onClick={() => setShowFullHistory(!showFullHistory)}
@@ -960,6 +961,9 @@ export default function Logs() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,7 @@ import { MarkdownMessage } from "~/app/components/MarkdownMessage";
 import { ThemeToggle } from "~/app/components/ThemeToggle";
 import { useChat } from "~/app/providers/ChatProvider";
 import { logger } from "~/app/utils/logger";
+import { BottomNav } from "~/app/components/BottomNav";
 
 interface Message {
   role: "user" | "assistant";
@@ -1767,7 +1769,8 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col bg-background h-full overflow-hidden" style={{ overscrollBehavior: "contain" }}>
+    <>
+      <div className="fixed inset-x-0 top-0 bottom-16 bg-background flex flex-col" style={{ overscrollBehavior: "contain" }}>
       {/* Fixed Header Container */}
       <div className="flex-shrink-0">
         {/* Header */}
@@ -2545,38 +2548,15 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
             {/* Spacer for fixed input area with small padding for breathing room */}
-            <div style={{ height: `${(inputAreaHeight || 120) + 24}px` }} />
-          </div>
-        </div>
-        
-        {/* Scroll to bottom button - Fixed but within container bounds */}
-        <div className="fixed bottom-0 left-0 right-0 pointer-events-none" style={{ bottom: `${(inputAreaHeight || 120) + 64 + 20}px` }}>
-          <div className="max-w-lg mx-auto px-4 relative">
-            {!isAtBottom && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={() => {
-                  scrollToBottom();
-                  setIsAtBottom(true);
-                }}
-                className="absolute right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0 pointer-events-auto"
-                style={{
-                  zIndex: 20,
-                }}
-              >
-                <ChevronDown className="h-5 w-5" />
-              </motion.button>
-            )}
+            <div style={{ height: `${(inputAreaHeight || 120) + 10}px` }} />
           </div>
         </div>
 
       {/* Input Area - Fixed at bottom */}
       <div
         ref={inputAreaRef}
-        className="fixed bottom-0 left-0 right-0 bg-background overflow-hidden"
-        style={{ bottom: "64px", maxHeight: "200px", zIndex: 10 }}
+        className="absolute bottom-0 left-0 right-0 bg-background overflow-hidden"
+        style={{ maxHeight: "200px", zIndex: 10 }}
       >
           <div className="max-w-lg mx-auto px-4 pt-2" style={{ paddingBottom: "10px" }}>
             <form
@@ -2692,5 +2672,34 @@ export default function Chat() {
           </div>
         </div>
       </div>
+      
+      {/* Scroll to bottom button - Fixed positioning with dynamic bottom */}
+      <div className="fixed bottom-0 left-0 right-0 pointer-events-none" 
+           style={{ bottom: `${(inputAreaHeight || 120) + 64 + 60}px` }}>
+        <div className="max-w-lg mx-auto px-4 relative">
+          <AnimatePresence>
+            {!isAtBottom && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                onClick={() => {
+                  scrollToBottom();
+                }}
+                className="absolute right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0 pointer-events-auto"
+                style={{
+                  zIndex: 20,
+                }}
+              >
+                <ChevronDown className="h-5 w-5" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+      
+      {/* Bottom Navigation - Outside the main container */}
+      <BottomNav />
+    </>
   );
 }
