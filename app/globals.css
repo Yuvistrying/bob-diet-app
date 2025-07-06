@@ -247,3 +247,55 @@ html {
     @apply bg-accent;
 }
 
+/* Mobile Navigation Optimizations */
+@layer utilities {
+    /* Improve touch responsiveness */
+    .touch-manipulation {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    /* Prevent navigation freezing on mobile */
+    nav a {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Disable text selection on navigation items */
+    nav {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    
+    /* Optimize for mobile performance */
+    @media (hover: none) and (pointer: coarse) {
+        /* Mobile-specific optimizations */
+        nav a {
+            /* Increase touch target size */
+            min-height: 44px;
+            /* Disable hover effects on touch devices */
+            transition: none !important;
+        }
+        
+        /* Prevent sticky hover states */
+        nav a:hover {
+            background-color: inherit !important;
+        }
+    }
+    
+    /* Fix for iOS Safari bounce scrolling */
+    .fixed {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Prevent double-tap zoom on navigation */
+    nav {
+        touch-action: pan-y !important;
+    }
+}
+
