@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
-import { flushSync } from "react-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -527,6 +526,7 @@ export default function Chat() {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [justScrolledUser, setJustScrolledUser] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   // Transform to push container up
   const [containerTransform, setContainerTransform] = useState(0);
@@ -537,6 +537,36 @@ export default function Chat() {
   const scrollToBottom = useCallback(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, []);
+
+  // Handle touch events to prevent scroll boundary issues
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartYRef.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!scrollAreaRef.current || touchStartYRef.current === null) return;
+
+    const touchY = e.touches[0].clientY;
+    const scrollTop = scrollAreaRef.current.scrollTop;
+    const scrollHeight = scrollAreaRef.current.scrollHeight;
+    const clientHeight = scrollAreaRef.current.clientHeight;
+    const isScrollingDown = touchY < touchStartYRef.current;
+    const isScrollingUp = touchY > touchStartYRef.current;
+
+    // At the top and trying to scroll up
+    if (scrollTop <= 0 && isScrollingUp) {
+      e.preventDefault();
+      return;
+    }
+
+    // At the bottom and trying to scroll down
+    if (scrollTop + clientHeight >= scrollHeight - 1 && isScrollingDown) {
+      e.preventDefault();
+      // Scroll up by 1 pixel to prevent the freeze
+      scrollAreaRef.current.scrollTop = scrollHeight - clientHeight - 1;
+      return;
     }
   }, []);
 
@@ -2109,6 +2139,12 @@ export default function Chat() {
           <div
             ref={scrollAreaRef}
             className="h-full overflow-y-auto overflow-x-hidden"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'none'
+            }}
           >
             <div className="max-w-lg mx-auto px-4 pt-4 space-y-4 relative">
               <ClientOnly>
@@ -2223,11 +2259,9 @@ export default function Chat() {
                                 isStreaming={isStreaming}
                                 onReject={async () => {
                                   // Mark as rejected
-                                  flushSync(() => {
-                                    setRejectedFoodLogs((prev) =>
-                                      new Set(prev).add(confirmId),
-                                    );
-                                  });
+                                  setRejectedFoodLogs((prev) =>
+                                    new Set(prev).add(confirmId),
+                                  );
 
                                   // Save to Convex for cross-device sync
                                   if (threadId && saveConfirmedBubble) {
@@ -2510,8 +2544,8 @@ export default function Chat() {
               )}
               <div ref={messagesEndRef} />
             </div>
-            {/* Spacer for fixed input area */}
-            <div style={{ height: `${inputAreaHeight || 120}px` }} />
+            {/* Spacer for fixed input area with small padding for breathing room */}
+            <div style={{ height: `${(inputAreaHeight || 120) + 24}px` }} />
           </div>
         </div>
         
