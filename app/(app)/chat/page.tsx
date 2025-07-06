@@ -73,14 +73,14 @@ const ChatMessage = memo(
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="flex flex-col items-stretch gap-2 max-w-[85%] ml-auto"
+          className="flex flex-col items-end gap-2 max-w-[85%] ml-auto"
         >
           {imageUrl && (
-            <div>
+            <div className="ml-auto">
               <img
                 src={imageUrl}
                 alt="User uploaded"
-                className="rounded-xl shadow-sm"
+                className="rounded-xl shadow-sm ml-auto"
                 style={{
                   maxHeight: "120px",
                   maxWidth: "120px",
@@ -2110,7 +2110,7 @@ export default function Chat() {
             ref={scrollAreaRef}
             className="h-full overflow-y-auto overflow-x-hidden"
           >
-            <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
+            <div className="max-w-lg mx-auto px-4 pt-4 space-y-4 relative">
               <ClientOnly>
                 <AnimatePresence initial={false}>
                   {messages.map((message, index) => {
@@ -2513,26 +2513,29 @@ export default function Chat() {
             {/* Spacer for fixed input area */}
             <div style={{ height: `${inputAreaHeight || 120}px` }} />
           </div>
-          
-          {/* Scroll to bottom button */}
-          {!isAtBottom && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              onClick={() => {
-                scrollToBottom();
-                setIsAtBottom(true);
-              }}
-              className="absolute right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0"
-              style={{
-                zIndex: 20,
-                bottom: "20px",
-              }}
-            >
-              <ChevronDown className="h-5 w-5" />
-            </motion.button>
-          )}
+        </div>
+        
+        {/* Scroll to bottom button - Fixed but within container bounds */}
+        <div className="fixed bottom-0 left-0 right-0 pointer-events-none" style={{ bottom: `${(inputAreaHeight || 120) + 64 + 60}px` }}>
+          <div className="max-w-lg mx-auto px-4 relative">
+            {!isAtBottom && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                onClick={() => {
+                  scrollToBottom();
+                  setIsAtBottom(true);
+                }}
+                className="absolute right-4 bg-muted border border-border text-foreground rounded-full p-2 shadow-md transition-all duration-200 hover:bg-muted/80 focus:outline-none focus:ring-0 pointer-events-auto"
+                style={{
+                  zIndex: 20,
+                }}
+              >
+                <ChevronDown className="h-5 w-5" />
+              </motion.button>
+            )}
+          </div>
         </div>
 
       {/* Input Area - Fixed at bottom */}
