@@ -297,5 +297,23 @@ html {
     nav {
         touch-action: pan-y !important;
     }
+    
+    /* Prevent scroll chaining and overscroll effects */
+    html, body {
+        overscroll-behavior: none;
+    }
+    
+    /* Ensure proper scroll behavior on mobile */
+    .overflow-y-auto {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+    }
+    
+    /* Prevent body scroll when modal or fixed elements are present */
+    body.no-scroll {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+    }
 }
 
