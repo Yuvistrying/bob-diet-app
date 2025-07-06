@@ -1,9 +1,10 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageCircle, FileText, User } from "lucide-react";
 import { cn } from "~/lib/utils";
+import { useCallback, useState } from "react";
 
 const navigation = [
   { name: "Chat", href: "/chat", icon: MessageCircle },
@@ -13,6 +14,32 @@ const navigation = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Handle navigation with debouncing for mobile
+  const handleNavigation = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    // Prevent navigation if already navigating
+    if (isNavigating || pathname === href) {
+      e.preventDefault();
+      return;
+    }
+
+    // For mobile touch events, prevent default and handle manually
+    if ('ontouchstart' in window) {
+      e.preventDefault();
+      setIsNavigating(true);
+      
+      // Use router.push for programmatic navigation
+      router.push(href);
+      
+      // Reset navigation state after a delay
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 500);
+    }
+    // Let normal Link behavior handle desktop clicks
+  }, [pathname, router, isNavigating]);
 
   return (
     <div className="relative h-screen flex flex-col overflow-hidden">
@@ -33,12 +60,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.name}
                   href={item.href}
+                  prefetch={false}
+                  onClick={(e) => handleNavigation(e, item.href)}
                   className={cn(
                     "flex flex-col items-center justify-center gap-1 px-8 py-2 text-xs font-medium transition-all rounded-lg border flex-1 mx-1",
+                    "touch-manipulation select-none",
                     isActive
                       ? "text-foreground bg-muted border-border"
-                      : "text-muted-foreground hover:text-foreground border-transparent hover:border-border"
+                      : "text-muted-foreground hover:text-foreground border-transparent hover:border-border",
+                    isNavigating && "opacity-50 pointer-events-none"
                   )}
+                  style={{
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'manipulation'
+                  }}
                 >
                   <Icon className={cn(
                     "h-5 w-5",
