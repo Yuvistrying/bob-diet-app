@@ -1,0 +1,340 @@
+{
+    "teams": [
+      {
+        "name": "Bob Diet Coach",
+        "key": "BOB"
+      }
+    ],
+    "projects": [
+      {
+        "name": "Core Features",
+        "key": "CORE",
+        "description": "Essential functionality completion",
+        "icon": "🚀"
+      },
+      {
+        "name": "Bug Fixes",
+        "key": "BUGS",
+        "description": "Critical issues and stability",
+        "icon": "🐛"
+      },
+      {
+        "name": "UI/UX Polish",
+        "key": "UIUX",
+        "description": "Design and user experience improvements",
+        "icon": "💅"
+      },
+      {
+        "name": "Business & Growth",
+        "key": "BIZ",
+        "description": "Monetization and marketing features",
+        "icon": "💰"
+      },
+      {
+        "name": "Advanced AI",
+        "key": "AI",
+        "description": "Metabolism calibration and pattern recognition",
+        "icon": "🔬"
+      }
+    ],
+    "labels": [
+      { "name": "bug", "color": "#eb5757" },
+      { "name": "feature", "color": "#2da44e" },
+      { "name": "enhancement", "color": "#1f6feb" },
+      { "name": "performance", "color": "#8250df" },
+      { "name": "critical", "color": "#d73a49" },
+      { "name": "mobile", "color": "#0969da" },
+      { "name": "backend", "color": "#6f42c1" },
+      { "name": "frontend", "color": "#fd8c73" }
+    ],
+    "issues": [
+      {
+        "title": "Manual Food Logging",
+        "description": "Currently can only log through chat, need manual entry option in diary page",
+        "project": "CORE",
+        "priority": 1,
+        "labels": ["feature", "frontend"],
+        "estimate": 5
+      },
+      {
+        "title": "Weight History Visualization",
+        "description": "Implement proper weight history charts with trends and averages",
+        "project": "CORE",
+        "priority": 1,
+        "labels": ["feature", "frontend"],
+        "estimate": 3
+      },
+      {
+        "title": "Daily Weight Reminders",
+        "description": "Bob should consistently ask for weight each new day - currently inconsistent",
+        "project": "CORE",
+        "priority": 1,
+        "labels": ["feature", "backend"],
+        "estimate": 2
+      },
+      {
+        "title": "Settings Page Implementation",
+        "description": "Currently non-existent, needs full implementation with user preferences",
+        "project": "CORE",
+        "priority": 1,
+        "labels": ["feature", "frontend"],
+        "estimate": 8
+      },
+      {
+        "title": "Voice-to-Text Input",
+        "description": "Add voice recording for easier food logging on mobile",
+        "project": "CORE",
+        "priority": 1,
+        "labels": ["feature", "mobile"],
+        "estimate": 3
+      },
+      {
+        "title": "Meal Planning Tool",
+        "description": "Generate personalized meal plans with shopping lists",
+        "project": "CORE",
+        "priority": 2,
+        "labels": ["feature", "backend"],
+        "estimate": 8
+      },
+      {
+        "title": "Favorite Meals System",
+        "description": "Save meals logged 4+ times/month as favorites for quick access",
+        "project": "CORE",
+        "priority": 2,
+        "labels": ["feature", "backend"],
+        "estimate": 5
+      },
+      {
+        "title": "Progress Photos",
+        "description": "Monthly progress photo tracking with side-by-side comparison",
+        "project": "CORE",
+        "priority": 2,
+        "labels": ["feature", "frontend"],
+        "estimate": 5
+      },
+      {
+        "title": "Chat History Sync Issues",
+        "description": "History exists but doesn't sync to latest point across devices",
+        "project": "BUGS",
+        "priority": 0,
+        "labels": ["bug", "critical", "backend"],
+        "estimate": 5
+      },
+      {
+        "title": "Cross-Device Consistency",
+        "description": "Different sessions/devices don't sync properly - toolCalls persistence issue",
+        "project": "BUGS",
+        "priority": 0,
+        "labels": ["bug", "critical", "backend"],
+        "estimate": 8
+      },
+      {
+        "title": "Confirmation Bubble Persistence",
+        "description": "Minimized state not persistent on mobile after interactions",
+        "project": "BUGS",
+        "priority": 0,
+        "labels": ["bug", "mobile", "frontend"],
+        "estimate": 3
+      },
+      {
+        "title": "First Message Disappearing",
+        "description": "First message of the day disappears after sending user's first message",
+        "project": "BUGS",
+        "priority": 0,
+        "labels": ["bug", "frontend"],
+        "estimate": 2
+      },
+      {
+        "title": "Photo Context Bug",
+        "description": "Bob forgets photo context after corrections - needs better context management",
+        "project": "BUGS",
+        "priority": 0,
+        "labels": ["bug", "backend"],
+        "estimate": 5
+      },
+      {
+        "title": "Auto-Scroll Behavior",
+        "description": "Should maintain position, not auto-scroll except on open/refresh",
+        "project": "BUGS",
+        "priority": 1,
+        "labels": ["bug", "frontend"],
+        "estimate": 3
+      },
+      {
+        "title": "Duplicate Food Logs",
+        "description": "Check and prevent duplicate entries when logging food",
+        "project": "BUGS",
+        "priority": 1,
+        "labels": ["bug", "backend"],
+        "estimate": 3
+      },
+      {
+        "title": "Personal Goal Cards Missing",
+        "description": "Goal cards disappeared on phone, needs investigation",
+        "project": "BUGS",
+        "priority": 1,
+        "labels": ["bug", "mobile"],
+        "estimate": 2
+      },
+      {
+        "title": "New Device Login Spam",
+        "description": "Excessive 'new device logged in' emails from Clerk auth",
+        "project": "BUGS",
+        "priority": 1,
+        "labels": ["bug", "backend"],
+        "estimate": 2
+      },
+      {
+        "title": "Header Redesign",
+        "description": "Cleaner top section with icons instead of text - Goal weight, Current weight, Stats (Cals, P, C, F)",
+        "project": "UIUX",
+        "priority": 1,
+        "labels": ["enhancement", "frontend"],
+        "estimate": 3
+      },
+      {
+        "title": "Chat Font Size",
+        "description": "Consider smaller font for better mobile experience - compare with competitors",
+        "project": "UIUX",
+        "priority": 1,
+        "labels": ["enhancement", "mobile"],
+        "estimate": 1
+      },
+      {
+        "title": "Camera Button",
+        "description": "Bigger, more prominent camera button for photo uploads",
+        "project": "UIUX",
+        "priority": 1,
+        "labels": ["enhancement", "mobile"],
+        "estimate": 1
+      },
+      {
+        "title": "Tool Animation",
+        "description": "Show loading/processing animation when Bob uses tools with status text",
+        "project": "UIUX",
+        "priority": 1,
+        "labels": ["enhancement", "frontend"],
+        "estimate": 3
+      },
+      {
+        "title": "Text Animation",
+        "description": "Implement Grok-style streaming text animation for Bob's responses",
+        "project": "UIUX",
+        "priority": 2,
+        "labels": ["enhancement", "frontend"],
+        "estimate": 3
+      },
+      {
+        "title": "Mobile-First All Pages",
+        "description": "Make all pages mobile-optimized in web view for better preview",
+        "project": "UIUX",
+        "priority": 2,
+        "labels": ["enhancement", "mobile"],
+        "estimate": 5
+      },
+      {
+        "title": "True Freemium Model",
+        "description": "Remove credit card requirement for free tier - must start free",
+        "project": "BIZ",
+        "priority": 0,
+        "labels": ["feature", "critical"],
+        "estimate": 5
+      },
+      {
+        "title": "Freemium Limits Display",
+        "description": "Show '0/5 messages', '0/2 photos' UI for free tier users",
+        "project": "BIZ",
+        "priority": 0,
+        "labels": ["feature", "frontend"],
+        "estimate": 2
+      },
+      {
+        "title": "Payment Flow Redesign",
+        "description": "Implement proper freemium to paid conversion flow without friction",
+        "project": "BIZ",
+        "priority": 0,
+        "labels": ["feature", "backend"],
+        "estimate": 8
+      },
+      {
+        "title": "Admin Dashboard",
+        "description": "CRM and analytics tools for business monitoring",
+        "project": "BIZ",
+        "priority": 1,
+        "labels": ["feature", "backend"],
+        "estimate": 13
+      },
+      {
+        "title": "Landing Page",
+        "description": "Complete landing page with feature showcase, pricing, and sign-up flow",
+        "project": "BIZ",
+        "priority": 1,
+        "labels": ["feature", "frontend"],
+        "estimate": 8
+      },
+      {
+        "title": "B2B Features",
+        "description": "Coach accounts that can create preset goals and monitor client progress",
+        "project": "BIZ",
+        "priority": 2,
+        "labels": ["feature", "backend"],
+        "estimate": 13
+      },
+      {
+        "title": "Dynamic Metabolism Calibration",
+        "description": "Weekly cron job implementation for learning user's actual metabolism from weight results",
+        "project": "AI",
+        "priority": 1,
+        "labels": ["feature", "backend", "performance"],
+        "estimate": 8
+      },
+      {
+        "title": "Moving Averages Display",
+        "description": "Show daily moving averages instead of weekly checkpoints for faster calibration",
+        "project": "AI",
+        "priority": 1,
+        "labels": ["feature", "backend"],
+        "estimate": 5
+      },
+      {
+        "title": "Pattern Recognition",
+        "description": "Analyze food patterns and weight correlation using embeddings",
+        "project": "AI",
+        "priority": 1,
+        "labels": ["feature", "backend"],
+        "estimate": 8
+      },
+      {
+        "title": "Plateau Detection",
+        "description": "Automatic plateau detection with evidence-based intervention suggestions",
+        "project": "AI",
+        "priority": 2,
+        "labels": ["feature", "backend"],
+        "estimate": 5
+      },
+      {
+        "title": "Calorie Range Warnings",
+        "description": "Alert users when eating outside healthy calorie ranges",
+        "project": "AI",
+        "priority": 2,
+        "labels": ["feature", "backend"],
+        "estimate": 3
+      },
+      {
+        "title": "Smart Reminders",
+        "description": "Pattern-based contextual reminders for logging and weighing",
+        "project": "AI",
+        "priority": 3,
+        "labels": ["feature", "backend"],
+        "estimate": 5
+      },
+      {
+        "title": "Weekly Reports",
+        "description": "AI-generated comprehensive weekly summaries with insights",
+        "project": "AI",
+        "priority": 3,
+        "labels": ["feature", "backend"],
+        "estimate": 5
+      }
+    ]
+  }

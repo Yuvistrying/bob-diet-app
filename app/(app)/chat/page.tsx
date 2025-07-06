@@ -145,7 +145,7 @@ const ChatMessage = memo(
 
 ChatMessage.displayName = "ChatMessage";
 
-// Memoized confirmation bubble component
+// Memoized confirmation bubble component with custom comparison
 const ConfirmationBubble = memo(
   ({
     args,
@@ -157,6 +157,15 @@ const ConfirmationBubble = memo(
     onReject,
     isStreaming,
   }: any) => {
+    // Performance monitoring in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[ConfirmationBubble] Rendering ${confirmId}`, {
+        isConfirmed,
+        isRejected,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     if (isConfirmed) {
       return (
         <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
@@ -248,6 +257,17 @@ const ConfirmationBubble = memo(
       </div>
     );
   },
+  // Custom comparison to prevent unnecessary re-renders
+  (prevProps, nextProps) => {
+    return (
+      prevProps.confirmId === nextProps.confirmId &&
+      prevProps.isConfirmed === nextProps.isConfirmed &&
+      prevProps.isRejected === nextProps.isRejected &&
+      prevProps.isStealthMode === nextProps.isStealthMode &&
+      prevProps.isStreaming === nextProps.isStreaming &&
+      JSON.stringify(prevProps.args) === JSON.stringify(nextProps.args)
+    );
+  }
 );
 
 ConfirmationBubble.displayName = "ConfirmationBubble";
@@ -671,7 +691,7 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Auto-refresh at 3:30 AM local time
+  // Auto-refresh at 3:30 AM local time - STABLE TIMER (no message dependency)
   useEffect(() => {
     if (!threadId) return;
 
@@ -719,44 +739,71 @@ export default function Chat() {
       window.location.reload();
     }, timeUntilRefresh);
 
-    // Also check for warning period (3:25-3:30 AM)
-    const checkWarningPeriod = () => {
+    return () => {
+      clearTimeout(refreshTimer);
+    };
+  }, [threadId]); // Only depends on threadId - timer won't reset on messages!
+
+  // Handle visibility change - refresh if tab becomes active on a new day
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && threadId) {
+        // Check if we need to refresh when tab becomes visible
+        const threadDate = threadId.split('_').pop();
+        if (threadDate) {
+          const threadDay = new Date(parseInt(threadDate)).toDateString();
+          const today = new Date().toDateString();
+          
+          if (threadDay !== today) {
+            logger.info('[Chat] Tab became visible on new day, refreshing...');
+            window.location.reload();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [threadId]);
+
+  // Warning system - separate effect with ref to track if warning was shown
+  const warningShownRef = useRef(false);
+  const lastMessageTimeRef = useRef<number | null>(null);
+  
+  useEffect(() => {
+    const checkWarningTime = () => {
       const now = new Date();
       const hours = now.getHours();
       const minutes = now.getMinutes();
       
       if (hours === 3 && minutes >= 25 && minutes < 30) {
-        const minutesLeft = 30 - minutes;
-        // Add system message warning
-        const warningMessage: Message = {
-          role: "assistant",
-          content: `🌙 Heads up! Chat will refresh in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} to start the new day fresh.`,
-          isStreaming: false,
-        };
-        setMessages(prev => [...prev, warningMessage]);
+        // Check if user was active in last 5 minutes
+        if (lastMessageTimeRef.current && Date.now() - lastMessageTimeRef.current < 5 * 60 * 1000) {
+          const minutesLeft = 30 - minutes;
+          // Show warning only once
+          if (!warningShownRef.current) {
+            const warningMessage: Message = {
+              role: "assistant",
+              content: `🌙 Heads up! Chat will refresh in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} to start the new day fresh.`,
+              isStreaming: false,
+            };
+            setMessages(prev => [...prev, warningMessage]);
+            warningShownRef.current = true;
+          }
+        }
+      } else if (hours !== 3 || minutes >= 30) {
+        // Reset warning flag after 3:30 AM
+        warningShownRef.current = false;
       }
     };
 
-    // Check if we're in warning period on mount
-    checkWarningPeriod();
-
-    // Check every minute if we should show warning
-    const warningInterval = setInterval(() => {
-      const lastMessage = messages[messages.length - 1];
-      const lastMessageTime = Date.now(); // Would be better to track actual message timestamps
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      
-      // Only show warning if user sent a message in last 5 minutes
-      if (lastMessage && lastMessage.role === 'user' && lastMessageTime > fiveMinutesAgo) {
-        checkWarningPeriod();
-      }
-    }, 60000); // Check every minute
-
-    return () => {
-      clearTimeout(refreshTimer);
-      clearInterval(warningInterval);
-    };
-  }, [threadId, messages]);
+    // Check once on mount
+    checkWarningTime();
+    
+    // Then check every minute during potential warning window
+    const interval = setInterval(checkWarningTime, 60000);
+    return () => clearInterval(interval);
+  }, []); // No dependencies - runs once
 
   // Check if user is at bottom of scroll
   const checkIfAtBottom = useCallback(() => {
@@ -1320,6 +1367,29 @@ export default function Chat() {
         logger.warn("[Chat] Could not expire pending confirmation:", err);
       }
     }
+
+    // Check if we need to refresh for a new day before sending
+    const checkNewDayBeforeSend = () => {
+      if (!threadId) return false;
+      const threadDate = threadId.split('_').pop();
+      if (!threadDate) return false;
+      
+      const threadDay = new Date(parseInt(threadDate)).toDateString();
+      const today = new Date().toDateString();
+      
+      if (threadDay !== today) {
+        logger.info('[Chat] New day detected before sending message, refreshing...');
+        window.location.reload();
+        return true;
+      }
+      return false;
+    };
+
+    // Don't send if we need to refresh
+    if (checkNewDayBeforeSend()) return;
+
+    // Update last message time for warning system
+    lastMessageTimeRef.current = now;
 
     // Don't add message here - the streaming hook will add it
     setInput("");
@@ -2141,7 +2211,7 @@ export default function Chat() {
                         // Don't filter based on date here since we already handle that in loading
 
                         return (
-                          <div key={index}>
+                          <div key={confirmId || `confirm-${index}`}>
                             {/* Food confirmation card only - no duplicate message */}
                             <div className="flex justify-start">
                               <ConfirmationBubble
@@ -2398,11 +2468,13 @@ export default function Chat() {
                         ? imageUrls[message.storageId]
                         : message.imageUrl || null;
 
+                    // Generate stable key based on content hash or toolCallId
+                    const messageKey = message.toolCalls?.[0]?.toolCallId || 
+                      `msg-${message.role}-${message.content.substring(0, 50)}-${index}`;
+                    
                     return (
                       <div
-                        key={
-                          message.toolCalls?.[0]?.toolCallId || `msg-${index}`
-                        }
+                        key={messageKey}
                         className={cn(
                           "flex flex-col gap-1",
                           message.role === "user"

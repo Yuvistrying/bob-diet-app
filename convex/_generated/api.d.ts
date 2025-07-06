@@ -51,6 +51,7 @@ import type * as userProfiles from "../userProfiles.js";
 import type * as users from "../users.js";
 import type * as vectorSearch from "../vectorSearch.js";
 import type * as vision from "../vision.js";
+import type * as weeklySummaries from "../weeklySummaries.js";
 import type * as weightLogs from "../weightLogs.js";
 
 import type {
@@ -111,6 +112,7 @@ declare const fullApi: ApiFromModules<{
   users: typeof users;
   vectorSearch: typeof vectorSearch;
   vision: typeof vision;
+  weeklySummaries: typeof weeklySummaries;
   weightLogs: typeof weightLogs;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

@@ -1,0 +1,372 @@
+{
+  "missed_issues": [
+    {
+      "title": "Summarization Verification",
+      "description": "Check if Claude Haiku is really working for message summarization - ask to read the summary",
+      "project": "BUGS",
+      "priority": 1,
+      "labels": ["bug", "backend"],
+      "estimate": 2
+    },
+    {
+      "title": "Profile Caching Implementation",
+      "description": "Cache user profile until changed by user to reduce DB queries",
+      "project": "AI",
+      "priority": 2,
+      "labels": ["performance", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Daily Weight Caching",
+      "description": "Cache weight for the whole day to improve performance",
+      "project": "AI",
+      "priority": 2,
+      "labels": ["performance", "backend"],
+      "estimate": 2
+    },
+    {
+      "title": "Direct Food Logging from Confirmation",
+      "description": "Log food straight from every confirmFood without additional steps",
+      "project": "CORE",
+      "priority": 1,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Simplify Confirmation UI",
+      "description": "Remove text before confirmation bubble - just show 'Sounds something like this:' and bubble",
+      "project": "UIUX",
+      "priority": 2,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 2
+    },
+    {
+      "title": "Cooking Details Collection",
+      "description": "Ask for sauces, oil, and cooking method details for better calorie estimation",
+      "project": "AI",
+      "priority": 2,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Environment Setup",
+      "description": "Set up dev/staging/prod environments - currently all in production",
+      "project": "CORE",
+      "priority": 1,
+      "labels": ["feature", "backend"],
+      "estimate": 5
+    },
+    {
+      "title": "Email Edit in Settings",
+      "description": "Add ability to edit email address in user settings",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["feature", "frontend"],
+      "estimate": 2
+    },
+    {
+      "title": "Daily Average Cronjob",
+      "description": "Cronjob once a day for each new weekly average log calculation",
+      "project": "AI",
+      "priority": 1,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Nutrition MCP Tool",
+      "description": "Implement MCP nutrition tool call for detailed nutritional analysis",
+      "project": "AI",
+      "priority": 3,
+      "labels": ["feature", "backend"],
+      "estimate": 5
+    },
+    {
+      "title": "Image Description Context",
+      "description": "Save description of each image to context for better continuity",
+      "project": "AI",
+      "priority": 2,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Playwright UI Automation",
+      "description": "Set up Playwright for UI testing automation",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["feature", "testing"],
+      "estimate": 5
+    },
+    {
+      "title": "Architecture Documentation",
+      "description": "Create architecture.md with file structure and explanations for better AI assistance",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["documentation"],
+      "estimate": 3
+    },
+    {
+      "title": "Historical Commit Analysis",
+      "description": "Compare with old commits to identify missing features and better implementations",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["enhancement"],
+      "estimate": 5
+    },
+    {
+      "title": "Parallel Operations",
+      "description": "Run operations in parallel where possible for performance",
+      "project": "AI",
+      "priority": 2,
+      "labels": ["performance", "backend"],
+      "estimate": 5
+    },
+    {
+      "title": "Remove Unnecessary Routes",
+      "description": "Verify and remove any unnecessary Next.js routes that might hurt performance",
+      "project": "BUGS",
+      "priority": 2,
+      "labels": ["performance", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Diet Break Suggestions",
+      "description": "Suggest diet breaks every 8-12 weeks based on user progress",
+      "project": "AI",
+      "priority": 3,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Stop Generation Button",
+      "description": "Add square button to stop chat generation mid-stream",
+      "project": "UIUX",
+      "priority": 2,
+      "labels": ["feature", "frontend"],
+      "estimate": 2
+    },
+    {
+      "title": "Vector Storage Documentation",
+      "description": "Document and understand where vectors are kept in Convex",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["documentation"],
+      "estimate": 2
+    },
+    {
+      "title": "Tweak.cn Integration",
+      "description": "Explore Tweak.cn for design system improvements",
+      "project": "UIUX",
+      "priority": 3,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 3
+    },
+    {
+      "title": "Goal Change Through Chat",
+      "description": "Allow users to change goals through conversation with Bob",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["feature", "backend"],
+      "estimate": 5
+    },
+    {
+      "title": "Dark Mode Implementation",
+      "description": "Fix and properly implement dark mode functionality",
+      "project": "UIUX",
+      "priority": 2,
+      "labels": ["feature", "frontend"],
+      "estimate": 3
+    },
+    {
+      "title": "Backdate Food Logs",
+      "description": "Allow logging food to previous days when forgotten",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "N8N WhatsApp Integration",
+      "description": "Explore N8N for WhatsApp reminder integration",
+      "project": "BIZ",
+      "priority": 3,
+      "labels": ["feature", "backend"],
+      "estimate": 8
+    },
+    {
+      "title": "CodeRabbit Setup",
+      "description": "Set up CodeRabbit for automated bug detection",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["feature", "testing"],
+      "estimate": 2
+    },
+    {
+      "title": "Claude-git Integration",
+      "description": "Install and configure claude-git, fix cursor integration issues",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["feature", "tooling"],
+      "estimate": 3
+    },
+    {
+      "title": "MCP Setup in Claude Code",
+      "description": "Set up Model Context Protocol in Claude Code for better context",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["feature", "tooling"],
+      "estimate": 3
+    },
+    {
+      "title": "Stagewise Integration",
+      "description": "Implement Stagewise for element selection reference in Claude/Cursor",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["feature", "tooling"],
+      "estimate": 3
+    },
+    {
+      "title": "Magic UI Landing Page",
+      "description": "Use Magic UI components for enhanced landing page design",
+      "project": "UIUX",
+      "priority": 2,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 5
+    },
+    {
+      "title": "Tempo.new Design Tools",
+      "description": "Explore Tempo.new for Tailwind/shadcn design preview tools",
+      "project": "UIUX",
+      "priority": 3,
+      "labels": ["enhancement", "tooling"],
+      "estimate": 2
+    },
+    {
+      "title": "Food Preparation Follow-ups",
+      "description": "Add follow-up questions about home-cooked vs restaurant for accuracy",
+      "project": "AI",
+      "priority": 2,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Stealth/Standard Mode",
+      "description": "Implement mode toggle between stealth and standard in chat and profile",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["feature", "frontend"],
+      "estimate": 3
+    },
+    {
+      "title": "Onboarding Flow Improvements",
+      "description": "Review and improve onboarding flow based on competitor analysis",
+      "project": "UIUX",
+      "priority": 2,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 5
+    },
+    {
+      "title": "Unit Selection in Onboarding",
+      "description": "Add kg/lbs selection during onboarding chat flow",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["feature", "frontend"],
+      "estimate": 2
+    },
+    {
+      "title": "Fitness Journey Documentation",
+      "description": "Document personal fitness journey using app for marketing content",
+      "project": "BIZ",
+      "priority": 2,
+      "labels": ["feature", "marketing"],
+      "estimate": 5
+    },
+    {
+      "title": "Email Weak Spot Reminders",
+      "description": "Email reminders for identified weak spots in user patterns",
+      "project": "AI",
+      "priority": 3,
+      "labels": ["feature", "backend"],
+      "estimate": 5
+    },
+    {
+      "title": "Elegant Week Definition",
+      "description": "More elegant week definition for calibration calculations",
+      "project": "AI",
+      "priority": 3,
+      "labels": ["enhancement", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Protection Strategy",
+      "description": "Implement protection strategy for data integrity",
+      "project": "CORE",
+      "priority": 2,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Duplicate Confirmation Check",
+      "description": "Check for duplicates in tracked confirmations",
+      "project": "BUGS",
+      "priority": 2,
+      "labels": ["bug", "backend"],
+      "estimate": 3
+    },
+    {
+      "title": "Gemini UI Color Inspiration",
+      "description": "Update color scheme inspired by Google Gemini and Google Home",
+      "project": "UIUX",
+      "priority": 3,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 3
+    },
+    {
+      "title": "Grok Chat UI Inspiration",
+      "description": "Get UI inspiration from Grok on Mobbin for chat interface",
+      "project": "UIUX",
+      "priority": 3,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 3
+    },
+    {
+      "title": "Weekly Average Comparison Display",
+      "description": "Show this week's average vs last week's average in logs",
+      "project": "UIUX",
+      "priority": 2,
+      "labels": ["enhancement", "frontend"],
+      "estimate": 2
+    },
+    {
+      "title": "FitHub Competitive Analysis",
+      "description": "Analyze FitHub app for good features and competitive edge",
+      "project": "BIZ",
+      "priority": 2,
+      "labels": ["research"],
+      "estimate": 3
+    },
+    {
+      "title": "V0 Frontend Integration",
+      "description": "Explore v0.dev for better frontend generation and Next.js integration",
+      "project": "UIUX",
+      "priority": 3,
+      "labels": ["enhancement", "tooling"],
+      "estimate": 3
+    },
+    {
+      "title": "Document Generation Feature",
+      "description": "Allow Bob to create docs, meal plans, and shopping lists",
+      "project": "CORE",
+      "priority": 3,
+      "labels": ["feature", "backend"],
+      "estimate": 5
+    },
+    {
+      "title": "Free Gemini CLI Integration",
+      "description": "Explore free Gemini CLI for additional AI capabilities",
+      "project": "AI",
+      "priority": 3,
+      "labels": ["feature", "backend"],
+      "estimate": 3
+    }
+  ]
+}
