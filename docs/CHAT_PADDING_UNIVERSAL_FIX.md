@@ -36,7 +36,12 @@ The chat page (`/app/(app)/chat/page.tsx`) now uses:
 **Components**:
 - `inputAreaHeight`: Dynamically measured height of the input area (including image preview)
 - `24px`: Small universal padding for breathing room
-- No navbar height included (AppLayout no longer adds it for chat)
+- **NO navbar height (64px) in the spacer** - This is crucial!
+
+**Why no navbar height?**
+- The input area is positioned with `bottom: 64px` which already accounts for navbar
+- Adding navbar height to the spacer would double-count it
+- This was the source of the padding inconsistency
 
 ## How It Works
 
