@@ -4,7 +4,7 @@ import { streamText } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import { api, internal } from "../../../../convex/_generated/api";
 import { getBobSystemPrompt, buildPromptContext } from "../../../../convex/prompts";
-import { createTools, detectIntent, getToolsForIntent } from "../../../../convex/tools";
+import { createTools, detectIntent, getToolsForIntent } from "../../../../convex/tools/index";
 import { StreamDebugger } from "./debug";
 
 const anthropic = createAnthropic({
@@ -193,22 +193,20 @@ export async function POST(req: Request) {
     debug.log("TOOLS_CREATE_START", { intents });
     
     let tools;
+    let toolsNeeded;
     try {
       // Only load tools if needed based on intent
-      const toolsNeeded = getToolsForIntent(intents, !!pendingConfirmation);
+      toolsNeeded = getToolsForIntent(intents, !!pendingConfirmation);
       
-      // Load all tools when needed
-      if (toolsNeeded.needsFoodTools || toolsNeeded.needsWeightTool || toolsNeeded.needsProgressTool || toolsNeeded.needsSearchTool) {
-        tools = createTools(
-          convexClient,
-          userId,
-          threadId,
-          storageId,
-          pendingConfirmation
-        );
-      } else {
-        tools = {}; // No tools needed
-      }
+      // Pass tool selection to createTools for selective loading
+      tools = createTools(
+        convexClient,
+        userId,
+        threadId,
+        storageId,
+        pendingConfirmation,
+        toolsNeeded // Pass the selection
+      );
       
       debug.log("TOOLS_CREATE_SUCCESS", { toolNames: Object.keys(tools) });
     } catch (error: any) {
@@ -216,7 +214,12 @@ export async function POST(req: Request) {
       throw error;
     }
     
-    console.log("[stream-v2] Available tools:", Object.keys(tools));
+    console.log("[stream-v2] Tool selection:", {
+      intents,
+      toolsNeeded,
+      loadedTools: Object.keys(tools),
+      toolCount: Object.keys(tools).length
+    });
     
     // 7. Stream response
     // Collect toolCalls during streaming to ensure they're saved

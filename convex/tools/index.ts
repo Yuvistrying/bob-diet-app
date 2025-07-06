@@ -17,18 +17,38 @@ const foodItemSchema = z.object({
 const mealTypeSchema = z.enum(["breakfast", "lunch", "dinner", "snack"]);
 const confidenceSchema = z.enum(["low", "medium", "high"]);
 
-// Create tools function that accepts context
+// Tool selection interface
+interface ToolSelection {
+  needsFoodTools: boolean;
+  needsWeightTool: boolean;
+  needsProgressTool: boolean;
+  needsSearchTool: boolean;
+}
+
+// Create tools function that accepts context and tool selection
 export function createTools(
   convexClient: ConvexHttpClient,
   userId: string,
   threadId: string,
   storageId?: string | Id<"_storage">,
-  pendingConfirmation?: any
+  pendingConfirmation?: any,
+  toolSelection?: ToolSelection
 ) {
   const tools: any = {};
+  
+  // If no selection provided, load all tools (backward compatibility)
+  if (!toolSelection) {
+    toolSelection = {
+      needsFoodTools: true,
+      needsWeightTool: true,
+      needsProgressTool: true,
+      needsSearchTool: true,
+    };
+  }
 
-  // Food confirmation tool
-  tools.confirmFood = tool({
+  // Food confirmation tool (only if needed)
+  if (toolSelection.needsFoodTools) {
+    tools.confirmFood = tool({
     description: "Show food understanding and ask for confirmation before logging",
     parameters: z.object({
       description: z.string().describe("Natural description of the food"),
@@ -49,10 +69,10 @@ export function createTools(
       });
       return args;
     },
-  });
+    });
 
-  // Food logging tool
-  tools.logFood = tool({
+    // Food logging tool
+    tools.logFood = tool({
     description: "Actually log the food after user confirmation",
     parameters: z.object({
       description: z.string(),
@@ -101,10 +121,11 @@ export function createTools(
       
       return { success: true, logId };
     },
-  });
+    });
+  }
 
-  // Photo analysis tool (only if storageId provided)
-  if (storageId) {
+  // Photo analysis tool (only if storageId provided and food tools needed)
+  if (storageId && toolSelection.needsFoodTools) {
     // Combined analyze and confirm tool for photos
     tools.analyzeAndConfirmPhoto = tool({
       description: "Analyze a food photo and immediately ask for confirmation - combines analyzePhoto and confirmFood in one step",
@@ -198,8 +219,9 @@ export function createTools(
     });
   }
 
-  // Weight logging tool
-  tools.logWeight = tool({
+  // Weight logging tool (only if needed)
+  if (toolSelection.needsWeightTool) {
+    tools.logWeight = tool({
     description: "Log user's weight",
     parameters: z.object({
       weight: z.number().describe("Weight value"),
@@ -234,10 +256,12 @@ export function createTools(
         };
       }
     },
-  });
+    });
+  }
 
-  // Progress tool
-  tools.showProgress = tool({
+  // Progress tool (only if needed)
+  if (toolSelection.needsProgressTool) {
+    tools.showProgress = tool({
     description: "Show user's daily progress and remaining calories/macros",
     parameters: z.object({
       showDetailed: z.boolean().default(false).describe("Whether to show detailed macro breakdown"),
@@ -267,10 +291,12 @@ export function createTools(
         detailed: args.showDetailed,
       };
     },
-  });
+    });
+  }
 
-  // Similar meals search tool
-  tools.findSimilarMeals = tool({
+  // Similar meals search tool (only if needed)
+  if (toolSelection.needsSearchTool) {
+    tools.findSimilarMeals = tool({
     description: "Search for similar meals the user has eaten before",
     parameters: z.object({
       searchText: z.string().describe("Description of the meal to search for"),
@@ -291,10 +317,13 @@ export function createTools(
           "No similar meals found."
       };
     },
-  });
+    });
+  }
 
-  // Weekly insights tool (for Sunday summaries)
-  tools.weeklyInsights = tool({
+  // Weekly insights tool (for Sunday summaries) - always include on Sundays
+  const isSunday = new Date().getDay() === 0;
+  if (isSunday || toolSelection.needsProgressTool) {
+    tools.weeklyInsights = tool({
     description: "Show weekly summary with progress, insights, and calibration updates",
     parameters: z.object({
       showCalibration: z.boolean().default(true).describe("Whether to include calibration update if applicable"),
@@ -359,7 +388,8 @@ export function createTools(
 
       return summaryData;
     },
-  });
+    });
+  }
 
   return tools;
 }
