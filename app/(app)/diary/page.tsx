@@ -185,11 +185,13 @@ export default function Logs() {
   };
 
   return (
-    <div className="flex flex-col bg-background h-full">
-      <Tabs defaultValue="food" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-        <div className="border-b border-border flex-shrink-0">
-          <div className="max-w-lg mx-auto px-4 pt-4 pb-2">
-            <TabsList className="grid w-full grid-cols-2 bg-muted p-1 h-auto">
+    <>
+      <div className="fixed inset-x-0 top-0 bottom-16 bg-background flex flex-col">
+        <Tabs defaultValue="food" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
+          {/* Fixed tabs header */}
+          <div className="border-b border-border flex-shrink-0">
+            <div className="max-w-lg mx-auto px-4 pt-4 pb-2">
+              <TabsList className="grid w-full grid-cols-2 bg-muted p-1 h-auto">
             <TabsTrigger 
               value="food" 
               className="flex items-center gap-2 text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md py-2"
@@ -712,9 +714,9 @@ export default function Logs() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
 
-
-      {/* Add Dialog */}
+    {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="border-border">
           <DialogHeader>
@@ -964,6 +966,6 @@ export default function Logs() {
       
       {/* Bottom Navigation */}
       <BottomNav />
-    </div>
+    </>
   );
 }
