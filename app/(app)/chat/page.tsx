@@ -2550,7 +2550,7 @@ export default function Chat() {
         </div>
         
         {/* Scroll to bottom button - Fixed but within container bounds */}
-        <div className="fixed bottom-0 left-0 right-0 pointer-events-none" style={{ bottom: `${(inputAreaHeight || 120) + 64 + 60}px` }}>
+        <div className="fixed bottom-0 left-0 right-0 pointer-events-none" style={{ bottom: `${(inputAreaHeight || 120) + 64 + 20}px` }}>
           <div className="max-w-lg mx-auto px-4 relative">
             {!isAtBottom && (
               <motion.button
