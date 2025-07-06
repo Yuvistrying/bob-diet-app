@@ -298,6 +298,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSentMessageRef = useRef<{
     content: string;
     timestamp: number;
@@ -1249,6 +1250,34 @@ export default function Chat() {
       setInputAreaHeight(height);
     }
   }, [imagePreview]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
+
+  // Detect if mobile device
+  const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // Handle keyboard events in textarea
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      if (isMobile) {
+        // Mobile: Enter creates newline (default behavior)
+        return;
+      } else {
+        // Desktop: Enter sends message, Shift+Enter creates newline
+        if (!e.shiftKey) {
+          e.preventDefault();
+          handleSubmit(e as any);
+        }
+        // If Shift+Enter, let default behavior create newline
+      }
+    }
+  };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2625,13 +2654,20 @@ export default function Chat() {
                   </div>
 
                   {/* Input field */}
-                  <input
+                  <textarea
+                    ref={textareaRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="Ask Bob anything"
-                    className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none focus:outline-none focus:ring-0 text-[15px] min-w-0"
+                    rows={1}
+                    className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none focus:outline-none focus:ring-0 text-base min-w-0 resize-none leading-relaxed"
                     disabled={isStreaming}
-                    style={{ WebkitAppearance: "none", overflow: "hidden" }}
+                    style={{ 
+                      WebkitAppearance: "none", 
+                      overflow: "hidden",
+                      maxHeight: "120px"
+                    }}
                   />
 
                   {/* Send/Stop button */}
