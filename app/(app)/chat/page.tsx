@@ -724,11 +724,9 @@ export default function Chat() {
     }
   }, [preferences?.darkMode]);
 
-  // Auto-refresh at 3:30 AM local time - STABLE TIMER (no message dependency)
+  // Auto-refresh at 3:30 AM local time
   useEffect(() => {
-    if (!threadId) return;
-
-    // Calculate time until next 3:30 AM
+    // Calculate time until next 3:30 AM in local timezone
     const getTimeUntilRefresh = () => {
       const now = new Date();
       const next330AM = new Date();
@@ -742,38 +740,19 @@ export default function Chat() {
       return next330AM.getTime() - now.getTime();
     };
 
-    // Check if thread is from a different day
-    const checkIfNewDay = () => {
-      const threadDate = threadId.split('_').pop();
-      if (!threadDate) return false;
-      
-      // Validate it's a valid timestamp
-      const timestamp = parseInt(threadDate);
-      if (isNaN(timestamp) || timestamp < 1000000000000) return false; // Must be milliseconds
-      
-      const threadDay = new Date(timestamp).toDateString();
-      const today = new Date().toDateString();
-      
-      return threadDay !== today;
-    };
-
-    // If it's already a new day, refresh immediately (but only once)
-    if (checkIfNewDay()) {
-      // Check if we've already tried to refresh in this session
-      const refreshKey = `refreshed_${new Date().toDateString()}`;
-      if (!sessionStorage.getItem(refreshKey)) {
-        sessionStorage.setItem(refreshKey, 'true');
-        logger.info('[Chat] Thread is from a different day, refreshing...');
-        window.location.reload();
-        return;
-      }
-    }
-
     // Set timer for 3:30 AM refresh
     const timeUntilRefresh = getTimeUntilRefresh();
     logger.info('[Chat] Setting auto-refresh timer', {
-      timeUntilRefresh,
-      refreshAt: new Date(Date.now() + timeUntilRefresh).toLocaleString()
+      timeUntilRefresh: `${Math.floor(timeUntilRefresh / 1000 / 60 / 60)} hours ${Math.floor((timeUntilRefresh / 1000 / 60) % 60)} minutes`,
+      refreshAt: new Date(Date.now() + timeUntilRefresh).toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZoneName: 'short'
+      })
     });
 
     const refreshTimer = setTimeout(() => {
@@ -786,36 +765,7 @@ export default function Chat() {
     };
   }, [threadId]); // Only depends on threadId - timer won't reset on messages!
 
-  // Handle visibility change - refresh if tab becomes active on a new day
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && threadId) {
-        // Check if we need to refresh when tab becomes visible
-        const threadDate = threadId.split('_').pop();
-        if (threadDate) {
-          // Validate timestamp
-          const timestamp = parseInt(threadDate);
-          if (!isNaN(timestamp) && timestamp > 1000000000000) {
-            const threadDay = new Date(timestamp).toDateString();
-            const today = new Date().toDateString();
-            
-            if (threadDay !== today) {
-              // Only refresh if we haven't already today
-              const refreshKey = `refreshed_${today}`;
-              if (!sessionStorage.getItem(refreshKey)) {
-                sessionStorage.setItem(refreshKey, 'true');
-                logger.info('[Chat] Tab became visible on new day, refreshing...');
-                window.location.reload();
-              }
-            }
-          }
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [threadId]);
+  // Removed visibility change refresh - let backend handle thread management
 
   // Warning system - separate effect with ref to track if warning was shown
   const warningShownRef = useRef(false);
@@ -1447,34 +1397,7 @@ export default function Chat() {
       }
     }
 
-    // Check if we need to refresh for a new day before sending
-    const checkNewDayBeforeSend = () => {
-      if (!threadId) return false;
-      const threadDate = threadId.split('_').pop();
-      if (!threadDate) return false;
-      
-      // Validate timestamp
-      const timestamp = parseInt(threadDate);
-      if (isNaN(timestamp) || timestamp < 1000000000000) return false;
-      
-      const threadDay = new Date(timestamp).toDateString();
-      const today = new Date().toDateString();
-      
-      if (threadDay !== today) {
-        // Only refresh if we haven't already today
-        const refreshKey = `refreshed_${today}`;
-        if (!sessionStorage.getItem(refreshKey)) {
-          sessionStorage.setItem(refreshKey, 'true');
-          logger.info('[Chat] New day detected before sending message, refreshing...');
-          window.location.reload();
-          return true;
-        }
-      }
-      return false;
-    };
-
-    // Don't send if we need to refresh
-    if (checkNewDayBeforeSend()) return;
+    // Remove day-check - let the backend handle thread management
 
     // Update last message time for warning system
     lastMessageTimeRef.current = now;
