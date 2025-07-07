@@ -1,40 +1,44 @@
-import { LinearClient } from '@linear/sdk';
+import { LinearClient } from "@linear/sdk";
 
 async function addReferencesIssue() {
-  const apiKey = process.env.LINEAR_API_KEY || 'YOUR_LINEAR_API_KEY';
-  
-  if (apiKey === 'YOUR_LINEAR_API_KEY') {
-    console.error('Please set your Linear API key in the LINEAR_API_KEY environment variable');
+  const apiKey = process.env.LINEAR_API_KEY || "YOUR_LINEAR_API_KEY";
+
+  if (apiKey === "YOUR_LINEAR_API_KEY") {
+    console.error(
+      "Please set your Linear API key in the LINEAR_API_KEY environment variable",
+    );
     process.exit(1);
   }
 
   const linear = new LinearClient({ apiKey });
 
-  console.log('Adding reference documentation issue to Linear...\n');
+  console.log("Adding reference documentation issue to Linear...\n");
 
   try {
     // Get team
     const teams = await linear.teams();
-    const team = teams.nodes.find(t => t.key === 'BOB');
-    
+    const team = teams.nodes.find((t) => t.key === "BOB");
+
     if (!team) {
-      console.error('Team BOB not found!');
+      console.error("Team BOB not found!");
       process.exit(1);
     }
 
     // Get Core Features project
     const projects = await linear.projects();
-    const coreProject = projects.nodes.find(p => p.name === 'Core Features');
-    
+    const coreProject = projects.nodes.find((p) => p.name === "Core Features");
+
     if (!coreProject) {
-      console.error('Core Features project not found!');
+      console.error("Core Features project not found!");
       process.exit(1);
     }
 
     // Get documentation label
     const teamLabels = await team.labels();
-    const docLabel = teamLabels.nodes.find(l => l.name.toLowerCase() === 'documentation');
-    
+    const docLabel = teamLabels.nodes.find(
+      (l) => l.name.toLowerCase() === "documentation",
+    );
+
     // Create the issue description with all references
     const description = `# Implementation Reference Videos
 
@@ -72,7 +76,7 @@ These videos contain valuable implementation details, best practices, and specif
 
     // Create the issue
     const issue = await linear.createIssue({
-      title: 'Implementation Reference Videos',
+      title: "Implementation Reference Videos",
       description: description,
       teamId: team.id,
       projectId: coreProject.id,
@@ -80,12 +84,13 @@ These videos contain valuable implementation details, best practices, and specif
       labelIds: docLabel ? [docLabel.id] : [],
       estimate: 1, // Minimal estimate for documentation
     });
-    
-    console.log(`✓ Created reference documentation issue: "Implementation Reference Videos"`);
+
+    console.log(
+      `✓ Created reference documentation issue: "Implementation Reference Videos"`,
+    );
     console.log(`  Issue URL: ${issue.url}`);
-    
   } catch (error) {
-    console.error('Failed to create issue:', error);
+    console.error("Failed to create issue:", error);
     process.exit(1);
   }
 }
@@ -93,10 +98,10 @@ These videos contain valuable implementation details, best practices, and specif
 // Run it
 addReferencesIssue()
   .then(() => {
-    console.log('\nCompleted successfully!');
+    console.log("\nCompleted successfully!");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\nFailed:', error);
+    console.error("\nFailed:", error);
     process.exit(1);
   });

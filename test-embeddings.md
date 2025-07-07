@@ -22,11 +22,13 @@
 ## Verify in Convex Dashboard:
 
 ### Data Explorer:
+
 1. Go to `foodLogs` table
 2. Find your recent entry
 3. Look for `embedding` field - should have 1536 numbers
 
 ### Function Logs:
+
 1. Go to Functions → Logs
 2. Filter by function name: `embeddings`
 3. You should see executions of:
@@ -37,6 +39,7 @@
 ### Debugging Tips:
 
 If you don't see embeddings:
+
 1. Check for errors in the scheduled functions tab
 2. Make sure `OPENAI_API_KEY` is set in Convex environment variables
 3. Look for any error logs containing "embedding"
@@ -44,6 +47,7 @@ If you don't see embeddings:
 ## Sample Log Output:
 
 When working correctly, you'll see:
+
 ```
 [Chat Stream API] Request body: { prompt: "I had a banana", ... }
 [logFood] Called with: { description: "Had a banana", ... }
@@ -52,6 +56,7 @@ When working correctly, you'll see:
 ```
 
 And in scheduled functions:
+
 ```
 embeddings:generateEmbedding - Success (243ms)
 embeddings:updateFoodLogEmbedding - Success (52ms)

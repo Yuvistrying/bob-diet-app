@@ -14,54 +14,62 @@ const mealPlanSchema = z.object({
     carbs: z.number(),
     fat: z.number(),
   }),
-  days: z.array(z.object({
-    day: z.number(),
-    dayName: z.string(),
-    meals: z.object({
-      breakfast: z.object({
-        name: z.string(),
-        foods: z.array(z.string()),
-        preparation: z.string(),
+  days: z.array(
+    z.object({
+      day: z.number(),
+      dayName: z.string(),
+      meals: z.object({
+        breakfast: z.object({
+          name: z.string(),
+          foods: z.array(z.string()),
+          preparation: z.string(),
+          calories: z.number(),
+          protein: z.number(),
+          carbs: z.number(),
+          fat: z.number(),
+        }),
+        lunch: z.object({
+          name: z.string(),
+          foods: z.array(z.string()),
+          preparation: z.string(),
+          calories: z.number(),
+          protein: z.number(),
+          carbs: z.number(),
+          fat: z.number(),
+        }),
+        dinner: z.object({
+          name: z.string(),
+          foods: z.array(z.string()),
+          preparation: z.string(),
+          calories: z.number(),
+          protein: z.number(),
+          carbs: z.number(),
+          fat: z.number(),
+        }),
+        snacks: z
+          .array(
+            z.object({
+              name: z.string(),
+              calories: z.number(),
+              protein: z.number(),
+            }),
+          )
+          .optional(),
+      }),
+      totals: z.object({
         calories: z.number(),
         protein: z.number(),
         carbs: z.number(),
         fat: z.number(),
       }),
-      lunch: z.object({
-        name: z.string(),
-        foods: z.array(z.string()),
-        preparation: z.string(),
-        calories: z.number(),
-        protein: z.number(),
-        carbs: z.number(),
-        fat: z.number(),
-      }),
-      dinner: z.object({
-        name: z.string(),
-        foods: z.array(z.string()),
-        preparation: z.string(),
-        calories: z.number(),
-        protein: z.number(),
-        carbs: z.number(),
-        fat: z.number(),
-      }),
-      snacks: z.array(z.object({
-        name: z.string(),
-        calories: z.number(),
-        protein: z.number(),
-      })).optional(),
     }),
-    totals: z.object({
-      calories: z.number(),
-      protein: z.number(),
-      carbs: z.number(),
-      fat: z.number(),
+  ),
+  shoppingList: z.array(
+    z.object({
+      category: z.string(),
+      items: z.array(z.string()),
     }),
-  })),
-  shoppingList: z.array(z.object({
-    category: z.string(),
-    items: z.array(z.string()),
-  })),
+  ),
   tips: z.array(z.string()).describe("Helpful tips for following the plan"),
 });
 
@@ -69,60 +77,62 @@ const mealPlanSchema = z.object({
 export const generateDetailedMealPlan = action({
   args: {
     days: v.number(),
-    preferences: v.optional(v.object({
-      avoidFoods: v.optional(v.array(v.string())),
-      preferredFoods: v.optional(v.array(v.string())),
-      cuisine: v.optional(v.string()),
-      budget: v.optional(v.string()), // "low", "medium", "high"
-      cookingTime: v.optional(v.string()), // "minimal", "moderate", "extensive"
-    })),
+    preferences: v.optional(
+      v.object({
+        avoidFoods: v.optional(v.array(v.string())),
+        preferredFoods: v.optional(v.array(v.string())),
+        cuisine: v.optional(v.string()),
+        budget: v.optional(v.string()), // "low", "medium", "high"
+        cookingTime: v.optional(v.string()), // "minimal", "moderate", "extensive"
+      }),
+    ),
     threadId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.subject;
-    
+
     // Get user profile
     const profile = await ctx.runQuery(api.userProfiles.getUserProfile, {});
     if (!profile) {
       throw new Error("Please complete your profile setup first");
     }
-    
+
     // Get recent meal history for context
     const recentMeals = await ctx.runQuery(api.foodLogs.searchMeals, {
       query: "",
       daysBack: 14,
       limit: 20,
     });
-    
+
     // Create or continue thread
     let thread;
     let threadId = args.threadId;
-    
+
     if (threadId) {
       const result = await bobAgent.continueThread(ctx, { threadId, userId });
       thread = result.thread;
     } else {
-      const result = await bobAgent.createThread(ctx, { 
+      const result = await bobAgent.createThread(ctx, {
         userId,
         metadata: {
           title: "Meal Plan Generation",
           type: "structured_generation",
-        }
+        },
       });
       thread = result.thread;
       threadId = result.threadId;
     }
-    
+
     // Build context for the meal plan
     const context = `
     User Profile:
     - Goal: ${profile.goal}
     - Daily Calorie Target: ${profile.dailyCalorieTarget}
     - Daily Protein Target: ${profile.proteinTarget}g
-    - Carbs Target: ${profile.carbsTarget || Math.round(profile.dailyCalorieTarget * 0.4 / 4)}g
-    - Fat Target: ${profile.fatTarget || Math.round(profile.dailyCalorieTarget * 0.3 / 9)}g
+    - Carbs Target: ${profile.carbsTarget || Math.round((profile.dailyCalorieTarget * 0.4) / 4)}g
+    - Fat Target: ${profile.fatTarget || Math.round((profile.dailyCalorieTarget * 0.3) / 9)}g
     
     Preferences:
     - Foods to avoid: ${args.preferences?.avoidFoods?.join(", ") || "None specified"}
@@ -132,11 +142,15 @@ export const generateDetailedMealPlan = action({
     - Cooking time: ${args.preferences?.cookingTime || "Moderate"}
     
     Recent meals for inspiration:
-    ${recentMeals.slice(0, 5).map((meal: any) => 
-      `- ${meal.description} (${meal.totalCalories} cal, ${meal.totalProtein}g protein)`
-    ).join("\n")}
+    ${recentMeals
+      .slice(0, 5)
+      .map(
+        (meal: any) =>
+          `- ${meal.description} (${meal.totalCalories} cal, ${meal.totalProtein}g protein)`,
+      )
+      .join("\n")}
     `;
-    
+
     try {
       // Generate structured meal plan
       const result = await thread.generateObject({
@@ -151,9 +165,10 @@ export const generateDetailedMealPlan = action({
         6. Consider the user's preferences and budget
         7. Balance macros appropriately throughout the day`,
         schema: mealPlanSchema,
-        system: "You are Bob, an expert diet coach creating personalized meal plans.",
+        system:
+          "You are Bob, an expert diet coach creating personalized meal plans.",
       });
-      
+
       return {
         mealPlan: result.object,
         threadId,
@@ -180,7 +195,9 @@ const calibrationReportSchema = z.object({
     reliability: z.enum(["high", "medium", "low"]),
   }),
   metabolismAnalysis: z.object({
-    expectedTDEE: z.number().describe("Expected Total Daily Energy Expenditure"),
+    expectedTDEE: z
+      .number()
+      .describe("Expected Total Daily Energy Expenditure"),
     actualTDEE: z.number().describe("Actual TDEE based on results"),
     metabolicRate: z.enum(["slow", "normal", "fast"]),
     confidence: z.enum(["high", "medium", "low"]),
@@ -219,57 +236,64 @@ export const generateCalibrationReport = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.subject;
-    
+
     // Get user profile
     const profile = await ctx.runQuery(api.userProfiles.getUserProfile, {});
     if (!profile) {
       throw new Error("Please complete your profile setup first");
     }
-    
+
     // Get weight history
     const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - args.periodDays * 24 * 60 * 60 * 1000);
-    
+    const startDate = new Date(
+      endDate.getTime() - args.periodDays * 24 * 60 * 60 * 1000,
+    );
+
     const weightLogs = await ctx.runQuery(api.weightLogs.getWeightHistory, {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
     });
-    
+
     // Get food logs
     const foodLogs = await ctx.runQuery(api.foodLogs.searchMeals, {
       query: "",
       daysBack: args.periodDays,
       limit: 1000, // Get all logs for the period
     });
-    
+
     // Create or continue thread
     let thread;
     let threadId = args.threadId;
-    
+
     if (threadId) {
       const result = await bobAgent.continueThread(ctx, { threadId, userId });
       thread = result.thread;
     } else {
-      const result = await bobAgent.createThread(ctx, { 
+      const result = await bobAgent.createThread(ctx, {
         userId,
         metadata: {
           title: "Calibration Report",
           type: "structured_generation",
-        }
+        },
       });
       thread = result.thread;
       threadId = result.threadId;
     }
-    
+
     // Calculate basic stats for context
-    const avgDailyCalories = foodLogs.length > 0 
-      ? foodLogs.reduce((sum: number, log: any) => sum + (log.totalCalories || 0), 0) / args.periodDays
-      : 0;
-    
-    const weightChange = weightLogs.length >= 2
-      ? weightLogs[weightLogs.length - 1].weight - weightLogs[0].weight
-      : 0;
-    
+    const avgDailyCalories =
+      foodLogs.length > 0
+        ? foodLogs.reduce(
+            (sum: number, log: any) => sum + (log.totalCalories || 0),
+            0,
+          ) / args.periodDays
+        : 0;
+
+    const weightChange =
+      weightLogs.length >= 2
+        ? weightLogs[weightLogs.length - 1].weight - weightLogs[0].weight
+        : 0;
+
     const context = `
     User Profile:
     - Current Goal: ${profile.goal}
@@ -292,7 +316,7 @@ export const generateCalibrationReport = action({
     - Average daily calories: ${Math.round(avgDailyCalories)}
     - Days with complete logging: ${Math.round(foodLogs.length / 3)} (estimate)
     `;
-    
+
     try {
       // Generate calibration report
       const result = await thread.generateObject({
@@ -307,9 +331,10 @@ export const generateCalibrationReport = action({
         6. Consider adherence and consistency patterns
         7. Account for water weight fluctuations in short periods`,
         schema: calibrationReportSchema,
-        system: "You are Bob, an expert diet coach performing a detailed metabolic calibration analysis.",
+        system:
+          "You are Bob, an expert diet coach performing a detailed metabolic calibration analysis.",
       });
-      
+
       // Save calibration to history if significant adjustment recommended
       if (result.object.recommendations.adjustmentSize !== "none") {
         await ctx.runMutation(api.calibrationHistory.saveCalibration, {
@@ -320,14 +345,16 @@ export const generateCalibrationReport = action({
           confidence: result.object.metabolismAnalysis.confidence,
         });
       }
-      
+
       return {
         report: result.object,
         threadId,
       };
     } catch (error) {
       console.error("Error generating calibration report:", error);
-      throw new Error("Failed to generate calibration report. Please try again.");
+      throw new Error(
+        "Failed to generate calibration report. Please try again.",
+      );
     }
   },
 });

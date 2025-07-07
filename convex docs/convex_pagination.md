@@ -7,6 +7,7 @@ This can be used to build components with "Load More" buttons or "infinite scrol
 Example: [Paginated Messaging App](https://github.com/get-convex/convex-demos/tree/main/pagination)
 
 Using pagination in Convex is as simple as:
+
 - Writing a paginated query function that calls `.paginate(paginationOpts)`
 - Using the `usePaginatedQuery` React hook.
 
@@ -86,11 +87,13 @@ export const listWithTransformation = query({
 To paginate within a React component, use the `usePaginatedQuery` hook. This hook gives you a simple interface for rendering the current items and requesting more. Internally, this hook manages the continuation cursors.
 
 The arguments to this hook are:
+
 - The name of the paginated query function.
 - The arguments object to pass to the query function, excluding the `paginationOpts` (that's injected by the hook).
 - An options object with the `initialNumItems` to load on the first page.
 
 The hook returns an object with:
+
 - `results`: An array of the currently loaded results.
 - `isLoading`: Whether the hook is currently loading results.
 - `status`: The status of the pagination. The possible statuses are:
@@ -110,7 +113,7 @@ export function App() {
     {},
     { initialNumItems: 5 },
   );
-  
+
   return (
     <div>
       {results?.map(({ _id, body }) => <div key={_id}>{body}</div>)}
@@ -134,7 +137,7 @@ export function App() {
     { author: "Alex" },
     { initialNumItems: 5 },
   );
-  
+
   return (
     <div>
       {results?.map(({ _id, body }) => <div key={_id}>{body}</div>)}
@@ -173,7 +176,7 @@ async function getAllMessages() {
   let isDone = false;
   let page;
   const results = [];
-  
+
   while (!isDone) {
     ({ continueCursor, isDone, page } = await client.query(api.messages.list, {
       paginationOpts: { numItems: 5, cursor: continueCursor },
@@ -181,7 +184,7 @@ async function getAllMessages() {
     console.log("got", page.length);
     results.push(...page);
   }
-  
+
   console.log(results);
 }
 

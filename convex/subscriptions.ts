@@ -33,7 +33,7 @@ const createCheckout = async ({
   let productId = null;
   for (const product of productsResult.items) {
     const hasPrice = product.prices.some(
-      (price: any) => price.id === productPriceId
+      (price: any) => price.id === productPriceId,
     );
     if (hasPrice) {
       productId = product.id;
@@ -57,7 +57,7 @@ const createCheckout = async ({
 
   console.log(
     "Creating checkout with data:",
-    JSON.stringify(checkoutData, null, 2)
+    JSON.stringify(checkoutData, null, 2),
   );
 
   const result = await polar.checkouts.create(checkoutData);
@@ -251,51 +251,70 @@ export const fetchUserSubscription = query({
       return null;
     }
 
-    console.log("[fetchUserSubscription] Looking up user with tokenIdentifier:", identity.subject);
+    console.log(
+      "[fetchUserSubscription] Looking up user with tokenIdentifier:",
+      identity.subject,
+    );
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
       .first();
 
     if (!user) {
-      console.log("[fetchUserSubscription] No user found for tokenIdentifier:", identity.subject);
+      console.log(
+        "[fetchUserSubscription] No user found for tokenIdentifier:",
+        identity.subject,
+      );
       return null;
     }
 
-    console.log("[fetchUserSubscription] Found user, looking up subscription with userId:", user.tokenIdentifier);
+    console.log(
+      "[fetchUserSubscription] Found user, looking up subscription with userId:",
+      user.tokenIdentifier,
+    );
     const subscription = await ctx.db
       .query("subscriptions")
       .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
       .first();
 
     if (!subscription) {
-      console.log("[fetchUserSubscription] No subscription found for userId:", user.tokenIdentifier);
-      
+      console.log(
+        "[fetchUserSubscription] No subscription found for userId:",
+        user.tokenIdentifier,
+      );
+
       // Check if there's a subscription with the raw identity subject
       const altSubscription = await ctx.db
         .query("subscriptions")
         .withIndex("userId", (q) => q.eq("userId", identity.subject))
         .first();
-      
+
       if (altSubscription) {
-        console.log("[fetchUserSubscription] Found subscription with raw identity.subject, returning it");
+        console.log(
+          "[fetchUserSubscription] Found subscription with raw identity.subject, returning it",
+        );
         return altSubscription;
       }
-      
+
       // Also check for subscription by email if user has email
       if (user.email) {
-        console.log("[fetchUserSubscription] Checking by customer email:", user.email);
+        console.log(
+          "[fetchUserSubscription] Checking by customer email:",
+          user.email,
+        );
         // Get all subscriptions and find by customer email in metadata
         const allSubscriptions = await ctx.db.query("subscriptions").collect();
-        const emailSubscription = allSubscriptions.find(sub => 
-          sub.metadata?.customerEmail === user.email
+        const emailSubscription = allSubscriptions.find(
+          (sub) => sub.metadata?.customerEmail === user.email,
         );
-        
+
         if (emailSubscription) {
-          console.log("[fetchUserSubscription] Found subscription by email, updating userId");
+          console.log(
+            "[fetchUserSubscription] Found subscription by email, updating userId",
+          );
           // Update the subscription with correct userId
           await (ctx.db as any).patch(emailSubscription._id, {
-            userId: user.tokenIdentifier
+            userId: user.tokenIdentifier,
           });
           return emailSubscription;
         }
@@ -304,7 +323,7 @@ export const fetchUserSubscription = query({
       console.log("[fetchUserSubscription] Found subscription:", {
         id: subscription._id,
         status: subscription.status,
-        polarId: subscription.polarId
+        polarId: subscription.polarId,
       });
     }
 
@@ -319,12 +338,12 @@ export const handleWebhookEvent = mutation({
   handler: async (ctx, args) => {
     // Extract event type from webhook payload
     const eventType = args.body.type;
-    
+
     console.log("[handleWebhookEvent] Received webhook event:", {
       type: eventType,
       dataId: args.body.data.id,
       metadata: args.body.data.metadata,
-      customerId: args.body.data.customer_id
+      customerId: args.body.data.customer_id,
     });
 
     // Store webhook event
@@ -339,10 +358,16 @@ export const handleWebhookEvent = mutation({
     switch (eventType) {
       case "subscription.created":
         console.log("[handleWebhookEvent] Processing subscription.created");
-        console.log("[handleWebhookEvent] Metadata userId:", args.body.data.metadata?.userId);
-        console.log("[handleWebhookEvent] Customer ID:", args.body.data.customer_id);
+        console.log(
+          "[handleWebhookEvent] Metadata userId:",
+          args.body.data.metadata?.userId,
+        );
+        console.log(
+          "[handleWebhookEvent] Customer ID:",
+          args.body.data.customer_id,
+        );
         console.log("[handleWebhookEvent] Status:", args.body.data.status);
-        
+
         // Insert new subscription
         const subscriptionId = await ctx.db.insert("subscriptions", {
           polarId: args.body.data.id,
@@ -352,10 +377,10 @@ export const handleWebhookEvent = mutation({
           userId: args.body.data.metadata.userId,
           status: args.body.data.status,
           currentPeriodStart: new Date(
-            args.body.data.current_period_start
+            args.body.data.current_period_start,
           ).getTime(),
           currentPeriodEnd: new Date(
-            args.body.data.current_period_end
+            args.body.data.current_period_end,
           ).getTime(),
           cancelAtPeriodEnd: args.body.data.cancel_at_period_end,
           amount: args.body.data.amount,
@@ -374,8 +399,11 @@ export const handleWebhookEvent = mutation({
           customFieldData: args.body.data.custom_field_data || {},
           customerId: args.body.data.customer_id,
         });
-        
-        console.log("[handleWebhookEvent] Subscription created with ID:", subscriptionId);
+
+        console.log(
+          "[handleWebhookEvent] Subscription created with ID:",
+          subscriptionId,
+        );
         break;
 
       case "subscription.updated":
@@ -390,10 +418,10 @@ export const handleWebhookEvent = mutation({
             amount: args.body.data.amount,
             status: args.body.data.status,
             currentPeriodStart: new Date(
-              args.body.data.current_period_start
+              args.body.data.current_period_start,
             ).getTime(),
             currentPeriodEnd: new Date(
-              args.body.data.current_period_end
+              args.body.data.current_period_end,
             ).getTime(),
             cancelAtPeriodEnd: args.body.data.cancel_at_period_end,
             metadata: args.body.data.metadata || {},
@@ -489,7 +517,7 @@ export const handleWebhookEvent = mutation({
 const validateEvent = (
   body: string | Buffer,
   headers: Record<string, string>,
-  secret: string
+  secret: string,
 ) => {
   const base64Secret = btoa(secret);
   const webhook = new Webhook(base64Secret);
@@ -506,11 +534,14 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
     headersObj[key] = value;
   });
   console.log("[paymentWebhook] Headers:", headersObj);
-  
+
   try {
     const rawBody = await request.text();
-    console.log("[paymentWebhook] Webhook body received, length:", rawBody.length);
-    
+    console.log(
+      "[paymentWebhook] Webhook body received, length:",
+      rawBody.length,
+    );
+
     // Log first 200 chars of body for debugging
     console.log("[paymentWebhook] Body preview:", rawBody.substring(0, 200));
 
@@ -525,7 +556,7 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
     // Validate the webhook event
     if (!process.env.POLAR_WEBHOOK_SECRET) {
       throw new Error(
-        "POLAR_WEBHOOK_SECRET environment variable is not configured"
+        "POLAR_WEBHOOK_SECRET environment variable is not configured",
       );
     }
     validateEvent(rawBody, headers, process.env.POLAR_WEBHOOK_SECRET);
@@ -546,9 +577,12 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
     });
   } catch (error) {
     console.error("[paymentWebhook] Error processing webhook:", error);
-    
+
     if (error instanceof WebhookVerificationError) {
-      console.error("[paymentWebhook] Webhook verification failed:", error.message);
+      console.error(
+        "[paymentWebhook] Webhook verification failed:",
+        error.message,
+      );
       return new Response(
         JSON.stringify({ message: "Webhook verification failed" }),
         {
@@ -556,17 +590,26 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
-    console.error("[paymentWebhook] Unexpected error:", error instanceof Error ? error.message : error);
-    return new Response(JSON.stringify({ message: "Webhook failed", error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 400,
-      headers: {
-        "Content-Type": "application/json",
+    console.error(
+      "[paymentWebhook] Unexpected error:",
+      error instanceof Error ? error.message : error,
+    );
+    return new Response(
+      JSON.stringify({
+        message: "Webhook failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
   }
 });
 

@@ -7,24 +7,29 @@
 ## What Was Implemented
 
 ### Database Schema
+
 Added new table in `convex/schema.ts`:
+
 ```typescript
 dietaryPreferences: defineTable({
   userId: v.string(),
   restrictions: v.array(v.string()), // ["vegan", "gluten-free", etc.]
   customNotes: v.optional(v.string()),
-  intermittentFasting: v.optional(v.object({
-    enabled: v.boolean(),
-    startHour: v.number(), // 0-23
-    endHour: v.number(),   // 0-23
-  })),
+  intermittentFasting: v.optional(
+    v.object({
+      enabled: v.boolean(),
+      startHour: v.number(), // 0-23
+      endHour: v.number(), // 0-23
+    }),
+  ),
   updatedAt: v.number(),
-})
-.index("by_user", ["userId"])
+}).index("by_user", ["userId"]);
 ```
 
 ### Backend Functions
+
 Created `convex/dietaryPreferences.ts` with:
+
 - `getUserPreferences` - Query to fetch preferences
 - `updatePreferences` - Mutation to save preferences
 - `addRestriction` - Add single restriction
@@ -32,7 +37,9 @@ Created `convex/dietaryPreferences.ts` with:
 - `toggleIntermittentFasting` - Enable/disable IF
 
 ### Chat Integration
+
 Preferences are now included in Bob's context:
+
 ```typescript
 // In stream-v2/route.ts
 const dietaryPreferences = await convexClient.query(
@@ -45,7 +52,9 @@ Fasting window: ${startHour}:00-${endHour}:00
 ```
 
 ### Bob's Behavior Changes
+
 Bob now:
+
 - Considers dietary restrictions when suggesting meals
 - Respects intermittent fasting windows
 - Includes dietary info in context
@@ -54,7 +63,9 @@ Bob now:
 ## What's Missing (Frontend)
 
 ### Settings Page Component
+
 Need to create `/app/(app)/settings/dietary-preferences/page.tsx`:
+
 ```typescript
 // TODO: Implement UI for:
 // - Checkbox list of common restrictions
@@ -64,7 +75,9 @@ Need to create `/app/(app)/settings/dietary-preferences/page.tsx`:
 ```
 
 ### Menu Item Added But Broken
+
 Added link in settings but page doesn't exist:
+
 ```typescript
 // In settings/page.tsx
 <Link href="/settings/dietary-preferences">
@@ -92,6 +105,7 @@ Added link in settings but page doesn't exist:
 ## How Bob Uses This
 
 ### Meal Suggestions
+
 ```typescript
 // Vegan user asks "what should I eat?"
 Bob: "3 vegan options:
@@ -101,10 +115,11 @@ Bob: "3 vegan options:
 ```
 
 ### Fasting Window Respect
+
 ```typescript
 // User at 10 AM with 12-8 PM eating window
 User: "I'm hungry"
-Bob: "You're still in your fasting window (ends at 12:00). 
+Bob: "You're still in your fasting window (ends at 12:00).
 How about some water or black coffee?"
 ```
 

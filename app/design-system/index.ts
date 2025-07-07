@@ -1,12 +1,12 @@
 // iOS Dark Mode Design System - Main Export
 
-export * from './tokens';
-export * from './components';
-export * from './hooks';
+export * from "./tokens";
+export * from "./components";
+export * from "./hooks";
 
 // Re-export specific items for convenience
-export { designTokens } from './tokens';
-export { 
+export { designTokens } from "./tokens";
+export {
   buttonConfig,
   inputConfig,
   cardConfig,
@@ -17,8 +17,8 @@ export {
   badgeConfig,
   toggleConfig,
   safeAreaConfig,
-  animationConfig
-} from './components';
+  animationConfig,
+} from "./components";
 export {
   useHapticFeedback,
   useSafeAreaInsets,
@@ -27,5 +27,5 @@ export {
   usePullToRefresh,
   useDoubleTap,
   useIOSKeyboard,
-  useDeviceDetection
-} from './hooks';
+  useDeviceDetection,
+} from "./hooks";

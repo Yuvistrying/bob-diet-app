@@ -4,7 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "~/lib/utils";
 import { Camera, ChevronDown, X } from "lucide-react";
 import { designTokens } from "~/app/design-system/tokens";
-import { useIOSKeyboard, useHapticFeedback, useSafeAreaInsets } from "~/app/design-system/hooks";
+import {
+  useIOSKeyboard,
+  useHapticFeedback,
+  useSafeAreaInsets,
+} from "~/app/design-system/hooks";
 
 interface ChatInterfaceProps {
   messages: any[];
@@ -31,38 +35,38 @@ export function ChatInterface({
   onImageSelect,
   onImageClear,
   onScrollToBottom,
-  showScrollToBottom
+  showScrollToBottom,
 }: ChatInterfaceProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { keyboardHeight, isKeyboardVisible } = useIOSKeyboard();
   const { triggerHaptic } = useHapticFeedback();
   const safeAreaInsets = useSafeAreaInsets();
-  
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onImageSelect(file);
-      triggerHaptic('light');
+      triggerHaptic("light");
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && !selectedImage) || isStreaming) return;
-    triggerHaptic('medium');
+    triggerHaptic("medium");
     onSubmit(e);
   };
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat Messages Area */}
-      <div 
+      <div
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto ios-scroll px-4 pb-2"
-        style={{ 
+        style={{
           paddingTop: safeAreaInsets.top,
-          paddingBottom: isKeyboardVisible ? 8 : safeAreaInsets.bottom + 72
+          paddingBottom: isKeyboardVisible ? 8 : safeAreaInsets.bottom + 72,
         }}
       >
         <div className="max-w-content mx-auto space-y-3">
@@ -71,15 +75,15 @@ export function ChatInterface({
               key={index}
               className={cn(
                 "flex",
-                message.role === "user" ? "justify-end" : "justify-start"
+                message.role === "user" ? "justify-end" : "justify-start",
               )}
             >
               <div
                 className={cn(
                   "max-w-chat-bubble px-4 py-2.5 rounded-[18px]",
-                  message.role === "user" 
-                    ? "bg-accent text-white rounded-br-[4px]" 
-                    : "bg-background-elevated text-foreground rounded-bl-[4px]"
+                  message.role === "user"
+                    ? "bg-accent text-white rounded-br-[4px]"
+                    : "bg-background-elevated text-foreground rounded-bl-[4px]",
                 )}
               >
                 <div className="text-body">{message.content}</div>
@@ -94,7 +98,7 @@ export function ChatInterface({
         <button
           onClick={() => {
             onScrollToBottom?.();
-            triggerHaptic('light');
+            triggerHaptic("light");
           }}
           className="absolute bottom-24 right-4 w-10 h-10 bg-background-elevated rounded-full shadow-lg flex items-center justify-center ios-button"
         >
@@ -103,11 +107,11 @@ export function ChatInterface({
       )}
 
       {/* Input Bar */}
-      <div 
+      <div
         className="border-t border-separator bg-background-secondary"
-        style={{ 
+        style={{
           paddingBottom: isKeyboardVisible ? 8 : safeAreaInsets.bottom,
-          marginBottom: keyboardHeight
+          marginBottom: keyboardHeight,
         }}
       >
         <form onSubmit={handleSubmit} className="px-4 py-3">
@@ -123,7 +127,7 @@ export function ChatInterface({
                 type="button"
                 onClick={() => {
                   onImageClear();
-                  triggerHaptic('light');
+                  triggerHaptic("light");
                 }}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-background-elevated rounded-full flex items-center justify-center shadow-sm ios-button"
               >
@@ -131,20 +135,20 @@ export function ChatInterface({
               </button>
             </div>
           )}
-          
+
           <div className="flex items-center gap-3">
             {/* Camera Button */}
             <button
               type="button"
               onClick={() => {
                 fileInputRef.current?.click();
-                triggerHaptic('light');
+                triggerHaptic("light");
               }}
               className="w-9 h-9 flex items-center justify-center rounded-full ios-button"
             >
               <Camera className="w-5 h-5 text-foreground-secondary" />
             </button>
-            
+
             {/* Hidden File Input */}
             <input
               ref={fileInputRef}
@@ -154,7 +158,7 @@ export function ChatInterface({
               onChange={handleImageSelect}
               className="hidden"
             />
-            
+
             {/* Text Input */}
             <div className="flex-1 relative">
               <input
@@ -164,11 +168,11 @@ export function ChatInterface({
                 className={cn(
                   "w-full h-9 bg-background-elevated rounded-full px-4 pr-12",
                   "text-body placeholder:text-foreground-tertiary text-foreground",
-                  "border-0 outline-none ios-input"
+                  "border-0 outline-none ios-input",
                 )}
                 disabled={isStreaming}
               />
-              
+
               {/* Send Button */}
               <button
                 type="submit"
@@ -179,21 +183,26 @@ export function ChatInterface({
                   "transition-all duration-200 ios-button",
                   (!input.trim() && !selectedImage) || isStreaming
                     ? "bg-foreground-tertiary/20"
-                    : "bg-accent"
+                    : "bg-accent",
                 )}
               >
-                <svg 
+                <svg
                   className={cn(
                     "w-4 h-4",
                     (!input.trim() && !selectedImage) || isStreaming
                       ? "text-foreground-tertiary"
-                      : "text-white"
+                      : "text-white",
                   )}
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 10l7-7m0 0l7 7m-7-7v18"
+                  />
                 </svg>
               </button>
             </div>

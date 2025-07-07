@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
 interface StreamingOptions {
   wordsPerMinute?: number;
@@ -9,26 +9,22 @@ interface StreamingOptions {
 export function useStreamingMessage(
   fullText: string,
   isActive: boolean,
-  options: StreamingOptions = {}
+  options: StreamingOptions = {},
 ) {
-  const {
-    wordsPerMinute = 300,
-    showCursor = true,
-    cursorChar = '▋'
-  } = options;
+  const { wordsPerMinute = 300, showCursor = true, cursorChar = "▋" } = options;
 
-  const [displayText, setDisplayText] = useState('');
+  const [displayText, setDisplayText] = useState("");
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
     if (!isActive || !fullText) {
-      setDisplayText('');
+      setDisplayText("");
       setIsComplete(false);
       return;
     }
 
     // Calculate delay based on words per minute
-    const words = fullText.split(' ');
+    const words = fullText.split(" ");
     const delayMs = (60 * 1000) / wordsPerMinute; // ms per word
 
     let currentIndex = 0;
@@ -36,8 +32,9 @@ export function useStreamingMessage(
 
     const timer = setInterval(() => {
       if (currentIndex < words.length) {
-        const partial = words.slice(0, currentIndex + 1).join(' ');
-        const cursor = showCursor && currentIndex < words.length - 1 ? ` ${cursorChar}` : '';
+        const partial = words.slice(0, currentIndex + 1).join(" ");
+        const cursor =
+          showCursor && currentIndex < words.length - 1 ? ` ${cursorChar}` : "";
         setDisplayText(partial + cursor);
         currentIndex++;
       } else {
@@ -51,7 +48,7 @@ export function useStreamingMessage(
   }, [fullText, isActive, wordsPerMinute, showCursor, cursorChar]);
 
   const restart = useCallback(() => {
-    setDisplayText('');
+    setDisplayText("");
     setIsComplete(false);
   }, []);
 

@@ -5,19 +5,25 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "~/app/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/app/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/app/components/ui/card";
 import { Separator } from "~/app/components/ui/separator";
-import { 
-  User, 
-  CreditCard, 
-  LogOut, 
-  Moon, 
-  Sun, 
+import {
+  User,
+  CreditCard,
+  LogOut,
+  Moon,
+  Sun,
   ChevronRight,
   Mail,
   Shield,
   Bell,
-  Utensils
+  Utensils,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ClientOnly } from "~/app/components/ClientOnly";
@@ -28,7 +34,7 @@ export default function Settings() {
   const { signOut } = useClerk();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  
+
   const subscription = useQuery(api.subscriptions.fetchUserSubscription);
 
   const handleSignOut = async () => {
@@ -60,7 +66,9 @@ export default function Settings() {
         {
           icon: CreditCard,
           label: "Billing",
-          description: subscription ? `${subscription.status} - ${subscription.productName}` : "No active subscription",
+          description: subscription
+            ? `${subscription.status} - ${subscription.productName}`
+            : "No active subscription",
           href: "/pricing",
         },
       ],
@@ -106,7 +114,7 @@ export default function Settings() {
     <ClientOnly>
       <div className="container mx-auto p-4 max-w-2xl pb-20">
         <h1 className="text-2xl font-bold mb-6">Settings</h1>
-        
+
         <div className="space-y-6">
           {settingsGroups.map((group) => (
             <Card key={group.title}>
@@ -117,7 +125,7 @@ export default function Settings() {
                 {group.items.map((item, index) => {
                   const Icon = item.icon;
                   const isLast = index === group.items.length - 1;
-                  
+
                   const content = (
                     <>
                       <div className="flex items-center gap-3">
@@ -128,12 +136,14 @@ export default function Settings() {
                             {item.description}
                           </p>
                         </div>
-                        {!item.disabled && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        {!item.disabled && (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                       {!isLast && <Separator className="mt-4" />}
                     </>
                   );
-                  
+
                   if (item.disabled) {
                     return (
                       <div key={item.label} className="px-6 py-4 opacity-50">
@@ -141,7 +151,7 @@ export default function Settings() {
                       </div>
                     );
                   }
-                  
+
                   if (item.action) {
                     return (
                       <button
@@ -153,7 +163,7 @@ export default function Settings() {
                       </button>
                     );
                   }
-                  
+
                   if (item.href) {
                     return (
                       <Link
@@ -167,13 +177,13 @@ export default function Settings() {
                       </Link>
                     );
                   }
-                  
+
                   return null;
                 })}
               </CardContent>
             </Card>
           ))}
-          
+
           <Card>
             <CardContent className="p-6">
               <Button

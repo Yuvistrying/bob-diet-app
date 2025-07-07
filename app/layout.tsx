@@ -10,7 +10,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Bob - Your AI Diet Coach",
-  description: "Personalized AI-powered diet coaching to help you achieve your health goals",
+  description:
+    "Personalized AI-powered diet coaching to help you achieve your health goals",
   icons: {
     icon: "/favicon.png",
   },
@@ -30,13 +31,15 @@ export default function RootLayout({
           <link rel="dns-prefetch" href="https://api.convex.dev" />
           <link rel="dns-prefetch" href="https://clerk.dev" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
         </head>
         <body className={inter.className}>
           <ConvexClientProvider>
-            <ThemeProvider>
-              {children}
-            </ThemeProvider>
+            <ThemeProvider>{children}</ThemeProvider>
           </ConvexClientProvider>
           <Analytics />
         </body>

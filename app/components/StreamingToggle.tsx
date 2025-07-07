@@ -6,21 +6,21 @@ import { Label } from "./ui/label";
 
 export function StreamingToggle() {
   const [useNewStreaming, setUseNewStreaming] = useState(false);
-  
+
   useEffect(() => {
-    const stored = localStorage.getItem('useNewStreaming') === 'true';
+    const stored = localStorage.getItem("useNewStreaming") === "true";
     setUseNewStreaming(stored);
   }, []);
-  
+
   const handleToggle = (checked: boolean) => {
     setUseNewStreaming(checked);
-    localStorage.setItem('useNewStreaming', checked.toString());
+    localStorage.setItem("useNewStreaming", checked.toString());
     // Optionally reload to ensure clean state
-    if (confirm('Reload page to apply changes?')) {
+    if (confirm("Reload page to apply changes?")) {
       window.location.reload();
     }
   };
-  
+
   return (
     <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
       <Switch
@@ -31,11 +31,13 @@ export function StreamingToggle() {
       <Label htmlFor="streaming-mode" className="cursor-pointer">
         <div>
           <div className="font-medium">
-            {useNewStreaming ? "New Streaming (Vercel-Only)" : "Current System (Hybrid)"}
+            {useNewStreaming
+              ? "New Streaming (Vercel-Only)"
+              : "Current System (Hybrid)"}
           </div>
           <div className="text-sm text-muted-foreground">
-            {useNewStreaming 
-              ? "Simplified architecture with same features" 
+            {useNewStreaming
+              ? "Simplified architecture with same features"
               : "Convex Agent + Vercel streaming"}
           </div>
         </div>

@@ -7,23 +7,26 @@ export const generateDailySummaries = internalAction({
   handler: async (ctx) => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const dateStr = yesterday.toISOString().split('T')[0];
-    
+    const dateStr = yesterday.toISOString().split("T")[0];
+
     console.log(`Generating summaries for ${dateStr}`);
-    
+
     // Get all users who had conversations yesterday
     const yesterdayStart = yesterday.setHours(0, 0, 0, 0);
     const yesterdayEnd = yesterday.setHours(23, 59, 59, 999);
-    
+
     // Get unique user IDs from yesterday's chat history
-    const messages = await ctx.runQuery(internal.backgroundJobHandlers.getYesterdayMessages, {
-      startTime: yesterdayStart,
-      endTime: yesterdayEnd,
-    });
-    
+    const messages = await ctx.runQuery(
+      internal.backgroundJobHandlers.getYesterdayMessages,
+      {
+        startTime: yesterdayStart,
+        endTime: yesterdayEnd,
+      },
+    );
+
     const userIds = [...new Set(messages.map((m: any) => m.userId))];
     console.log(`Found ${userIds.length} users with activity on ${dateStr}`);
-    
+
     // Generate summary for each user
     for (const userId of userIds) {
       try {
@@ -34,19 +37,19 @@ export const generateDailySummaries = internalAction({
             content: m.content,
             metadata: m.metadata,
           }));
-        
+
         await ctx.runAction(internal.conversationSummary.generateDailySummary, {
           userId,
           date: dateStr,
           messages: userMessages,
         });
-        
+
         console.log(`Generated summary for user ${userId}`);
       } catch (error) {
         console.error(`Failed to generate summary for user ${userId}:`, error);
       }
     }
-    
+
     console.log(`Completed generating summaries for ${dateStr}`);
   },
 });
@@ -60,11 +63,11 @@ export const getYesterdayMessages = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("chatHistory")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.gte(q.field("timestamp"), args.startTime),
-          q.lte(q.field("timestamp"), args.endTime)
-        )
+          q.lte(q.field("timestamp"), args.endTime),
+        ),
       )
       .collect();
   },

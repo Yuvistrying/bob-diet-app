@@ -8,9 +8,9 @@ export const getUserProfile = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     const userId = args.userId || identity.subject;
-    
+
     return await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", userId))
@@ -35,10 +35,10 @@ export const upsertUserProfile = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const userId = identity.subject;
     const now = Date.now();
-    
+
     // Calculate daily targets based on user data
     const bmr = calculateBMR({
       weight: args.currentWeight,
@@ -46,26 +46,30 @@ export const upsertUserProfile = mutation({
       age: args.age,
       gender: args.gender,
     });
-    
+
     const tdee = calculateTDEE(bmr, args.activityLevel);
-    const { calories, protein } = calculateTargets(tdee, args.goal, args.currentWeight);
-    
+    const { calories, protein } = calculateTargets(
+      tdee,
+      args.goal,
+      args.currentWeight,
+    );
+
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", userId))
       .first();
-    
+
     const profileData = {
       userId,
       ...args,
       dailyCalorieTarget: calories,
       proteinTarget: protein,
-      carbsTarget: Math.round(calories * 0.4 / 4), // 40% from carbs
-      fatTarget: Math.round(calories * 0.3 / 9), // 30% from fat
+      carbsTarget: Math.round((calories * 0.4) / 4), // 40% from carbs
+      fatTarget: Math.round((calories * 0.3) / 9), // 30% from fat
       onboardingCompleted: true,
       updatedAt: now,
     };
-    
+
     let profileId;
     if (existing) {
       await ctx.db.patch(existing._id, profileData);
@@ -76,19 +80,24 @@ export const upsertUserProfile = mutation({
         createdAt: now,
       });
     }
-    
+
     // Clear cached context since profile data has changed
     // Clear cached context when profile is updated
     await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
-      cacheKey: "chat_context"
+      cacheKey: "chat_context",
     });
-    
+
     return profileId;
   },
 });
 
 // Helper functions for calculations
-function calculateBMR({ weight, height, age, gender }: {
+function calculateBMR({
+  weight,
+  height,
+  age,
+  gender,
+}: {
   weight: number;
   height: number;
   age: number;
@@ -111,16 +120,16 @@ function calculateTDEE(bmr: number, activityLevel: string) {
 
 function calculateTargets(tdee: number, goal: string, weight: number) {
   let calories = tdee;
-  
+
   if (goal === "cut") {
     calories = tdee - 500; // 500 calorie deficit for ~1lb/week loss
   } else if (goal === "gain") {
     calories = tdee + 300; // 300 calorie surplus for lean gains
   }
-  
+
   // Protein: 0.8-1g per lb of body weight
   const proteinGrams = Math.round(weight * 2.2 * 0.9); // kg to lbs * 0.9
-  
+
   return {
     calories: Math.round(calories),
     protein: proteinGrams,
@@ -136,39 +145,39 @@ export const updateProfileField = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const profile = await ctx.db
       .query("userProfiles")
-      .withIndex("by_user", q => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
-    
+
     if (!profile) {
       throw new Error("Profile not found");
     }
-    
+
     await ctx.db.patch(profile._id, {
       [args.field]: args.value,
       updatedAt: Date.now(),
     });
-    
+
     // If the name field is being updated, also update it in the users table
     if (args.field === "name" && typeof args.value === "string") {
       const user = await ctx.db
         .query("users")
         .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
         .first();
-      
+
       if (user) {
         await ctx.db.patch(user._id, {
           name: args.value,
         });
       }
     }
-    
+
     // Clear cached context since profile data has changed
     // Clear cached context when profile is created/updated
     await ctx.runMutation(api.sessionCache.clearSessionCacheKey, {
-      cacheKey: "chat_context"
+      cacheKey: "chat_context",
     });
   },
 });

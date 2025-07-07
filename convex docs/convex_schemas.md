@@ -1,6 +1,7 @@
 # Schemas | Convex Developer Hub
 
 A schema is a description of:
+
 - the tables in your Convex project
 - the type of documents within your tables
 
@@ -156,6 +157,7 @@ export default mutation({
 ```
 
 Notes:
+
 - This type corresponds to the [Record<K,V>](https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type) type in TypeScript
 - You cannot use string literals as a `record` key
 - Using `v.string()` as a `record` key validator will only allow ASCII characters

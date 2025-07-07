@@ -36,13 +36,13 @@ export const myAction = action({
     if (!apiKey) {
       throw new Error("API_KEY environment variable not set");
     }
-    
+
     const response = await fetch("https://api.example.com", {
       headers: {
         Authorization: `Bearer ${apiKey}`,
       },
     });
-    
+
     // Process response...
   },
 });

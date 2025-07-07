@@ -5,6 +5,7 @@
 Our app uses semantic color variables that automatically adapt to light/dark themes. Here's how to use them:
 
 ### Background Colors
+
 - `bg-background` - Main page/app background
 - `bg-card` - Cards, panels, elevated surfaces
 - `bg-popover` - Popovers, dropdowns, modals
@@ -16,6 +17,7 @@ Our app uses semantic color variables that automatically adapt to light/dark the
 - `bg-destructive` - Error states, delete buttons
 
 ### Text Colors
+
 - `text-foreground` - Main body text
 - `text-card-foreground` - Text on cards
 - `text-popover-foreground` - Text in popovers
@@ -26,22 +28,25 @@ Our app uses semantic color variables that automatically adapt to light/dark the
 - `text-destructive-foreground` - Text on destructive backgrounds
 
 ### Border Colors
+
 - `border-border` - All borders (cards, inputs, dividers)
 - `border-input` - Input field borders (same as border)
 - `border-ring` - Focus rings
 
 ### Special Cases
+
 - `ring-ring` - Focus ring color
 - `shadow-*` - Use Tailwind shadow utilities
 
 ## Component Usage Guide
 
 ### Chat Messages
+
 ```tsx
 // User messages
 <div className="bg-primary text-primary-foreground rounded-2xl">
 
-// Assistant messages  
+// Assistant messages
 <div className="text-foreground">
 
 // System/tool messages
@@ -49,6 +54,7 @@ Our app uses semantic color variables that automatically adapt to light/dark the
 ```
 
 ### Cards
+
 ```tsx
 <div className="bg-card text-card-foreground border border-border rounded-lg">
   <h3 className="text-foreground font-semibold">Title</h3>
@@ -57,11 +63,13 @@ Our app uses semantic color variables that automatically adapt to light/dark the
 ```
 
 ### Inputs
+
 ```tsx
 <input className="bg-input text-foreground placeholder-muted-foreground border-border" />
 ```
 
 ### Buttons
+
 ```tsx
 // Primary
 <button className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -77,6 +85,7 @@ Our app uses semantic color variables that automatically adapt to light/dark the
 ```
 
 ### Status Indicators
+
 ```tsx
 // Success
 <div className="text-green-600 dark:text-green-400">
@@ -95,19 +104,19 @@ Our app uses semantic color variables that automatically adapt to light/dark the
 
 ### From Hard-coded Colors
 
-| Old | New |
-|-----|-----|
-| `bg-white dark:bg-black` | `bg-background` |
-| `bg-white dark:bg-gray-900` | `bg-card` |
-| `bg-gray-50 dark:bg-gray-950` | `bg-muted` |
-| `bg-gray-100 dark:bg-gray-800` | `bg-muted` |
-| `bg-gray-200 dark:bg-gray-800` | `bg-accent` or `bg-muted` |
-| `text-gray-900 dark:text-gray-100` | `text-foreground` |
-| `text-gray-800 dark:text-gray-200` | `text-foreground` |
-| `text-gray-600 dark:text-gray-400` | `text-muted-foreground` |
-| `text-gray-500 dark:text-gray-400` | `text-muted-foreground` |
-| `border-gray-200 dark:border-gray-800` | `border-border` |
-| `border-gray-300 dark:border-gray-700` | `border-border` |
+| Old                                    | New                       |
+| -------------------------------------- | ------------------------- |
+| `bg-white dark:bg-black`               | `bg-background`           |
+| `bg-white dark:bg-gray-900`            | `bg-card`                 |
+| `bg-gray-50 dark:bg-gray-950`          | `bg-muted`                |
+| `bg-gray-100 dark:bg-gray-800`         | `bg-muted`                |
+| `bg-gray-200 dark:bg-gray-800`         | `bg-accent` or `bg-muted` |
+| `text-gray-900 dark:text-gray-100`     | `text-foreground`         |
+| `text-gray-800 dark:text-gray-200`     | `text-foreground`         |
+| `text-gray-600 dark:text-gray-400`     | `text-muted-foreground`   |
+| `text-gray-500 dark:text-gray-400`     | `text-muted-foreground`   |
+| `border-gray-200 dark:border-gray-800` | `border-border`           |
+| `border-gray-300 dark:border-gray-700` | `border-border`           |
 
 ## Notes
 

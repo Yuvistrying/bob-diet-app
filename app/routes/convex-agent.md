@@ -24,35 +24,35 @@ npm run example
 Example usage:#
 // Define an agent similarly to the AI SDK
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
-  tools: { accountLookup, fileTicket, sendEmail },
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
+tools: { accountLookup, fileTicket, sendEmail },
 });
 
 // Use the agent from within a normal action:
 export const createThreadAndPrompt = action({
-  args: { prompt: v.string() },
-  handler: async (ctx, { prompt }) => {
-    const userId = await getUserId(ctx);
-    // Start a new thread for the user.
-    const { threadId, thread } = await supportAgent.createThread(ctx, { userId});
-    // Creates a user message with the prompt, and an assistant reply message.
-    const result = await thread.generateText({ prompt });
-    return { threadId, text: result.text };
-  },
+args: { prompt: v.string() },
+handler: async (ctx, { prompt }) => {
+const userId = await getUserId(ctx);
+// Start a new thread for the user.
+const { threadId, thread } = await supportAgent.createThread(ctx, { userId});
+// Creates a user message with the prompt, and an assistant reply message.
+const result = await thread.generateText({ prompt });
+return { threadId, text: result.text };
+},
 });
 
 // Pick up where you left off, with the same or a different agent:
 export const continueThread = action({
-  args: { prompt: v.string(), threadId: v.string() },
-  handler: async (ctx, { prompt, threadId }) => {
-    // Continue a thread, picking up where you left off.
-    const { thread } = await anotherAgent.continueThread(ctx, { threadId });
-    // This includes previous message history from the thread automatically.
-    const result = await thread.generateText({ prompt });
-    return result.text;
-  },
+args: { prompt: v.string(), threadId: v.string() },
+handler: async (ctx, { prompt, threadId }) => {
+// Continue a thread, picking up where you left off.
+const { thread } = await anotherAgent.continueThread(ctx, { threadId });
+// This includes previous message history from the thread automatically.
+const result = await thread.generateText({ prompt });
+return result.text;
+},
 });
 
 Also see the Stack article.
@@ -86,43 +86,43 @@ import { tool } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { Agent, createTool } from "@convex-dev/agent";
-import { components } from "./_generated/api";
+import { components } from "./\_generated/api";
 
 // Define an agent similarly to the AI SDK
 const supportAgent = new Agent(components.agent, {
-  // The chat completions model to use for the agent.
-  chat: openai.chat("gpt-4o-mini"),
-  // The default system prompt if not overriden.
-  instructions: "You are a helpful assistant.",
-  tools: {
-    // Convex tool
-    myConvexTool: createTool({
-      description: "My Convex tool",
-      args: z.object({...}),
-      // Note: annotate the return type of the handler to avoid type cycles.
-      handler: async (ctx, args): Promise<string> => {
-        return "Hello, world!";
-      },
-    }),
-    // Standard AI SDK tool
-    myTool: tool({ description, parameters, execute: () => {}}),
-  },
-  // Embedding model to power vector search of message history (RAG).
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  // Used for fetching context messages. See [below](#configuring-the-context-of-messages)
-  contextOptions,
-  // Used for storing messages. See [below](#configuring-the-storage-of-messages)
-  storageOptions,
-  // Used for limiting the number of steps when tool calls are involved.
-  // NOTE: if you want tool calls to happen automatically with a single call,
-  // you need to set this to something greater than 1 (the default).
-  maxSteps: 1,
-  // Used for limiting the number of retries when a tool call fails. Default: 3.
-  maxRetries: 3,
-  // Used for tracking token usage. See [below](#tracking-token-usage)
-  usageHandler: async (ctx, { model, usage }) => {
-    // ... log, save usage to your database, etc.
-  },
+// The chat completions model to use for the agent.
+chat: openai.chat("gpt-4o-mini"),
+// The default system prompt if not overriden.
+instructions: "You are a helpful assistant.",
+tools: {
+// Convex tool
+myConvexTool: createTool({
+description: "My Convex tool",
+args: z.object({...}),
+// Note: annotate the return type of the handler to avoid type cycles.
+handler: async (ctx, args): Promise<string> => {
+return "Hello, world!";
+},
+}),
+// Standard AI SDK tool
+myTool: tool({ description, parameters, execute: () => {}}),
+},
+// Embedding model to power vector search of message history (RAG).
+textEmbedding: openai.embedding("text-embedding-3-small"),
+// Used for fetching context messages. See [below](#configuring-the-context-of-messages)
+contextOptions,
+// Used for storing messages. See [below](#configuring-the-storage-of-messages)
+storageOptions,
+// Used for limiting the number of steps when tool calls are involved.
+// NOTE: if you want tool calls to happen automatically with a single call,
+// you need to set this to something greater than 1 (the default).
+maxSteps: 1,
+// Used for limiting the number of retries when a tool call fails. Default: 3.
+maxRetries: 3,
+// Used for tracking token usage. See [below](#tracking-token-usage)
+usageHandler: async (ctx, { model, usage }) => {
+// ... log, save usage to your database, etc.
+},
 });
 
 Starting a thread#
@@ -130,13 +130,13 @@ You can start a thread from either an action or a mutation. If it's in an action
 
 // Use the agent from within a normal action:
 export const createThread = mutation({
-  args: {},
-  handler: async (ctx): Promise<{ threadId: string }> => {
-    const userId = await getUserId(ctx);
-    // Start a new thread for the user.
-    const { threadId } = await supportAgent.createThread(ctx, { userId });
-    return { threadId };
-  },
+args: {},
+handler: async (ctx): Promise<{ threadId: string }> => {
+const userId = await getUserId(ctx);
+// Start a new thread for the user.
+const { threadId } = await supportAgent.createThread(ctx, { userId });
+return { threadId };
+},
 });
 
 Continuing a thread#
@@ -144,15 +144,16 @@ If you specify a userId too, you can search the user's history for relevant mess
 
 // Pick up where you left off:
 export const continueThread = action({
-  args: { prompt: v.string(), threadId: v.string() },
-  handler: async (ctx, { prompt, threadId }): Promise<string> => {
-    await authorizeThreadAccess(ctx, threadId);
-    // This includes previous message history from the thread automatically.
-+   const { thread } = await supportAgent.continueThread(ctx, { threadId });
-    const result = await thread.generateText({ prompt });
-    return result.text;
+args: { prompt: v.string(), threadId: v.string() },
+handler: async (ctx, { prompt, threadId }): Promise<string> => {
+await authorizeThreadAccess(ctx, threadId);
+// This includes previous message history from the thread automatically.
+
+- const { thread } = await supportAgent.continueThread(ctx, { threadId });
+  const result = await thread.generateText({ prompt });
+  return result.text;
   },
-});
+  });
 
 Generating text#
 The arguments to generateText are the same as the AI SDK, except you don't have to provide a model. By default it will use the agent's chat model.
@@ -169,8 +170,8 @@ Similar to the AI SDK, you can generate or streaman object. The same arguments a
 import { z } from "zod";
 
 const result = await thread.generateObject({
-  prompt: "Generate a plan based on the conversation so far",
-  schema: z.object({...}),
+prompt: "Generate a plan based on the conversation so far",
+schema: z.object({...}),
 });
 
 Showing messages#
@@ -182,42 +183,42 @@ import type { MessageDoc } from "@convex-dev/agent";
 import { paginationOptsValidator, type PaginationResult } from "convex/server";
 
 export const listThreadMessages = query({
-  args: {
-    threadId: v.string(),
-    paginationOpts: paginationOptsValidator,
-    //... other arguments you want
-  },
-  handler: async (
-    ctx, { threadId, paginationOpts },
-  ): PaginationResult<MessageDoc> => {
-    // await authorizeThreadAccess(ctx, threadId);
-    const paginated = await agent.listMessages(ctx, {
-      threadId,
-      paginationOpts,
-    });
-    // Here you could filter out / modify the documents
-    return paginated;
-  },
+args: {
+threadId: v.string(),
+paginationOpts: paginationOptsValidator,
+//... other arguments you want
+},
+handler: async (
+ctx, { threadId, paginationOpts },
+): PaginationResult<MessageDoc> => {
+// await authorizeThreadAccess(ctx, threadId);
+const paginated = await agent.listMessages(ctx, {
+threadId,
+paginationOpts,
+});
+// Here you could filter out / modify the documents
+return paginated;
+},
 });
 
 Client-side:
 
-import { api } from "../convex/_generated/api";
+import { api } from "../convex/\_generated/api";
 import { useThreadMessages, toUIMessages } from "@convex-dev/agent/react";
 
 function MyComponent({ threadId }: { threadId: string }) {
-  const messages = useThreadMessages(
-    api.chatBasic.listThreadMessages,
-    { threadId },
-    { initialNumItems: 10 },
-  );
-  return (
-    <div>
-      {toUIMessages(messages.results ?? []).map((message) => (
-        <div key={message.key}>{message.content}</div>
-      ))}
-    </div>
-  );
+const messages = useThreadMessages(
+api.chatBasic.listThreadMessages,
+{ threadId },
+{ initialNumItems: 10 },
+);
+return (
+<div>
+{toUIMessages(messages.results ?? []).map((message) => (
+<div key={message.key}>{message.content}</div>
+))}
+</div>
+);
 }
 
 See examples/chat-basic for an example, and examples/chat-streaming for a streaming example.
@@ -226,27 +227,27 @@ Configuring the context of message generation#
 You can customize what history is included per-message via contextOptions. These options can be provided to the Agent constructor, or per-message.
 
 const result = await thread.generateText({ prompt }, {
-  // Values shown are the defaults.
-  contextOptions: {
-    // Whether to include tool messages in the context.
-    includeToolCalls: false,
-    // How many recent messages to include. These are added after the search
-    // messages, and do not count against the search limit.
-    recentMessages: 100,
-    // Options for searching messages via text and/or vector search.
-    searchOptions: {
-      limit: 10, // The maximum number of messages to fetch.
-      textSearch: false, // Whether to use text search to find messages.
-      vectorSearch: false, // Whether to use vector search to find messages.
-      // Note, this is after the limit is applied.
-      // E.g. this will quadruple the number of messages fetched.
-      // (two before, and one after each message found in the search)
-      messageRange: { before: 2, after: 1 },
-    },
-    // Whether to search across other threads for relevant messages.
-    // By default, only the current thread is searched.
-    searchOtherThreads: false,
-  },
+// Values shown are the defaults.
+contextOptions: {
+// Whether to include tool messages in the context.
+includeToolCalls: false,
+// How many recent messages to include. These are added after the search
+// messages, and do not count against the search limit.
+recentMessages: 100,
+// Options for searching messages via text and/or vector search.
+searchOptions: {
+limit: 10, // The maximum number of messages to fetch.
+textSearch: false, // Whether to use text search to find messages.
+vectorSearch: false, // Whether to use vector search to find messages.
+// Note, this is after the limit is applied.
+// E.g. this will quadruple the number of messages fetched.
+// (two before, and one after each message found in the search)
+messageRange: { before: 2, after: 1 },
+},
+// Whether to search across other threads for relevant messages.
+// By default, only the current thread is searched.
+searchOtherThreads: false,
+},
 
 Configuring the storage of messages#
 Generally the defaults are fine, but if you want to pass in multiple messages and have them all saved (vs. just the last one), or avoid saving any input or output messages, you can pass in a storageOptions object, either to the Agent constructor or per-message.
@@ -254,9 +255,9 @@ Generally the defaults are fine, but if you want to pass in multiple messages an
 The usecase for passing in multiple messages but not saving them is if you want to include some extra messages for context to the LLM, but only the last message is the user's actual request. e.g. messages = [...messagesFromRag, messageFromUser]. The default is to save the prompt and all output messages.
 
 const result = await thread.generateText({ messages }, {
-  storageOptions: {
-    saveMessages: "all" | "none" | "promptAndOutput";
-  },
+storageOptions: {
+saveMessages: "all" | "none" | "promptAndOutput";
+},
 });
 
 Creating a tool with Convex context#
@@ -264,25 +265,25 @@ There are two ways to create a tool that has access to the Convex context.
 
 Use the createTool function, which is a wrapper around the AI SDK's tool function.
 export const ideaSearch = createTool({
-  description: "Search for ideas in the database",
-  args: z.object({ query: z.string() }),
-  handler: async (ctx, args): Promise<Array<Idea>> => {
-    // ctx has userId, threadId, messageId, runQuery, runMutation, and runAction
-    const ideas = await ctx.runQuery(api.ideas.searchIdeas, { query: args.query });
-    console.log("found ideas", ideas);
-    return ideas;
-  },
+description: "Search for ideas in the database",
+args: z.object({ query: z.string() }),
+handler: async (ctx, args): Promise<Array<Idea>> => {
+// ctx has userId, threadId, messageId, runQuery, runMutation, and runAction
+const ideas = await ctx.runQuery(api.ideas.searchIdeas, { query: args.query });
+console.log("found ideas", ideas);
+return ideas;
+},
 });
 
 Define tools at runtime in a context with the variables you want to use.
 async function createTool(ctx: ActionCtx, teamId: Id<"teams">) {
-  const myTool = tool({
-    description: "My tool",
-    parameters: z.object({...}),
-    execute: async (args, options) => {
-      return await ctx.runQuery(internal.foo.bar, args);
-    },
-  });
+const myTool = tool({
+description: "My tool",
+parameters: z.object({...}),
+execute: async (args, options) => {
+return await ctx.runQuery(internal.foo.bar, args);
+},
+});
 }
 
 You can provide tools at different times:
@@ -303,27 +304,27 @@ To do this, you need to first save the message, then pass the messageId as promp
 Note: embeddings are usually generated automatically when you save messages from an action. However, if you're saving messages in a mutation, where calling an LLM is not possible, you can generate them asynchronously as well.
 
 export const sendMessage = mutation({
-  args: { threadId: v.id("threads"), prompt: v.string() },
-  handler: async (ctx, { threadId, prompt }) => {
-    const userId = await getUserId(ctx);
-    const { messageId } = await agent.saveMessage(ctx, {
-      threadId, userId, prompt,
-      skipEmbeddings: true,
-    });
-    await ctx.scheduler.runAfter(0, internal.example.myAsyncAction, {
-      threadId, promptMessageId: messageId,
-    });
-  }
+args: { threadId: v.id("threads"), prompt: v.string() },
+handler: async (ctx, { threadId, prompt }) => {
+const userId = await getUserId(ctx);
+const { messageId } = await agent.saveMessage(ctx, {
+threadId, userId, prompt,
+skipEmbeddings: true,
+});
+await ctx.scheduler.runAfter(0, internal.example.myAsyncAction, {
+threadId, promptMessageId: messageId,
+});
+}
 });
 
 export const myAsyncAction = internalAction({
-  args: { threadId: v.string(), promptMessageId: v.string() },
-  handler: async (ctx, { threadId, promptMessageId }) => {
-    // Generate embeddings for the prompt message
-    await supportAgent.generateAndSaveEmbeddings(ctx, { messageIds: [promptMessageId] });
-    const { thread } = await supportAgent.continueThread(ctx, { threadId });
-    await thread.generateText({ promptMessageId });
-  },
+args: { threadId: v.string(), promptMessageId: v.string() },
+handler: async (ctx, { threadId, promptMessageId }) => {
+// Generate embeddings for the prompt message
+await supportAgent.generateAndSaveEmbeddings(ctx, { messageIds: [promptMessageId] });
+const { thread } = await supportAgent.continueThread(ctx, { threadId });
+await thread.generateText({ promptMessageId });
+},
 });
 
 Search for messages#
@@ -334,29 +335,29 @@ Fetch Messages for a user and/or thread. Accepts ContextOptions, e.g. includeToo
 import type { MessageDoc } from "@convex-dev/agent";
 
 const messages: MessageDoc[] = await supportAgent.fetchContextMessages(ctx, {
-  threadId, messages: [{ role, content }], contextOptions
+threadId, messages: [{ role, content }], contextOptions
 });
 
 Get and update thread information#
 List threads for a user:
 
 const threads = await ctx.runQuery(components.agent.threads.listThreadsByUserId, {
-  userId,
-  order: "desc",
-  paginationOpts: { cursor: null, numItems: 10 }
+userId,
+order: "desc",
+paginationOpts: { cursor: null, numItems: 10 }
 });
 
 Get a thread by id:
 
 const thread = await ctx.runQuery(components.agent.threads.getThread, {
-  threadId,
+threadId,
 });
 
 Update a thread's metadata:
 
 await ctx.runMutation(components.agent.threads.updateThread, {
-  threadId,
-  { title, summary, status }
+threadId,
+{ title, summary, status }
 });
 
 Using the Playground UI#
@@ -381,16 +382,16 @@ export const createThread = supportAgent.createThreadMutation();
 For an action that generates text in a thread, similar to thread.generateText:
 
 export const getSupport = supportAgent.asTextAction({
-  maxSteps: 10,
+maxSteps: 10,
 });
 
 You can also expose a standalone action that generates an object.
 
 export const getStructuredSupport = supportAgent.asObjectAction({
-  schema: z.object({
-    analysis: z.string().describe("A detailed analysis of the user's request."),
-    suggestion: z.string().describe("A suggested action to take.")
-  }),
+schema: z.object({
+analysis: z.string().describe("A detailed analysis of the user's request."),
+suggestion: z.string().describe("A suggested action to take.")
+}),
 });
 
 To save messages explicitly as a mutation, similar to agent.saveMessages:
@@ -405,21 +406,21 @@ You can use the Workflow component to run agent flows. It handles retries and gu
 const workflow = new WorkflowManager(components.workflow);
 
 export const supportAgentWorkflow = workflow.define({
-  args: { prompt: v.string(), userId: v.string() },
-  handler: async (step, { prompt, userId }) => {
-    const { threadId } = await step.runMutation(internal.example.createThread, {
-      userId, title: "Support Request",
-    });
-    const suggestion = await step.runAction(internal.example.getSupport, {
-      threadId, userId, prompt,
-    });
-    const { object } = await step.runAction(internal.example.getStructuredSupport, {
-      userId, message: suggestion,
-    });
-    await step.runMutation(internal.example.sendUserMessage, {
-      userId, message: object.suggestion,
-    });
-  },
+args: { prompt: v.string(), userId: v.string() },
+handler: async (step, { prompt, userId }) => {
+const { threadId } = await step.runMutation(internal.example.createThread, {
+userId, title: "Support Request",
+});
+const suggestion = await step.runAction(internal.example.getSupport, {
+threadId, userId, prompt,
+});
+const { object } = await step.runAction(internal.example.getStructuredSupport, {
+userId, message: suggestion,
+});
+await step.runMutation(internal.example.sendUserMessage, {
+userId, message: object.suggestion,
+});
+},
 });
 
 See another example in example.ts.
@@ -432,56 +433,56 @@ Saving messages manually#
 Save messages to the database.
 
 const { lastMessageId, messageIds} = await agent.saveMessages(ctx, {
-  threadId, userId,
-  messages: [{ role, content }],
-  metadata: [{ reasoning, usage, ... }] // See MessageWithMetadata type
+threadId, userId,
+messages: [{ role, content }],
+metadata: [{ reasoning, usage, ... }] // See MessageWithMetadata type
 });
 
 Manage embeddings#
 Generate embeddings for a set of messages.
 
 const embeddings = await supportAgent.generateEmbeddings([
-  { role: "user", content: "What is love?" },
+{ role: "user", content: "What is love?" },
 ]);
 
 Get and update embeddings, e.g. for a migration to a new model.
 
 const messages = await ctx.runQuery(
-  components.agent.vector.index.paginate,
-  { vectorDimension: 1536, cursor: null, limit: 10 }
+components.agent.vector.index.paginate,
+{ vectorDimension: 1536, cursor: null, limit: 10 }
 );
 
 Note: If the dimension changes, you need to delete the old and insert the new.
 
 const messages = await ctx.runQuery(components.agent.vector.index.updateBatch, {
-  vectors: [
-    { model: "gpt-4o-mini", vector: embedding, id: msg.embeddingId },
-  ],
+vectors: [
+{ model: "gpt-4o-mini", vector: embedding, id: msg.embeddingId },
+],
 });
 
 Delete embeddings
 
 await ctx.runMutation(components.agent.vector.index.deleteBatch, {
-  ids: [embeddingId1, embeddingId2],
+ids: [embeddingId1, embeddingId2],
 });
 
 Insert embeddings
 
 const ids = await ctx.runMutation(
-  components.agent.vector.index.insertBatch, {
-    vectorDimension: 1536,
-    vectors: [
-      {
-        model: "gpt-4o-mini",
-        table: "messages",
-        userId: "123",
-        threadId: "123",
-        vector: embedding,
-        // Optional, if you want to update the message with the embeddingId
-        messageId: messageId,
-      },
-    ],
-  }
+components.agent.vector.index.insertBatch, {
+vectorDimension: 1536,
+vectors: [
+{
+model: "gpt-4o-mini",
+table: "messages",
+userId: "123",
+threadId: "123",
+vector: embedding,
+// Optional, if you want to update the message with the embeddingId
+messageId: messageId,
+},
+],
+}
 );
 
 See example usage in example.ts. Read more in this Stack post.
@@ -494,18 +495,18 @@ You can provide a usageHandler to the agent to track token usage. See an example
 You can provide a usageHandler to the agent, per-thread, or per-message.
 
 const supportAgent = new Agent(components.agent, {
-  ...
-  usageHandler: async (ctx, args) => {
-    const {
-      // Who used the tokens
-      userId, threadId, agentName,
-      // What LLM was used
-      model, provider,
-      // How many tokens were used (extra info is available in providerMetadata)
-      usage, providerMetadata
-    } = args;
-    // ... log, save usage to your database, etc.
-  },
+...
+usageHandler: async (ctx, args) => {
+const {
+// Who used the tokens
+userId, threadId, agentName,
+// What LLM was used
+model, provider,
+// How many tokens were used (extra info is available in providerMetadata)
+usage, providerMetadata
+} = args;
+// ... log, save usage to your database, etc.
+},
 });
 
 Tip: Define the usageHandler within a function where you have more variables available to attribute the usage to a different user, team, project, etc.
@@ -516,35 +517,35 @@ You can provide a rawRequestResponseHandler to the agent to log the raw request 
 You could use this to log the request and response to a table, or use console logs with Log Streaming to allow debugging and searching through Axiom or another logging service.
 
 const supportAgent = new Agent(components.agent, {
-  ...
-  rawRequestResponseHandler: async (ctx, { request, response }) => {
-    console.log("request", request);
-    console.log("response", response);
-  },
+...
+rawRequestResponseHandler: async (ctx, { request, response }) => {
+console.log("request", request);
+console.log("response", response);
+},
 });
 
 Troubleshooting#
 Circular dependencies#
 Having the return value of workflows depend on other Convex functions can lead to circular dependencies due to the internal.foo.bar way of specifying functions. The way to fix this is to explicitly type the return value of the workflow. When in doubt, add return types to more handler functions, like this:
 
- export const supportAgentWorkflow = workflow.define({
-   args: { prompt: v.string(), userId: v.string(), threadId: v.string() },
-+  handler: async (step, { prompt, userId, threadId }): Promise<string> => {
-     // ...
-   },
- });
+export const supportAgentWorkflow = workflow.define({
+args: { prompt: v.string(), userId: v.string(), threadId: v.string() },
 
- // And regular functions too:
- export const myFunction = action({
-   args: { prompt: v.string() },
-+  handler: async (ctx, { prompt }): Promise<string> => {
-     // ...
-   },
- });
+- handler: async (step, { prompt, userId, threadId }): Promise<string> => {
+  // ...
+  },
+  });
+
+// And regular functions too:
+export const myFunction = action({
+args: { prompt: v.string() },
+
+- handler: async (ctx, { prompt }): Promise<string> => {
+  // ...
+  },
+  });
 
 hey put this into md call it convex-agent
-
-
 
 more documetation
 
@@ -578,35 +579,37 @@ To get concrete, let’s look at defining an agent using my new Agent component
 
 Defining an agent
 import { Agent } from "@convex-dev/agent";
-import { components, internal } from "./_generated/api";
+import { components, internal } from "./\_generated/api";
 import { openai } from "@ai-sdk/openai";
 
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
 });
 
 Starting a conversation
 export const createThread = action({
-  args: { prompt: v.string() },
-  handler: async (ctx, { prompt }) => {
-+   const { threadId, thread } = await supportAgent.createThread(ctx, {});
-+   const result = await thread.generateText({ prompt });
-    return { threadId, text: result.text };
+args: { prompt: v.string() },
+handler: async (ctx, { prompt }) => {
+
+- const { threadId, thread } = await supportAgent.createThread(ctx, {});
+- const result = await thread.generateText({ prompt });
+  return { threadId, text: result.text };
   },
-});
+  });
 
 Continuing a conversation
 export const continueThread = action({
-  args: { prompt: v.string(), threadId: v.string() },
-  handler: async (ctx, { prompt, threadId }) => {
-    // This includes previous message history from the thread automatically.
-+   const { thread } = await supportAgent.continueThread(ctx, { threadId });
-+   const result = await thread.generateText({ prompt });
-    return result.text;
+args: { prompt: v.string(), threadId: v.string() },
+handler: async (ctx, { prompt, threadId }) => {
+// This includes previous message history from the thread automatically.
+
+- const { thread } = await supportAgent.continueThread(ctx, { threadId });
+- const result = await thread.generateText({ prompt });
+  return result.text;
   },
-});
+  });
 
 Using tools
 Tools are functions that the LLM can call. We use the AI SDK Tool syntax
@@ -614,111 +617,115 @@ Tools are functions that the LLM can call. We use the AI SDK Tool syntax
 Configuring tools:
 
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
-+ tools: { accountLookup, fileTicket, sendEmail },
-});
-//...
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
+
+- tools: { accountLookup, fileTicket, sendEmail },
+  });
+  //...
   // or per-invocation in an action
-  await thread.generateText({ 
-    prompt,
-+   tools: { accountLookup, fileTicket, sendEmail },
+  await thread.generateText({
+  prompt,
+- tools: { accountLookup, fileTicket, sendEmail },
   });
 
 Defining Convex tools that have access to the function’s context, including userId, threadId, messageId, and the action ctx object which you can use to call queries, mutations, or actions:
 
 export const ideaSearch = createTool({
-  description: "Search for ideas by space-delimited keywords",
-  args: z.object({ search: z.string().describe("What you seek") }),
-+ handler: async (ctx, { search }): Promise<Doc<"ideas">[]> =>
-+    ctx.runQuery(api.ideas.searchIdeas, { search }),
-});
+description: "Search for ideas by space-delimited keywords",
+args: z.object({ search: z.string().describe("What you seek") }),
+
+- handler: async (ctx, { search }): Promise<Doc<"ideas">[]> =>
+- ctx.runQuery(api.ideas.searchIdeas, { search }),
+  });
 
 Incorporating into a durable workflow
-import { components, internal } from "./_generated/api";
+import { components, internal } from "./\_generated/api";
 import { WorkflowManager } from "@convex-dev/workflow";
 
 const workflow = new WorkflowManager(components.workflow);
 
 export const weatherAgentWorkflow = workflow.define({
-  args: { location: v.string() },
-  handler: async (step, { location }): Promise<Outfit> => {
-+   const { threadId } = await step.runMutation(agent.createThread, {
-+     userId: "123",
-+   });
-+   await step.runAction(
-+     internal.example.getForecast,
-+     { prompt: `What is the weather in ${location}?`, threadId },
-+     { retry: true },
-+   );
-+   const { object: fashionSuggestion } = await step.runAction(
-+     internal.example.getFashionAdvice,
-+     { prompt: `What should I wear based on the weather?`, threadId },
-+     { runAfter: 2 * SECOND },
-+   );
-+   return fashionSuggestion;
+args: { location: v.string() },
+handler: async (step, { location }): Promise<Outfit> => {
+
+- const { threadId } = await step.runMutation(agent.createThread, {
+-     userId: "123",
+- });
+- await step.runAction(
+-     internal.example.getForecast,
+-     { prompt: `What is the weather in ${location}?`, threadId },
+-     { retry: true },
+- );
+- const { object: fashionSuggestion } = await step.runAction(
+-     internal.example.getFashionAdvice,
+-     { prompt: `What should I wear based on the weather?`, threadId },
+-     { runAfter: 2 * SECOND },
+- );
+- return fashionSuggestion;
   },
-});
+  });
 
 Subscribing to asynchronously-generated messages
 This will fetch the thread’s messages, and re-run whenever new messages are created (within the query range). React clients can subscribe to the results with useQuery.
 
 export const listMessages = query({
-  args: {
-    threadId: v.string(),
-    paginationOpts: paginationOptsValidator,
+args: {
+threadId: v.string(),
+paginationOpts: paginationOptsValidator,
+},
+handler: async (ctx, args) => {
+const { threadId, paginationOpts } = args;
+await authorizeThreadAccess(ctx, threadId);
+
+- const msgs = await agent.listMessages(ctx, {
+-     threadId,
+-     paginationOpts,
+- });
+  // Here you could add more fields to the messages, like the user's name.
+  return msgs;
   },
-  handler: async (ctx, args) => {
-    const { threadId, paginationOpts } = args;
-    await authorizeThreadAccess(ctx, threadId);
-+   const msgs = await agent.listMessages(ctx, {
-+     threadId,
-+     paginationOpts,
-+   });
-    // Here you could add more fields to the messages, like the user's name.
-    return msgs;
-  },
-});
+  });
 
 Using a user’s previous conversations as context manually
 The agent will automatically pull in context based on the contextOptions parameter. If you don’t want the automatic behavior, you can provide messages yourself. You can also use the Agent's API to query for messages in the same way it would internally:
 
 const messages = await weatherAgent.fetchContextMessages(ctx, {
-	userId,
-	threadId,
-	messages: [{ role: "user", content: text }],
-	contextOptions: {
-		searchOtherThreads: true,
-		recentMessages: 10,
-		searchOptions: {
-			textSearch: true,
-			vectorSearch: true,
-			messageRange: { before: 1, after: 1 },
-			limit: 10,
-		},
-	},
+userId,
+threadId,
+messages: [{ role: "user", content: text }],
+contextOptions: {
+searchOtherThreads: true,
+recentMessages: 10,
+searchOptions: {
+textSearch: true,
+vectorSearch: true,
+messageRange: { before: 1, after: 1 },
+limit: 10,
+},
+},
 });
 // do customization and add a final prompt message
 const result = await thread.generateText({
-  messages,
-	{ prompt }, // either provide a prompt here or as the last message
-	saveMessages: "none",
-	// don't automatically fetch any context
-  contextOptions: {
-	  recentMessages: 0,
-		searchOptions: { limit: 0 },
-  },
+messages,
+{ prompt }, // either provide a prompt here or as the last message
+saveMessages: "none",
+// don't automatically fetch any context
+contextOptions: {
+recentMessages: 0,
+searchOptions: { limit: 0 },
+},
 });
 
 Retrying pesky LLMs who mean well but frequently goof up
 Per-agent call retries (immediate, accounting for LLM blips):
 
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
-  maxRetries: 3,
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
+maxRetries: 3,
 });
 
 Retrying the whole action if the server restarts or the API provider is having issues by using the Workpool or Workflow components. This will use backoff and jitter to avoid thundering herds.
@@ -726,27 +733,27 @@ Retrying the whole action if the server restarts or the API provider is having i
 Workpool:
 
 const workpool = new Workpool(components.workpool, {
-  maxParallelism: 10,
-  retryActionsByDefault: true,
-  defaultRetryBehavior: {
-    maxAttempts: 5,
-    initialBackoffMs: 1000,
-    base: 2,
-  },
+maxParallelism: 10,
+retryActionsByDefault: true,
+defaultRetryBehavior: {
+maxAttempts: 5,
+initialBackoffMs: 1000,
+base: 2,
+},
 });
 
 Workflow:
 
 const workflow = new WorkflowManager(components.workflow, {
-  workpoolOptions: {
-    maxParallelism: 10,
-    retryActionsByDefault: true,
-    defaultRetryBehavior: {
-      maxAttempts: 5,
-      initialBackoffMs: 1000,
-      base: 2,
-    },
-  },
+workpoolOptions: {
+maxParallelism: 10,
+retryActionsByDefault: true,
+defaultRetryBehavior: {
+maxAttempts: 5,
+initialBackoffMs: 1000,
+base: 2,
+},
+},
 });
 
 Other capabiliities
@@ -793,7 +800,7 @@ To stay up to date with all the developments, join the #agents channel in Discor
 Summary
 With agents you can organize and orchestrate complex workflows. With the new Agent component, you can store and retrieve message history automatically.
 
-As always, let me know what you think in Discord, on 🦋  or on 𝕏
+As always, let me know what you think in Discord, on 🦋 or on 𝕏
 
 Footnotes
 If you pass saveMessages: "all" it will save all of the messages automatically. The default is to only save the prompt / final input message and output messages since it’s common to pass in a lot of custom context that should not be saved, followed by a final user prompt. ↩

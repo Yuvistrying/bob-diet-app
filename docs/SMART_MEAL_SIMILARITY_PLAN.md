@@ -16,12 +16,13 @@
 ### 1. Proactive Similarity Suggestions
 
 When user mentions food, Bob should automatically:
+
 ```
 User: "I had grilled chicken"
 Bob: "Let me confirm:
 • Grilled chicken breast (165 cal, 31g protein)
 
-Is this correct? 
+Is this correct?
 
 📊 Similar meals you've logged:
 - Monday: Grilled chicken with rice (420 cal)
@@ -34,6 +35,7 @@ Want to use one of these instead?"
 ### 2. Smart Portion Memory
 
 Bob remembers your usual portions:
+
 ```
 User: "chicken breast"
 Bob: "Your usual portion is 150g (247 cal). Is that right?"
@@ -42,14 +44,16 @@ Bob: "Your usual portion is 150g (247 cal). Is that right?"
 ### 3. Meal Patterns Recognition
 
 Detect eating patterns:
+
 ```
-Bob: "I noticed you usually have oatmeal on Tuesday mornings. 
+Bob: "I noticed you usually have oatmeal on Tuesday mornings.
      Log your regular bowl (320 cal)?" [Yes] [No]
 ```
 
 ### 4. Quick Repeat Actions
 
 Add quick actions to confirmation bubbles:
+
 - "Same as yesterday"
 - "Same as last [meal type]"
 - "My usual"
@@ -57,11 +61,13 @@ Add quick actions to confirmation bubbles:
 ## Implementation Steps
 
 ### Phase 1: Update Confirmation Flow
+
 1. Modify `confirmFood` tool to include similar meals
 2. Add `recentSimilarMeals` to the confirmation data
 3. Update confirmation bubble UI to show suggestions
 
 ### Phase 2: Pattern Detection
+
 1. Create `mealPatterns.ts` to analyze:
    - Day/time patterns
    - Usual portions for specific foods
@@ -69,11 +75,13 @@ Add quick actions to confirmation bubbles:
 2. Add pattern data to user context
 
 ### Phase 3: Smart Suggestions
+
 1. Update Bob's prompt to proactively mention patterns
 2. Add "quick log" shortcuts based on history
 3. Create "meal templates" from frequent combinations
 
 ### Phase 4: UI Enhancements
+
 1. Clickable meal history in confirmations
 2. "Use this meal" buttons
 3. Portion slider with history markers
@@ -81,12 +89,13 @@ Add quick actions to confirmation bubbles:
 ## Technical Implementation
 
 ### Backend Changes
+
 ```typescript
 // In confirmFood tool
 const similarMeals = await searchSimilarMeals({
   searchText: foodDescription,
   limit: 3,
-  includeLastWeek: true
+  includeLastWeek: true,
 });
 
 // Add to confirmation data
@@ -95,13 +104,14 @@ confirmationData.usualPortion = await getUsualPortion(userId, foodName);
 ```
 
 ### Frontend Changes
+
 ```typescript
 // In ConfirmationBubble
 {similarMeals && (
   <div className="mt-2 border-t pt-2">
     <p className="text-sm text-muted-foreground mb-1">Recent similar meals:</p>
     {similarMeals.map(meal => (
-      <button 
+      <button
         onClick={() => useSimilarMeal(meal)}
         className="block w-full text-left..."
       >
@@ -113,7 +123,9 @@ confirmationData.usualPortion = await getUsualPortion(userId, foodName);
 ```
 
 ### Prompt Updates
+
 Add to Bob's instructions:
+
 ```
 When confirming food, ALWAYS:
 1. Check for similar recent meals

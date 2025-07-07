@@ -7,6 +7,7 @@ This migration will preserve 100% of Bob's current capabilities while simplifyin
 ## Current Functionality to Preserve
 
 ### 1. **Bob's Brain & Intelligence**
+
 - ✅ All prompts and personality
 - ✅ Context awareness and memory
 - ✅ Conversation patterns
@@ -15,6 +16,7 @@ This migration will preserve 100% of Bob's current capabilities while simplifyin
 - ✅ Weight tracking and averages
 
 ### 2. **Core Features**
+
 - ✅ Food logging with confirmation flow
 - ✅ Photo analysis with embeddings
 - ✅ Weight tracking with trends
@@ -25,6 +27,7 @@ This migration will preserve 100% of Bob's current capabilities while simplifyin
 - ✅ Pending confirmations
 
 ### 3. **Data & Schema**
+
 - ✅ ALL database tables remain unchanged
 - ✅ Context caching strategy
 - ✅ Embeddings for semantic search
@@ -33,6 +36,7 @@ This migration will preserve 100% of Bob's current capabilities while simplifyin
 - ✅ Calibration history
 
 ### 4. **Advanced Features**
+
 - ✅ 5-minute cache for core stats
 - ✅ 30-day cache for preferences
 - ✅ Thread-based conversations
@@ -42,6 +46,7 @@ This migration will preserve 100% of Bob's current capabilities while simplifyin
 ## What Changes (Architecture Only)
 
 ### Before:
+
 ```
 User → Streaming Route → Vercel AI SDK
   ↓         ↓              ↓
@@ -50,6 +55,7 @@ User → Streaming Route → Vercel AI SDK
 ```
 
 ### After:
+
 ```
 User → Streaming Route → Vercel AI SDK
              ↓
@@ -59,11 +65,13 @@ User → Streaming Route → Vercel AI SDK
 ## Migration Steps (Preserving Everything)
 
 ### Phase 1: Create Parallel System
+
 1. Keep ALL existing code running
 2. Create new simplified endpoints alongside
 3. Test extensively to ensure feature parity
 
 ### Phase 2: Migrate Components
+
 1. **Thread Management** - Use new threads.ts (already created)
 2. **Message Storage** - Direct to chatHistory table
 3. **Context Building** - Keep exact same logic
@@ -71,6 +79,7 @@ User → Streaming Route → Vercel AI SDK
 5. **Caching** - Keep all cache strategies
 
 ### Phase 3: Testing Checklist
+
 - [ ] Food logging with confirmations
 - [ ] Photo analysis with embeddings
 - [ ] Weight tracking and trends
@@ -84,7 +93,7 @@ User → Streaming Route → Vercel AI SDK
 ## Code to Keep Unchanged
 
 1. **Schema** - `/convex/schema.ts` - NO CHANGES
-2. **Food Logs** - `/convex/foodLogs.ts` - NO CHANGES  
+2. **Food Logs** - `/convex/foodLogs.ts` - NO CHANGES
 3. **Weight Logs** - `/convex/weightLogs.ts` - NO CHANGES
 4. **Embeddings** - `/convex/embeddings.ts` - NO CHANGES
 5. **Vector Search** - `/convex/vectorSearch.ts` - NO CHANGES
@@ -99,19 +108,19 @@ User → Streaming Route → Vercel AI SDK
 export async function handleChat(prompt: string, threadId?: string) {
   // 1. Get/create thread (same as before)
   const thread = await getOrCreateDailyThread();
-  
+
   // 2. Build context (exact same queries)
   const context = await buildContext(thread.threadId);
-  
+
   // 3. Get Bob's prompt (centralized)
   const systemPrompt = getBobSystemPrompt(context);
-  
+
   // 4. Stream response with tools
   const response = await streamText({
     model: anthropic('claude-sonnet-4'),
     system: systemPrompt,
     messages: [...],
-    tools: { 
+    tools: {
       confirmFood,  // Same tool
       logFood,      // Same tool
       analyzePhoto, // Same tool
@@ -120,7 +129,7 @@ export async function handleChat(prompt: string, threadId?: string) {
       findSimilarMeals // Same tool
     }
   });
-  
+
   // 5. Save to database (same tables)
   await saveMessage({ threadId, ... });
 }

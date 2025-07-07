@@ -21,9 +21,9 @@ export function useToast() {
   const toast = useCallback((props: Omit<Toast, "id">) => {
     const id = String(toastCounter++);
     const newToast: Toast = { ...props, id };
-    
+
     setToasts((prev) => [...prev, newToast]);
-    
+
     // Auto dismiss after 3 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));

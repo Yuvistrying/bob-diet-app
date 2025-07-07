@@ -18,7 +18,7 @@ Tutorial
 1. A chat app
 2. Calling external services
 3. Scaling your app
-Quickstarts
+   Quickstarts
 
 Understand Convex
 
@@ -110,7 +110,7 @@ If you try sending a message now, you'll see an alert telling you the mutation i
 How Convex works
 Overview of the sync engine
 
-Database. The Convex database is a document-relational database, which means you have tables with JSON like documents in them. All documents have an auto-generated _id that can be used to create relations between documents. You interact with the database through mutation and query functions that are written entirely in TypeScript.
+Database. The Convex database is a document-relational database, which means you have tables with JSON like documents in them. All documents have an auto-generated \_id that can be used to create relations between documents. You interact with the database through mutation and query functions that are written entirely in TypeScript.
 
 Mutation functions. Mutations are TypeScript functions that update the database. All mutation functions in Convex run as a database transaction. So either all the changes are committed, or none are.
 
@@ -127,21 +127,21 @@ Create a new file in your convex/ folder called chat.ts. This is where you'll wr
 
 Add the following to your convex/chat.ts file.
 
-import { mutation } from "./_generated/server";
+import { mutation } from "./\_generated/server";
 import { v } from "convex/values";
 
 export const sendMessage = mutation({
-  args: {
-    user: v.string(),
-    body: v.string(),
-  },
-  handler: async (ctx, args) => {
-    console.log("This TypeScript function is running on the server.");
-    await ctx.db.insert("messages", {
-      user: args.user,
-      body: args.body,
-    });
-  },
+args: {
+user: v.string(),
+body: v.string(),
+},
+handler: async (ctx, args) => {
+console.log("This TypeScript function is running on the server.");
+await ctx.db.insert("messages", {
+user: args.user,
+body: args.body,
+});
+},
 });
 
 Let's break this down:
@@ -157,24 +157,24 @@ Update your src/App.tsx file like so:
 
 // Import `useMutation` and `api` from Convex.
 import { useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { api } from "../convex/\_generated/api";
 
 //...
 
 export default function App() {
-  // Replace the "TODO: Add mutation hook here." with:
-  const sendMessage = useMutation(api.chat.sendMessage);
+// Replace the "TODO: Add mutation hook here." with:
+const sendMessage = useMutation(api.chat.sendMessage);
 
-  //...
+//...
 
-  return (
-    <main className="chat">
-      {/* ... */}
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          // Replace "alert("Mutation not implemented yet");" with:
-          await sendMessage({ user: NAME, body: newMessageText });
+return (
+<main className="chat">
+{/_ ... _/}
+<form
+onSubmit={async (e) => {
+e.preventDefault();
+// Replace "alert("Mutation not implemented yet");" with:
+await sendMessage({ user: NAME, body: newMessageText });
 
           setNewMessageText("");
         }}
@@ -182,7 +182,8 @@ export default function App() {
         {/* ... */}
       </form>
     </main>
-  );
+
+);
 }
 
 There are two steps to call a mutation in your frontend:
@@ -209,19 +210,19 @@ Your first query
 Update your convex/chat.ts file like this:
 
 // Update your server import like this:
-import { query, mutation } from "./_generated/server";
+import { query, mutation } from "./\_generated/server";
 
 // ...
 
 // Add the following function to the file:
 export const getMessages = query({
-  args: {},
-  handler: async (ctx) => {
-    // Get most recent messages first
-    const messages = await ctx.db.query("messages").order("desc").take(50);
-    // Reverse the list so that it's in a chronological order.
-    return messages.reverse();
-  },
+args: {},
+handler: async (ctx) => {
+// Get most recent messages first
+const messages = await ctx.db.query("messages").order("desc").take(50);
+// Reverse the list so that it's in a chronological order.
+return messages.reverse();
+},
 });
 
 Let's break this down:
@@ -238,10 +239,10 @@ import { useQuery, useMutation } from "convex/react";
 //...
 
 export default function App() {
-  // Replace the `const messages = ...` line with the following
-  const messages = useQuery(api.chat.getMessages);
+// Replace the `const messages = ...` line with the following
+const messages = useQuery(api.chat.getMessages);
 
-  //...
+//...
 }
 
 That one useQuery line is doing a lot of work automatically for you. It's telling the Convex client library to subscribe to your getMessages function. Anytime there are new messages to show the query function is automatically rerun. The result is put in const messages variable and React rerenders your UI component to show the latest messages.
@@ -249,8 +250,6 @@ That one useQuery line is doing a lot of work automatically for you. It's tellin
 That's it. Now go back to your app and try sending messages.
 
 Your app should be showing live updates as new messages arrive:
-
-
 
 Don't believe it? Try opening two chat windows side by side and send some messages:
 
@@ -270,8 +269,7 @@ But if you want to see how to call external services and build sophisticated bac
 Calling external services
 Previous
 Home
-Next
-2. Calling external services
+Next 2. Calling external services
 Releases
 GitHub
 Discord

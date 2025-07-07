@@ -5,10 +5,12 @@ import { mutation, query } from "./_generated/server";
 export const generateUploadUrl = mutation({
   args: {
     // Optional metadata about the file
-    metadata: v.optional(v.object({
-      type: v.string(),
-      purpose: v.string(),
-    })),
+    metadata: v.optional(
+      v.object({
+        type: v.string(),
+        purpose: v.string(),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -50,7 +52,7 @@ export const getMultipleImageUrls = query({
   },
   handler: async (ctx, { storageIds }) => {
     const urls: Record<string, string | null> = {};
-    
+
     for (const storageId of storageIds) {
       try {
         const url = await ctx.storage.getUrl(storageId);
@@ -60,7 +62,7 @@ export const getMultipleImageUrls = query({
         urls[storageId] = null;
       }
     }
-    
+
     return urls;
   },
 });
@@ -81,7 +83,7 @@ export const storeFileId = mutation({
         .query("files")
         .withIndex("by_upload_url", (q) => q.eq("uploadUrl", uploadUrl))
         .first();
-      
+
       if (file) {
         await ctx.db.patch(file._id, {
           storageId,

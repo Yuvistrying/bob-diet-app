@@ -1,10 +1,12 @@
-import { LinearClient } from '@linear/sdk';
+import { LinearClient } from "@linear/sdk";
 
 async function addProjects() {
-  const apiKey = process.env.LINEAR_API_KEY || 'YOUR_LINEAR_API_KEY';
-  
-  if (apiKey === 'YOUR_LINEAR_API_KEY') {
-    console.error('Please set your Linear API key in the LINEAR_API_KEY environment variable');
+  const apiKey = process.env.LINEAR_API_KEY || "YOUR_LINEAR_API_KEY";
+
+  if (apiKey === "YOUR_LINEAR_API_KEY") {
+    console.error(
+      "Please set your Linear API key in the LINEAR_API_KEY environment variable",
+    );
     process.exit(1);
   }
 
@@ -12,41 +14,41 @@ async function addProjects() {
 
   const projects = [
     {
-      name: 'Core Features',
-      key: 'CORE',
-      description: 'Essential functionality completion',
+      name: "Core Features",
+      key: "CORE",
+      description: "Essential functionality completion",
     },
     {
-      name: 'Bug Fixes',
-      key: 'BUGS',
-      description: 'Critical issues and stability',
+      name: "Bug Fixes",
+      key: "BUGS",
+      description: "Critical issues and stability",
     },
     {
-      name: 'UI/UX Polish',
-      key: 'UIUX',
-      description: 'Design and user experience improvements',
+      name: "UI/UX Polish",
+      key: "UIUX",
+      description: "Design and user experience improvements",
     },
     {
-      name: 'Business & Growth',
-      key: 'BIZ',
-      description: 'Monetization and marketing features',
+      name: "Business & Growth",
+      key: "BIZ",
+      description: "Monetization and marketing features",
     },
     {
-      name: 'Advanced AI',
-      key: 'AI',
-      description: 'Metabolism calibration and pattern recognition',
-    }
+      name: "Advanced AI",
+      key: "AI",
+      description: "Metabolism calibration and pattern recognition",
+    },
   ];
 
-  console.log('Adding missing projects to Linear...\n');
+  console.log("Adding missing projects to Linear...\n");
 
   try {
     // Get team
     const teams = await linear.teams();
-    const team = teams.nodes.find(t => t.key === 'BOB');
-    
+    const team = teams.nodes.find((t) => t.key === "BOB");
+
     if (!team) {
-      console.error('Team BOB not found!');
+      console.error("Team BOB not found!");
       process.exit(1);
     }
 
@@ -64,10 +66,13 @@ async function addProjects() {
         console.log(`  ✓ Created project: ${projectData.name}`);
         successCount++;
       } catch (error: any) {
-        if (error.message?.includes('already exists')) {
+        if (error.message?.includes("already exists")) {
           console.log(`  → Project already exists: ${projectData.name}`);
         } else {
-          console.error(`  ✗ Failed to create project ${projectData.name}:`, error.message);
+          console.error(
+            `  ✗ Failed to create project ${projectData.name}:`,
+            error.message,
+          );
           failCount++;
         }
       }
@@ -77,9 +82,8 @@ async function addProjects() {
     console.log(`Projects created: ${successCount}`);
     console.log(`Projects failed: ${failCount}`);
     console.log(`==================`);
-    
   } catch (error) {
-    console.error('Failed:', error);
+    console.error("Failed:", error);
     process.exit(1);
   }
 }
@@ -87,10 +91,10 @@ async function addProjects() {
 // Run it
 addProjects()
   .then(() => {
-    console.log('\nCompleted!');
+    console.log("\nCompleted!");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\nFailed:', error);
+    console.error("\nFailed:", error);
     process.exit(1);
   });

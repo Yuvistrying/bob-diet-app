@@ -126,6 +126,7 @@ export const cancelMessage = mutation({
 ```
 
 What `cancel` does depends on the state of the scheduled function:
+
 - If it hasn't started running, it won't run.
 - If it already started, it will continue to run, but any functions it schedules will not run.
 

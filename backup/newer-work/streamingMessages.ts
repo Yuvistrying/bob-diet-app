@@ -12,13 +12,13 @@ export const saveStreamChunk = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     // Find existing stream or create new one
     const existing = await ctx.db
       .query("streamingMessages")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .first();
-    
+
     if (existing) {
       // Append chunk to existing message
       await ctx.db.patch(existing._id, {
@@ -50,10 +50,10 @@ export const getStreamingMessage = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     return await ctx.db
       .query("streamingMessages")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .first();
   },
 });
@@ -66,12 +66,12 @@ export const clearStream = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const stream = await ctx.db
       .query("streamingMessages")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .first();
-    
+
     if (stream && stream.userId === identity.subject) {
       await ctx.db.delete(stream._id);
     }

@@ -27,7 +27,7 @@ export default function DietarySettings() {
             Help Bob understand your dietary needs and restrictions
           </p>
         </div>
-        
+
         <DietaryPreferencesCard />
       </div>
     </ClientOnly>

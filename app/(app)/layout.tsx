@@ -13,10 +13,6 @@ export default async function Layout({
   if (!userId) {
     redirect("/sign-in");
   }
-  
-  return (
-    <ChatProvider>
-      {children}
-    </ChatProvider>
-  );
+
+  return <ChatProvider>{children}</ChatProvider>;
 }

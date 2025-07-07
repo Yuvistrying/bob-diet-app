@@ -1,7 +1,7 @@
-import { LinearClient } from '@linear/sdk';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { LinearClient } from "@linear/sdk";
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 // Priority mapping from Linear's priority system
 const PRIORITY_MAP = {
   0: 1, // Urgent (your 0) -> Linear's 1
-  1: 2, // High (your 1) -> Linear's 2  
+  1: 2, // High (your 1) -> Linear's 2
   2: 3, // Medium (your 2) -> Linear's 3
   3: 4, // Low (your 3) -> Linear's 4
 };
@@ -35,27 +35,29 @@ interface ImportData {
 
 async function importToLinear() {
   // Initialize Linear client - you'll need to replace this with your actual API key
-  const apiKey = process.env.LINEAR_API_KEY || 'YOUR_LINEAR_API_KEY';
-  
-  if (apiKey === 'YOUR_LINEAR_API_KEY') {
-    console.error('Please set your Linear API key in the LINEAR_API_KEY environment variable');
+  const apiKey = process.env.LINEAR_API_KEY || "YOUR_LINEAR_API_KEY";
+
+  if (apiKey === "YOUR_LINEAR_API_KEY") {
+    console.error(
+      "Please set your Linear API key in the LINEAR_API_KEY environment variable",
+    );
     process.exit(1);
   }
 
   const linear = new LinearClient({ apiKey });
 
   // Load the import data
-  const dataPath = path.join(__dirname, 'linear-import.json');
-  const data: ImportData = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+  const dataPath = path.join(__dirname, "linear-import.json");
+  const data: ImportData = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
 
-  console.log('Starting Linear import...');
+  console.log("Starting Linear import...");
 
   try {
     // Step 1: Get or create team
-    console.log('\n1. Setting up team...');
+    console.log("\n1. Setting up team...");
     const existingTeams = await linear.teams();
-    let team = existingTeams.nodes.find(t => t.key === data.teams[0].key);
-    
+    let team = existingTeams.nodes.find((t) => t.key === data.teams[0].key);
+
     if (!team) {
       console.log(`Creating team: ${data.teams[0].name}`);
       team = await linear.createTeam({
@@ -67,9 +69,9 @@ async function importToLinear() {
     }
 
     // Step 2: Create projects
-    console.log('\n2. Creating projects...');
+    console.log("\n2. Creating projects...");
     const projectMap: Record<string, string> = {};
-    
+
     for (const projectData of data.projects) {
       try {
         console.log(`Creating project: ${projectData.name}`);
@@ -82,14 +84,17 @@ async function importToLinear() {
         projectMap[projectData.key] = project.id;
         console.log(`  ✓ Created project: ${projectData.name}`);
       } catch (error) {
-        console.error(`  ✗ Failed to create project ${projectData.name}:`, error);
+        console.error(
+          `  ✗ Failed to create project ${projectData.name}:`,
+          error,
+        );
       }
     }
 
     // Step 3: Create labels
-    console.log('\n3. Creating labels...');
+    console.log("\n3. Creating labels...");
     const labelMap: Record<string, string> = {};
-    
+
     for (const labelData of data.labels) {
       try {
         console.log(`Creating label: ${labelData.name}`);
@@ -106,18 +111,18 @@ async function importToLinear() {
     }
 
     // Step 4: Create issues
-    console.log('\n4. Creating issues...');
+    console.log("\n4. Creating issues...");
     let successCount = 0;
     let failCount = 0;
 
     for (const issueData of data.issues) {
       try {
         console.log(`Creating issue: ${issueData.title}`);
-        
+
         // Map label names to label IDs
         const labelIds = issueData.labels
-          .map(labelName => labelMap[labelName])
-          .filter(id => id !== undefined);
+          .map((labelName) => labelMap[labelName])
+          .filter((id) => id !== undefined);
 
         // Create the issue
         const issue = await linear.createIssue({
@@ -129,7 +134,7 @@ async function importToLinear() {
           labelIds: labelIds,
           estimate: issueData.estimate,
         });
-        
+
         console.log(`  ✓ Created issue: ${issueData.title}`);
         successCount++;
       } catch (error) {
@@ -139,7 +144,7 @@ async function importToLinear() {
     }
 
     // Summary
-    console.log('\n===== Import Summary =====');
+    console.log("\n===== Import Summary =====");
     console.log(`Team: ${team.name}`);
     console.log(`Projects created: ${Object.keys(projectMap).length}`);
     console.log(`Labels created: ${Object.keys(labelMap).length}`);
@@ -147,10 +152,9 @@ async function importToLinear() {
     if (failCount > 0) {
       console.log(`Issues failed: ${failCount}`);
     }
-    console.log('=========================');
-    
+    console.log("=========================");
   } catch (error) {
-    console.error('Import failed:', error);
+    console.error("Import failed:", error);
     process.exit(1);
   }
 }
@@ -158,10 +162,10 @@ async function importToLinear() {
 // Run the import
 importToLinear()
   .then(() => {
-    console.log('\nImport completed successfully!');
+    console.log("\nImport completed successfully!");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\nImport failed:', error);
+    console.error("\nImport failed:", error);
     process.exit(1);
   });

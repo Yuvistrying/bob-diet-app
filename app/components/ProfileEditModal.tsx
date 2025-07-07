@@ -26,9 +26,13 @@ interface ProfileEditModalProps {
   profile: any;
 }
 
-export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalProps) {
+export function ProfileEditModal({
+  isOpen,
+  onClose,
+  profile,
+}: ProfileEditModalProps) {
   const updateField = useMutation(api.userProfiles.updateProfileField);
-  
+
   const [formData, setFormData] = useState({
     name: profile?.name || "",
     age: profile?.age || 30,
@@ -39,7 +43,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
     activityLevel: profile?.activityLevel || "moderate",
     goal: profile?.goal || "maintain",
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
@@ -79,11 +83,13 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="col-span-3"
             />
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="age" className="text-right mb-1">
               Age
@@ -92,13 +98,18 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
               id="age"
               type="number"
               value={formData.age}
-              onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 30 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  age: parseInt(e.target.value) || 30,
+                })
+              }
               className="col-span-3"
               min="13"
               max="100"
             />
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="height" className="text-right mb-1">
               Height (cm)
@@ -107,13 +118,18 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
               id="height"
               type="number"
               value={formData.height}
-              onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) || 170 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  height: parseInt(e.target.value) || 170,
+                })
+              }
               className="col-span-3"
               min="100"
               max="250"
             />
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="currentWeight" className="text-right mb-2">
               Current Weight (kg)
@@ -122,14 +138,19 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
               id="currentWeight"
               type="number"
               value={formData.currentWeight}
-              onChange={(e) => setFormData({ ...formData, currentWeight: parseFloat(e.target.value) || 70 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  currentWeight: parseFloat(e.target.value) || 70,
+                })
+              }
               className="col-span-3"
               min="30"
               max="300"
               step="0.1"
             />
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="targetWeight" className="text-right mb-2">
               Target Weight (kg)
@@ -138,21 +159,28 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
               id="targetWeight"
               type="number"
               value={formData.targetWeight}
-              onChange={(e) => setFormData({ ...formData, targetWeight: parseFloat(e.target.value) || 70 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  targetWeight: parseFloat(e.target.value) || 70,
+                })
+              }
               className="col-span-3"
               min="30"
               max="300"
               step="0.1"
             />
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="gender" className="text-right mb-1">
               Gender
             </Label>
-            <Select 
-              value={formData.gender} 
-              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+            <Select
+              value={formData.gender}
+              onValueChange={(value) =>
+                setFormData({ ...formData, gender: value })
+              }
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue />
@@ -164,14 +192,16 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="activity" className="text-right mb-1">
               Activity Level
             </Label>
-            <Select 
-              value={formData.activityLevel} 
-              onValueChange={(value) => setFormData({ ...formData, activityLevel: value })}
+            <Select
+              value={formData.activityLevel}
+              onValueChange={(value) =>
+                setFormData({ ...formData, activityLevel: value })
+              }
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue />
@@ -184,14 +214,16 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="goal" className="text-right mb-1">
               Goal
             </Label>
-            <Select 
-              value={formData.goal} 
-              onValueChange={(value) => setFormData({ ...formData, goal: value })}
+            <Select
+              value={formData.goal}
+              onValueChange={(value) =>
+                setFormData({ ...formData, goal: value })
+              }
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue />

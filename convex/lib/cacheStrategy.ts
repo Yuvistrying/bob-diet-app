@@ -11,15 +11,15 @@ export const CACHE_STRATEGY = {
     size: "~100 tokens",
     invalidateOn: ["food_logged", "meal_updated", "food_deleted"] as string[],
   },
-  
-  // Rarely changes  
+
+  // Rarely changes
   profile: {
     ttl: 7 * DAY,
     description: "name, height, goals, targets",
     size: "~50 tokens",
     invalidateOn: ["profile_updated", "goal_changed"] as string[],
   },
-  
+
   // Daily updates
   weightTrend: {
     ttl: 1 * DAY,
@@ -27,7 +27,7 @@ export const CACHE_STRATEGY = {
     size: "~20 tokens",
     invalidateOn: ["weight_logged"] as string[],
   },
-  
+
   // Almost never changes
   preferences: {
     ttl: 30 * DAY,
@@ -35,7 +35,7 @@ export const CACHE_STRATEGY = {
     size: "~10 tokens",
     invalidateOn: ["preferences_updated"] as string[],
   },
-  
+
   // Today's food summary
   todayFoodLog: {
     ttl: 10 * MINUTE,
@@ -43,7 +43,7 @@ export const CACHE_STRATEGY = {
     size: "~200 tokens",
     invalidateOn: ["food_logged", "meal_updated", "food_deleted"] as string[],
   },
-  
+
   // Thread context
   threadContext: {
     ttl: 2 * MINUTE,
@@ -61,7 +61,10 @@ export function getCacheConfig(key: CacheKey) {
 }
 
 // Helper to check if event should invalidate cache
-export function shouldInvalidateCache(cacheKey: CacheKey, event: string): boolean {
+export function shouldInvalidateCache(
+  cacheKey: CacheKey,
+  event: string,
+): boolean {
   const config = CACHE_STRATEGY[cacheKey];
   return config.invalidateOn.includes(event);
 }

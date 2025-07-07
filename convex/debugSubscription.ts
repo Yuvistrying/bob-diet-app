@@ -31,7 +31,10 @@ export const createTestSubscription = mutation({
         currentPeriodEnd: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days from now
         cancelAtPeriodEnd: false,
       });
-      return { message: "Updated existing subscription to active", id: existing._id };
+      return {
+        message: "Updated existing subscription to active",
+        id: existing._id,
+      };
     }
 
     // Create new subscription
@@ -61,14 +64,15 @@ export const listAllSubscriptions = query({
   handler: async (ctx) => {
     const subscriptions = await ctx.db.query("subscriptions").collect();
     const users = await ctx.db.query("users").collect();
-    
+
     return {
-      subscriptions: subscriptions.map(sub => ({
+      subscriptions: subscriptions.map((sub) => ({
         ...sub,
-        user: users.find(u => u.tokenIdentifier === sub.userId),
+        user: users.find((u) => u.tokenIdentifier === sub.userId),
       })),
       totalSubscriptions: subscriptions.length,
-      activeSubscriptions: subscriptions.filter(s => s.status === "active").length,
+      activeSubscriptions: subscriptions.filter((s) => s.status === "active")
+        .length,
     };
   },
 });
@@ -86,10 +90,12 @@ export const checkMySubscription = query({
       .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
       .first();
 
-    const subscription = user ? await ctx.db
-      .query("subscriptions")
-      .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
-      .first() : null;
+    const subscription = user
+      ? await ctx.db
+          .query("subscriptions")
+          .withIndex("userId", (q) => q.eq("userId", user.tokenIdentifier))
+          .first()
+      : null;
 
     return {
       clerkUserId: identity.subject,

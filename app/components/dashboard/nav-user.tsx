@@ -5,7 +5,11 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { SettingsIcon } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "~/app/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "~/app/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,

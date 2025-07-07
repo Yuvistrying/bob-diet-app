@@ -11,6 +11,7 @@ File Storage makes it easy to implement file upload in your app, store files fro
 You can manage your stored files on the dashboard.
 
 Examples:
+
 - [File Storage with HTTP Actions](https://github.com/get-convex/convex-demos/tree/main/file-storage-with-http)
 - [File Storage with Queries and Mutations](https://github.com/get-convex/convex-demos/tree/main/file-storage)
 
@@ -27,6 +28,7 @@ To upload files from clients, you generate temporary upload URLs on the server. 
 ### File Metadata
 
 Each stored file has associated metadata including:
+
 - Content type (MIME type)
 - Size in bytes
 - Upload timestamp
@@ -44,6 +46,7 @@ Each stored file has associated metadata including:
 ### Serving Files
 
 Files can be served:
+
 - Via HTTP endpoints for public access
 - Through queries that return file URLs
 - With proper content type headers for in-browser viewing

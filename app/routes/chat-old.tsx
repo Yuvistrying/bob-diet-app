@@ -13,7 +13,7 @@ import { Paperclip, Send } from "lucide-react";
 
 const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_URL!.replace(
   /.cloud$/,
-  ".site"
+  ".site",
 );
 
 interface Message {
@@ -49,26 +49,37 @@ export default function Chat() {
       if (!onboardingStatus?.completed) {
         // Start onboarding
         if (messages.length === 0 || messages[0].id !== "onboarding-start") {
-          setMessages([{
-            id: "onboarding-start",
-            role: "assistant",
-            content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nFirst up - what should I call you?"
-          }]);
+          setMessages([
+            {
+              id: "onboarding-start",
+              role: "assistant",
+              content:
+                "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nFirst up - what should I call you?",
+            },
+          ]);
         }
       } else if (profile && messages.length === 0) {
         // Regular welcome for returning users
-        setMessages([{
-          id: "welcome",
-          role: "assistant",
-          content: `Hey there, ${profile.name}!\nTell me what you're eating, or attach a photo, I'll figure out the rest.`
-        }]);
-      } else if (profile && messages.length > 0 && messages[0].id === "onboarding-start") {
+        setMessages([
+          {
+            id: "welcome",
+            role: "assistant",
+            content: `Hey there, ${profile.name}!\nTell me what you're eating, or attach a photo, I'll figure out the rest.`,
+          },
+        ]);
+      } else if (
+        profile &&
+        messages.length > 0 &&
+        messages[0].id === "onboarding-start"
+      ) {
         // Onboarding just completed, show welcome
-        setMessages([{
-          id: "welcome",
-          role: "assistant",
-          content: `Awesome! You're all set up, ${profile.name}! 🎉\n\nI'm here to help you ${profile.goal === 'cut' ? 'lose weight' : profile.goal === 'gain' ? 'gain muscle' : 'maintain your weight'}. Just tell me what you're eating throughout the day, and I'll track everything for you.\n\nLet's start - what did you have for your last meal?`
-        }]);
+        setMessages([
+          {
+            id: "welcome",
+            role: "assistant",
+            content: `Awesome! You're all set up, ${profile.name}! 🎉\n\nI'm here to help you ${profile.goal === "cut" ? "lose weight" : profile.goal === "gain" ? "gain muscle" : "maintain your weight"}. Just tell me what you're eating throughout the day, and I'll track everything for you.\n\nLet's start - what did you have for your last meal?`,
+          },
+        ]);
       }
     }
   }, [onboardingStatus, profile]);
@@ -96,7 +107,7 @@ export default function Chat() {
 
     try {
       const response = await sendMessage({
-        messages: [...messages, userMessage].map(m => ({
+        messages: [...messages, userMessage].map((m) => ({
           role: m.role,
           content: m.content,
         })),
@@ -146,77 +157,117 @@ export default function Chat() {
       {/* Status Cards Grid - Only show after onboarding */}
       {!isOnboarding && (
         <div className="grid grid-cols-2 gap-3 p-4 bg-white">
-        {/* Goal Card */}
-        <Card className="bg-gray-50">
-          <CardContent className="p-3">
-            <div className="text-xs text-gray-600 mb-1">Goal</div>
-            <div className="font-semibold">
-              {profile?.goal === "cut" ? "Cut" : profile?.goal === "gain" ? "Gain" : "Maintain"}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Calories Card */}
-        <Card className={cn(todayStats && profile && getProgressColor(todayStats.calories, profile.dailyCalorieTarget))}>
-          <CardContent className="p-3">
-            <div className="text-xs text-gray-600 mb-1">Daily Calories</div>
-            <div className="font-semibold">
-              {isStealthMode ? (
-                todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "On Track"
-              ) : (
-                `${todayStats?.calories || 0}/${profile?.dailyCalorieTarget || 2000}`
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Weight Card */}
-        <Card className="bg-green-100 text-green-800">
-          <CardContent className="p-3">
-            <div className="text-xs text-gray-600 mb-1">Average Weight</div>
-            <div className="font-semibold">
-              {latestWeight?.weight || profile?.currentWeight || "—"} {latestWeight?.unit || "kg"}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Protein Card */}
-        <Card className={cn(todayStats && profile && getProgressColor(todayStats.protein, profile.proteinTarget))}>
-          <CardContent className="p-3">
-            <div className="text-xs text-gray-600 mb-1">Daily Proteins (gr)</div>
-            <div className="font-semibold">
-              {isStealthMode ? (
-                todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Need More" : "Good"
-              ) : (
-                `${todayStats?.protein || 0}/${profile?.proteinTarget || 150}`
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Carbs Card */}
-        {!isStealthMode && (
-          <Card className={cn(todayStats && profile && getProgressColor(todayStats.carbs, profile.carbsTarget))}>
+          {/* Goal Card */}
+          <Card className="bg-gray-50">
             <CardContent className="p-3">
-              <div className="text-xs text-gray-600 mb-1">Daily Carbs</div>
+              <div className="text-xs text-gray-600 mb-1">Goal</div>
               <div className="font-semibold">
-                {todayStats?.carbs || 0}/{profile?.carbsTarget || 200}
+                {profile?.goal === "cut"
+                  ? "Cut"
+                  : profile?.goal === "gain"
+                    ? "Gain"
+                    : "Maintain"}
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Fats Card */}
-        {!isStealthMode && (
-          <Card className={cn(todayStats && profile && getProgressColor(todayStats.fat, profile.fatTarget))}>
+          {/* Calories Card */}
+          <Card
+            className={cn(
+              todayStats &&
+                profile &&
+                getProgressColor(
+                  todayStats.calories,
+                  profile.dailyCalorieTarget,
+                ),
+            )}
+          >
             <CardContent className="p-3">
-              <div className="text-xs text-gray-600 mb-1">Daily Fats (gr)</div>
+              <div className="text-xs text-gray-600 mb-1">Daily Calories</div>
               <div className="font-semibold">
-                {todayStats?.fat || 0}/{profile?.fatTarget || 65}
+                {isStealthMode
+                  ? todayStats &&
+                    profile &&
+                    todayStats.calories > profile.dailyCalorieTarget
+                    ? "Over"
+                    : "On Track"
+                  : `${todayStats?.calories || 0}/${profile?.dailyCalorieTarget || 2000}`}
               </div>
             </CardContent>
           </Card>
-        )}
+
+          {/* Weight Card */}
+          <Card className="bg-green-100 text-green-800">
+            <CardContent className="p-3">
+              <div className="text-xs text-gray-600 mb-1">Average Weight</div>
+              <div className="font-semibold">
+                {latestWeight?.weight || profile?.currentWeight || "—"}{" "}
+                {latestWeight?.unit || "kg"}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Protein Card */}
+          <Card
+            className={cn(
+              todayStats &&
+                profile &&
+                getProgressColor(todayStats.protein, profile.proteinTarget),
+            )}
+          >
+            <CardContent className="p-3">
+              <div className="text-xs text-gray-600 mb-1">
+                Daily Proteins (gr)
+              </div>
+              <div className="font-semibold">
+                {isStealthMode
+                  ? todayStats &&
+                    profile &&
+                    todayStats.protein < profile.proteinTarget * 0.8
+                    ? "Need More"
+                    : "Good"
+                  : `${todayStats?.protein || 0}/${profile?.proteinTarget || 150}`}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Carbs Card */}
+          {!isStealthMode && (
+            <Card
+              className={cn(
+                todayStats &&
+                  profile &&
+                  getProgressColor(todayStats.carbs, profile.carbsTarget),
+              )}
+            >
+              <CardContent className="p-3">
+                <div className="text-xs text-gray-600 mb-1">Daily Carbs</div>
+                <div className="font-semibold">
+                  {todayStats?.carbs || 0}/{profile?.carbsTarget || 200}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Fats Card */}
+          {!isStealthMode && (
+            <Card
+              className={cn(
+                todayStats &&
+                  profile &&
+                  getProgressColor(todayStats.fat, profile.fatTarget),
+              )}
+            >
+              <CardContent className="p-3">
+                <div className="text-xs text-gray-600 mb-1">
+                  Daily Fats (gr)
+                </div>
+                <div className="font-semibold">
+                  {todayStats?.fat || 0}/{profile?.fatTarget || 65}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -227,7 +278,7 @@ export default function Chat() {
             key={message.id}
             className={cn(
               "flex",
-              message.role === "user" ? "justify-end" : "justify-start"
+              message.role === "user" ? "justify-end" : "justify-start",
             )}
           >
             <div
@@ -235,7 +286,7 @@ export default function Chat() {
                 "max-w-[80%] px-4 py-2 rounded-2xl text-sm",
                 message.role === "user"
                   ? "bg-gray-800 text-white rounded-br-sm"
-                  : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                  : "bg-gray-100 text-gray-800 rounded-bl-sm",
               )}
             >
               <div className="whitespace-pre-wrap">{message.content}</div>
@@ -257,10 +308,7 @@ export default function Chat() {
       </div>
 
       {/* Input Area */}
-      <form
-        onSubmit={handleSubmit}
-        className="border-t bg-white px-4 py-3"
-      >
+      <form onSubmit={handleSubmit} className="border-t bg-white px-4 py-3">
         <div className="flex items-center gap-2">
           <Button
             type="button"

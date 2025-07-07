@@ -26,7 +26,7 @@ export default function IntegratedPricing() {
     api.subscriptions.checkUserSubscriptionStatus,
     {
       userId: isSignedIn ? userId : undefined,
-    }
+    },
   );
   const userSubscription = useQuery(api.subscriptions.fetchUserSubscription);
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
@@ -122,7 +122,7 @@ export default function IntegratedPricing() {
           </Button>
         </div>
       )}
-      
+
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Simple, transparent pricing
@@ -274,7 +274,7 @@ export default function IntegratedPricing() {
 
         {userSubscription &&
           !plans?.items.some(
-            (plan: any) => plan.prices[0].id === userSubscription.polarPriceId
+            (plan: any) => plan.prices[0].id === userSubscription.polarPriceId,
           ) && (
             <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
               <p className="text-amber-800 text-center text-sm">

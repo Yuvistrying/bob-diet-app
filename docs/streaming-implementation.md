@@ -77,6 +77,7 @@ Users can stop streaming at any time:
 ### Tool Call Support
 
 The streaming implementation maintains full support for Bob's tools:
+
 - `confirmFood` - Shows food confirmation cards
 - `logFood` - Logs confirmed food
 - `analyzePhoto` - Analyzes uploaded photos
@@ -85,18 +86,13 @@ The streaming implementation maintains full support for Bob's tools:
 ## Usage Example
 
 ```typescript
-const {
-  messages,
-  isStreaming,
-  sendMessage,
-  stopStreaming
-} = useStreamingChat({
+const { messages, isStreaming, sendMessage, stopStreaming } = useStreamingChat({
   onToolCall: (toolCall) => {
-    console.log('Tool called:', toolCall);
+    console.log("Tool called:", toolCall);
   },
   onComplete: (threadId) => {
-    console.log('Message complete, thread:', threadId);
-  }
+    console.log("Message complete, thread:", threadId);
+  },
 });
 
 // Send a message

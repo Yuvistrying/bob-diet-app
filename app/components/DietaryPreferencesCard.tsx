@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
@@ -19,15 +25,21 @@ interface DietaryPreferencesCardProps {
   compact?: boolean;
 }
 
-export function DietaryPreferencesCard({ 
-  onComplete, 
+export function DietaryPreferencesCard({
+  onComplete,
   showTitle = true,
-  compact = false 
+  compact = false,
 }: DietaryPreferencesCardProps) {
-  const existingPreferences = useQuery(api.dietaryPreferences.getUserDietaryPreferences);
-  const setPreferences = useMutation(api.dietaryPreferences.setDietaryPreferences);
-  
-  const [selectedRestrictions, setSelectedRestrictions] = useState<string[]>([]);
+  const existingPreferences = useQuery(
+    api.dietaryPreferences.getUserDietaryPreferences,
+  );
+  const setPreferences = useMutation(
+    api.dietaryPreferences.setDietaryPreferences,
+  );
+
+  const [selectedRestrictions, setSelectedRestrictions] = useState<string[]>(
+    [],
+  );
   const [customNotes, setCustomNotes] = useState("");
   const [fastingEnabled, setFastingEnabled] = useState(false);
   const [fastingStartHour, setFastingStartHour] = useState(12);
@@ -48,10 +60,10 @@ export function DietaryPreferencesCard({
   }, [existingPreferences]);
 
   const handleRestrictionToggle = (restriction: string) => {
-    setSelectedRestrictions(prev => 
-      prev.includes(restriction) 
-        ? prev.filter(r => r !== restriction)
-        : [...prev, restriction]
+    setSelectedRestrictions((prev) =>
+      prev.includes(restriction)
+        ? prev.filter((r) => r !== restriction)
+        : [...prev, restriction],
     );
   };
 
@@ -61,11 +73,13 @@ export function DietaryPreferencesCard({
       await setPreferences({
         restrictions: selectedRestrictions,
         customNotes: customNotes.trim(),
-        intermittentFasting: fastingEnabled ? {
-          enabled: true,
-          startHour: fastingStartHour,
-          endHour: fastingEndHour,
-        } : undefined,
+        intermittentFasting: fastingEnabled
+          ? {
+              enabled: true,
+              startHour: fastingStartHour,
+              endHour: fastingEndHour,
+            }
+          : undefined,
       });
       onComplete?.();
     } catch (error) {
@@ -77,9 +91,16 @@ export function DietaryPreferencesCard({
 
   const commonCategories = {
     "Diet Types": ["vegan", "vegetarian", "keto", "low-carb"],
-    "Allergies": ["gluten-free", "dairy-free", "nut-free", "soy-free", "egg-free", "shellfish-free"],
+    Allergies: [
+      "gluten-free",
+      "dairy-free",
+      "nut-free",
+      "soy-free",
+      "egg-free",
+      "shellfish-free",
+    ],
     "Religious/Ethical": ["halal", "kosher"],
-    "Medical": ["diabetic"]
+    Medical: ["diabetic"],
   };
 
   return (
@@ -96,28 +117,35 @@ export function DietaryPreferencesCard({
         <div className="space-y-6">
           {/* Common Restrictions */}
           <div className="space-y-4">
-            {Object.entries(commonCategories).map(([category, restrictions]) => (
-              <div key={category}>
-                <h4 className="text-sm font-medium mb-2">{category}</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {restrictions.map((restriction) => (
-                    <div key={restriction} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={restriction}
-                        checked={selectedRestrictions.includes(restriction)}
-                        onCheckedChange={() => handleRestrictionToggle(restriction)}
-                      />
-                      <Label 
-                        htmlFor={restriction} 
-                        className="text-sm font-normal capitalize cursor-pointer"
+            {Object.entries(commonCategories).map(
+              ([category, restrictions]) => (
+                <div key={category}>
+                  <h4 className="text-sm font-medium mb-2">{category}</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {restrictions.map((restriction) => (
+                      <div
+                        key={restriction}
+                        className="flex items-center space-x-2"
                       >
-                        {restriction.replace("-", " ")}
-                      </Label>
-                    </div>
-                  ))}
+                        <Checkbox
+                          id={restriction}
+                          checked={selectedRestrictions.includes(restriction)}
+                          onCheckedChange={() =>
+                            handleRestrictionToggle(restriction)
+                          }
+                        />
+                        <Label
+                          htmlFor={restriction}
+                          className="text-sm font-normal capitalize cursor-pointer"
+                        >
+                          {restriction.replace("-", " ")}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
 
           {/* Intermittent Fasting */}
@@ -144,7 +172,9 @@ export function DietaryPreferencesCard({
                     min={0}
                     max={23}
                     value={fastingStartHour}
-                    onChange={(e) => setFastingStartHour(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setFastingStartHour(parseInt(e.target.value))
+                    }
                     className="w-16"
                   />
                   <span className="text-sm">to</span>
@@ -154,12 +184,15 @@ export function DietaryPreferencesCard({
                     min={0}
                     max={23}
                     value={fastingEndHour}
-                    onChange={(e) => setFastingEndHour(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setFastingEndHour(parseInt(e.target.value))
+                    }
                     className="w-16"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  You can eat between {fastingStartHour}:00 and {fastingEndHour}:00
+                  You can eat between {fastingStartHour}:00 and {fastingEndHour}
+                  :00
                 </p>
               </div>
             )}
@@ -178,11 +211,7 @@ export function DietaryPreferencesCard({
           </div>
 
           {/* Save Button */}
-          <Button 
-            onClick={handleSave} 
-            disabled={isSaving}
-            className="w-full"
-          >
+          <Button onClick={handleSave} disabled={isSaving} className="w-full">
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

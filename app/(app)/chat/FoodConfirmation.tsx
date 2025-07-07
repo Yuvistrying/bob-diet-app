@@ -38,14 +38,16 @@ export function FoodConfirmation({
   onConfirm,
   onReject,
   onEdit,
-  editedItems
+  editedItems,
 }: FoodConfirmationProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [localItems, setLocalItems] = useState<FoodItem[]>(editedItems || items);
+  const [localItems, setLocalItems] = useState<FoodItem[]>(
+    editedItems || items,
+  );
   const { triggerHaptic } = useHapticFeedback();
 
   const handleConfirm = () => {
-    triggerHaptic('medium');
+    triggerHaptic("medium");
     if (isEditing && onEdit) {
       onEdit(localItems);
       setIsEditing(false);
@@ -54,33 +56,38 @@ export function FoodConfirmation({
   };
 
   const handleReject = () => {
-    triggerHaptic('light');
+    triggerHaptic("light");
     onReject();
   };
 
   const handleEdit = () => {
-    triggerHaptic('light');
+    triggerHaptic("light");
     setIsEditing(!isEditing);
     if (!isEditing) {
       setLocalItems(editedItems || items);
     }
   };
 
-  const updateItem = (index: number, field: keyof FoodItem, value: string | number) => {
+  const updateItem = (
+    index: number,
+    field: keyof FoodItem,
+    value: string | number,
+  ) => {
     const newItems = [...localItems];
     newItems[index] = { ...newItems[index], [field]: value };
     setLocalItems(newItems);
   };
 
   const removeItem = (index: number) => {
-    triggerHaptic('light');
+    triggerHaptic("light");
     setLocalItems(localItems.filter((_, i) => i !== index));
   };
 
-  const displayItems = isEditing ? localItems : (editedItems || items);
-  const displayTotal = isEditing 
+  const displayItems = isEditing ? localItems : editedItems || items;
+  const displayTotal = isEditing
     ? localItems.reduce((sum, item) => sum + (item.calories || 0), 0)
-    : (editedItems?.reduce((sum, item) => sum + (item.calories || 0), 0) || totalCalories);
+    : editedItems?.reduce((sum, item) => sum + (item.calories || 0), 0) ||
+      totalCalories;
 
   if (isConfirmed) {
     return (
@@ -128,14 +135,16 @@ export function FoodConfirmation({
               <>
                 <Input
                   value={item.name}
-                  onChange={(e) => updateItem(index, 'name', e.target.value)}
+                  onChange={(e) => updateItem(index, "name", e.target.value)}
                   className="flex-1 h-9 text-body-small"
                   placeholder="Food name"
                 />
                 <Input
                   type="number"
                   value={item.calories}
-                  onChange={(e) => updateItem(index, 'calories', parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    updateItem(index, "calories", parseInt(e.target.value) || 0)
+                  }
                   className="w-20 h-9 text-body-small text-center"
                   placeholder="Cal"
                 />
@@ -149,7 +158,8 @@ export function FoodConfirmation({
             ) : (
               <div className="flex-1 flex items-center justify-between">
                 <span className="text-body-small text-foreground">
-                  {item.quantity && `${item.quantity} `}{item.name}
+                  {item.quantity && `${item.quantity} `}
+                  {item.name}
                 </span>
                 <span className="text-body-small font-medium text-foreground-secondary">
                   {item.calories} cal
@@ -168,11 +178,14 @@ export function FoodConfirmation({
             {displayTotal} calories
           </span>
         </div>
-        {displayItems.some(item => item.protein) && (
+        {displayItems.some((item) => item.protein) && (
           <div className="flex items-center justify-between mt-1">
-            <span className="text-caption text-foreground-secondary">Protein</span>
+            <span className="text-caption text-foreground-secondary">
+              Protein
+            </span>
             <span className="text-caption font-medium text-foreground-secondary">
-              {displayItems.reduce((sum, item) => sum + (item.protein || 0), 0)}g
+              {displayItems.reduce((sum, item) => sum + (item.protein || 0), 0)}
+              g
             </span>
           </div>
         )}

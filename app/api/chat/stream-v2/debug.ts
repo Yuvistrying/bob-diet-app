@@ -11,7 +11,7 @@ export class StreamDebugger {
     const entry = {
       timestamp: Date.now() - this.startTime,
       type,
-      data
+      data,
     };
     this.logs.push(entry);
     console.log(`[STREAM-DEBUG][${entry.timestamp}ms][${type}]`, data);
@@ -23,14 +23,14 @@ export class StreamDebugger {
       stack: error?.stack,
       name: error?.name,
       code: error?.code,
-      ...error
+      ...error,
     });
   }
 
   getDump() {
     return {
       totalTime: Date.now() - this.startTime,
-      logs: this.logs
+      logs: this.logs,
     };
   }
 }

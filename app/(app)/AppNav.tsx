@@ -34,7 +34,7 @@ export function AppNav({ user }: AppNavProps) {
                   "flex flex-col items-center justify-center gap-1 px-4 py-2 text-xs transition-colors",
                   isActive
                     ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <item.icon className="h-5 w-5" />

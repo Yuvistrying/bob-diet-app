@@ -16,7 +16,7 @@ export function StatsCards({
   todayStats,
   latestWeight,
   preferences,
-  isStealthMode = false
+  isStealthMode = false,
 }: StatsCardsProps) {
   const getProgressColor = (value: number, target: number) => {
     const percentage = (value / target) * 100;
@@ -39,11 +39,16 @@ export function StatsCards({
             <span className="text-caption text-foreground-secondary">Goal</span>
           </div>
           <div className="text-body font-semibold text-foreground">
-            {profile?.goal === "cut" ? "Cut" : profile?.goal === "gain" ? "Gain" : "Maintain"}
+            {profile?.goal === "cut"
+              ? "Cut"
+              : profile?.goal === "gain"
+                ? "Gain"
+                : "Maintain"}
           </div>
           {profile?.targetWeight && (
             <div className="text-caption text-foreground-tertiary mt-0.5">
-              Target: {profile.targetWeight} {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
+              Target: {profile.targetWeight}{" "}
+              {profile?.preferredUnits === "imperial" ? "lbs" : "kg"}
             </div>
           )}
         </div>
@@ -51,12 +56,15 @@ export function StatsCards({
         {/* Current Weight Card */}
         <div className="bg-background-elevated rounded-xl p-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-caption text-foreground-secondary">Weight</span>
+            <span className="text-caption text-foreground-secondary">
+              Weight
+            </span>
           </div>
           <div className="text-body font-semibold text-foreground">
             {latestWeight?.weight || profile?.currentWeight || "—"}
             <span className="text-caption text-foreground-secondary ml-1">
-              {latestWeight?.unit || (profile?.preferredUnits === "imperial" ? "lbs" : "kg")}
+              {latestWeight?.unit ||
+                (profile?.preferredUnits === "imperial" ? "lbs" : "kg")}
             </span>
           </div>
           {!latestWeight && (
@@ -69,28 +77,40 @@ export function StatsCards({
 
       {/* Nutrition Card */}
       <div className="bg-background-elevated rounded-xl p-3">
-        <div className="text-caption text-foreground-secondary mb-2">Today's Progress</div>
-        
+        <div className="text-caption text-foreground-secondary mb-2">
+          Today's Progress
+        </div>
+
         {/* Calories */}
         <div className="space-y-2">
           <div>
             <div className="flex justify-between items-center mb-1">
               <span className="text-body-small text-foreground">Calories</span>
-              <span className={cn("text-body-small font-medium", 
-                todayStats && profile ? getProgressColor(todayStats.calories, profile.dailyCalorieTarget) : ""
-              )}>
-                {isStealthMode ? (
-                  todayStats && profile && todayStats.calories > profile.dailyCalorieTarget ? "Over" : "OK"
-                ) : (
-                  `${todayStats?.calories || 0} / ${profile?.dailyCalorieTarget || 2000}`
+              <span
+                className={cn(
+                  "text-body-small font-medium",
+                  todayStats && profile
+                    ? getProgressColor(
+                        todayStats.calories,
+                        profile.dailyCalorieTarget,
+                      )
+                    : "",
                 )}
+              >
+                {isStealthMode
+                  ? todayStats &&
+                    profile &&
+                    todayStats.calories > profile.dailyCalorieTarget
+                    ? "Over"
+                    : "OK"
+                  : `${todayStats?.calories || 0} / ${profile?.dailyCalorieTarget || 2000}`}
               </span>
             </div>
             <div className="h-1.5 bg-background rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-accent rounded-full transition-all duration-300"
-                style={{ 
-                  width: `${getProgressPercentage(todayStats?.calories || 0, profile?.dailyCalorieTarget || 2000)}%` 
+                style={{
+                  width: `${getProgressPercentage(todayStats?.calories || 0, profile?.dailyCalorieTarget || 2000)}%`,
                 }}
               />
             </div>
@@ -101,21 +121,31 @@ export function StatsCards({
             <div>
               <div className="flex justify-between items-center mb-1">
                 <span className="text-body-small text-foreground">Protein</span>
-                <span className={cn("text-body-small font-medium",
-                  todayStats && profile?.proteinTarget ? getProgressColor(todayStats.protein, profile.proteinTarget) : ""
-                )}>
-                  {isStealthMode ? (
-                    todayStats && profile && todayStats.protein < profile.proteinTarget * 0.8 ? "Low" : "OK"
-                  ) : (
-                    `${todayStats?.protein || 0}g / ${profile?.proteinTarget || 150}g`
+                <span
+                  className={cn(
+                    "text-body-small font-medium",
+                    todayStats && profile?.proteinTarget
+                      ? getProgressColor(
+                          todayStats.protein,
+                          profile.proteinTarget,
+                        )
+                      : "",
                   )}
+                >
+                  {isStealthMode
+                    ? todayStats &&
+                      profile &&
+                      todayStats.protein < profile.proteinTarget * 0.8
+                      ? "Low"
+                      : "OK"
+                    : `${todayStats?.protein || 0}g / ${profile?.proteinTarget || 150}g`}
                 </span>
               </div>
               <div className="h-1.5 bg-background rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-success rounded-full transition-all duration-300"
-                  style={{ 
-                    width: `${getProgressPercentage(todayStats?.protein || 0, profile?.proteinTarget || 150)}%` 
+                  style={{
+                    width: `${getProgressPercentage(todayStats?.protein || 0, profile?.proteinTarget || 150)}%`,
                   }}
                 />
               </div>
@@ -132,10 +162,10 @@ export function StatsCards({
                 </span>
               </div>
               <div className="h-1.5 bg-background rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-warning rounded-full transition-all duration-300"
-                  style={{ 
-                    width: `${getProgressPercentage(todayStats?.carbs || 0, profile?.carbsTarget || 200)}%` 
+                  style={{
+                    width: `${getProgressPercentage(todayStats?.carbs || 0, profile?.carbsTarget || 200)}%`,
                   }}
                 />
               </div>
@@ -152,10 +182,10 @@ export function StatsCards({
                 </span>
               </div>
               <div className="h-1.5 bg-background rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-secondary rounded-full transition-all duration-300"
-                  style={{ 
-                    width: `${getProgressPercentage(todayStats?.fat || 0, profile?.fatTarget || 65)}%` 
+                  style={{
+                    width: `${getProgressPercentage(todayStats?.fat || 0, profile?.fatTarget || 65)}%`,
                   }}
                 />
               </div>

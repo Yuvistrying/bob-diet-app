@@ -48,7 +48,7 @@ export default function SubscriptionRequired() {
             <Button asChild variant="outline" className="w-full">
               <Link href="/">Back to Home</Link>
             </Button>
-            
+
             <Button asChild variant="ghost" className="w-full">
               <Link href="/profile">Go to Profile / Sign Out</Link>
             </Button>

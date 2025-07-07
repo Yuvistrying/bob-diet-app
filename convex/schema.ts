@@ -67,7 +67,7 @@ export default defineSchema({
     timezone: v.string(),
     onboardingCompleted: v.boolean(),
     createdAt: v.number(),
-    updatedAt: v.number()
+    updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
   // User preferences including stealth mode
@@ -88,11 +88,11 @@ export default defineSchema({
         weighIn: v.optional(v.string()),
         breakfast: v.optional(v.string()),
         lunch: v.optional(v.string()),
-        dinner: v.optional(v.string())
-      })
+        dinner: v.optional(v.string()),
+      }),
     }),
     agentThreadId: v.optional(v.string()), // For persisting chat thread across refreshes
-    updatedAt: v.number()
+    updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
   // Dietary preferences and restrictions
@@ -100,14 +100,16 @@ export default defineSchema({
     userId: v.string(),
     restrictions: v.array(v.string()), // ["vegan", "vegetarian", "gluten-free", "dairy-free", "nut-free", "keto", "diabetic", etc.]
     customNotes: v.optional(v.string()), // Free text for other restrictions/preferences
-    intermittentFasting: v.optional(v.object({
-      enabled: v.boolean(),
-      startHour: v.number(), // 0-23
-      endHour: v.number(), // 0-23
-      daysOfWeek: v.optional(v.array(v.number())), // 0-6 (Sun-Sat), if not provided = all days
-    })),
+    intermittentFasting: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        startHour: v.number(), // 0-23
+        endHour: v.number(), // 0-23
+        daysOfWeek: v.optional(v.array(v.number())), // 0-6 (Sun-Sat), if not provided = all days
+      }),
+    ),
     createdAt: v.number(),
-    updatedAt: v.number()
+    updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
   // Weight tracking
@@ -119,15 +121,15 @@ export default defineSchema({
     time: v.string(), // HH:MM format
     notes: v.optional(v.string()),
     createdAt: v.number(),
-    embedding: v.optional(v.array(v.float64()))
+    embedding: v.optional(v.array(v.float64())),
   })
-  .index("by_user_date", ["userId", "date"])
-  .index("by_user_created", ["userId", "createdAt"])
-  .vectorIndex("by_embedding", {
-    vectorField: "embedding",
-    dimensions: 1536,
-    filterFields: ["userId"]
-  }),
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_created", ["userId", "createdAt"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["userId"],
+    }),
 
   // Food logging
   foodLogs: defineTable({
@@ -136,14 +138,16 @@ export default defineSchema({
     time: v.string(), // HH:MM
     meal: v.string(), // "breakfast", "lunch", "dinner", "snack"
     description: v.string(), // Natural language description
-    foods: v.array(v.object({
-      name: v.string(),
-      quantity: v.string(),
-      calories: v.number(),
-      protein: v.number(),
-      carbs: v.number(),
-      fat: v.number()
-    })),
+    foods: v.array(
+      v.object({
+        name: v.string(),
+        quantity: v.string(),
+        calories: v.number(),
+        protein: v.number(),
+        carbs: v.number(),
+        fat: v.number(),
+      }),
+    ),
     totalCalories: v.number(),
     totalProtein: v.number(),
     totalCarbs: v.number(),
@@ -152,15 +156,15 @@ export default defineSchema({
     aiEstimated: v.boolean(),
     confidence: v.string(), // "high", "medium", "low"
     createdAt: v.number(),
-    embedding: v.optional(v.array(v.float64()))
+    embedding: v.optional(v.array(v.float64())),
   })
-  .index("by_user_date", ["userId", "date"])
-  .index("by_user_meal_date", ["userId", "meal", "date"])
-  .vectorIndex("by_embedding", {
-    vectorField: "embedding",
-    dimensions: 1536,
-    filterFields: ["userId"]
-  }),
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_meal_date", ["userId", "meal", "date"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["userId"],
+    }),
 
   // Session cache for performance (with TTL)
   sessionCache: defineTable({
@@ -169,9 +173,9 @@ export default defineSchema({
     data: v.string(), // JSON stringified
     expiresAt: v.number(), // timestamp
   })
-  .index("by_user_key", ["userId", "cacheKey"])
-  .index("by_expires", ["expiresAt"]), // for cleanup
-  
+    .index("by_user_key", ["userId", "cacheKey"])
+    .index("by_expires", ["expiresAt"]), // for cleanup
+
   // Chat sessions for better conversation management
   chatSessions: defineTable({
     userId: v.string(),
@@ -182,8 +186,8 @@ export default defineSchema({
     createdAt: v.number(),
     lastMessageAt: v.number(),
   })
-  .index("by_user_date", ["userId", "startDate"])
-  .index("by_user_active", ["userId", "isActive"]),
+    .index("by_user_date", ["userId", "startDate"])
+    .index("by_user_active", ["userId", "isActive"]),
 
   // Chat history with Bob
   chatHistory: defineTable({
@@ -191,28 +195,33 @@ export default defineSchema({
     role: v.string(), // "user" or "assistant"
     content: v.string(),
     timestamp: v.number(),
-    metadata: v.optional(v.object({
-      foodLogId: v.optional(v.id("foodLogs")),
-      weightLogId: v.optional(v.id("weightLogs")),
-      actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
-      toolCalls: v.optional(v.any()), // Store tool calls for persistence
-      threadId: v.optional(v.string()), // Thread ID for conversation continuity
-      storageId: v.optional(v.id("_storage")), // Image storage ID if photo was uploaded
-      usage: v.optional(v.object({ // Token usage tracking
-        promptTokens: v.number(),
-        completionTokens: v.number(),
-        totalTokens: v.number()
-      }))
-    })),
-    embedding: v.optional(v.array(v.float64()))
+    metadata: v.optional(
+      v.object({
+        foodLogId: v.optional(v.id("foodLogs")),
+        weightLogId: v.optional(v.id("weightLogs")),
+        actionType: v.optional(v.string()), // "food_log", "weight_log", "question", etc.
+        toolCalls: v.optional(v.any()), // Store tool calls for persistence
+        threadId: v.optional(v.string()), // Thread ID for conversation continuity
+        storageId: v.optional(v.id("_storage")), // Image storage ID if photo was uploaded
+        usage: v.optional(
+          v.object({
+            // Token usage tracking
+            promptTokens: v.number(),
+            completionTokens: v.number(),
+            totalTokens: v.number(),
+          }),
+        ),
+      }),
+    ),
+    embedding: v.optional(v.array(v.float64())),
   })
-  .index("by_user", ["userId"])
-  .index("by_user_timestamp", ["userId", "timestamp"])
-  .vectorIndex("by_embedding", {
-    vectorField: "embedding",
-    dimensions: 1536,
-    filterFields: ["userId", "role"]
-  }),
+    .index("by_user", ["userId"])
+    .index("by_user_timestamp", ["userId", "timestamp"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["userId", "role"],
+    }),
 
   // Usage tracking for freemium
   usageTracking: defineTable({
@@ -222,7 +231,7 @@ export default defineSchema({
     photoAnalysisCount: v.number(),
     opusCallsCount: v.number(),
     sonnetCallsCount: v.number(),
-    lastResetAt: v.number()
+    lastResetAt: v.number(),
   }).index("by_user_date", ["userId", "date"]),
 
   // Calibration history
@@ -234,7 +243,7 @@ export default defineSchema({
     reason: v.string(),
     dataPointsAnalyzed: v.number(),
     confidence: v.string(), // "high", "medium", "low"
-    createdAt: v.number()
+    createdAt: v.number(),
   }).index("by_user", ["userId"]),
 
   // Weekly analytics
@@ -250,7 +259,7 @@ export default defineSchema({
     actualWeightChange: v.number(),
     expectedWeightChange: v.number(),
     adherenceScore: v.number(), // 0-100
-    createdAt: v.number()
+    createdAt: v.number(),
   }).index("by_user_week", ["userId", "weekStartDate"]),
 
   // Onboarding progress
@@ -260,7 +269,7 @@ export default defineSchema({
     responses: v.any(), // Flexible object for storing partial responses
     completed: v.boolean(),
     startedAt: v.number(),
-    completedAt: v.optional(v.number())
+    completedAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
   // Photo analyses for food recognition
@@ -269,36 +278,40 @@ export default defineSchema({
     timestamp: v.number(),
     storageId: v.id("_storage"), // Convex storage ID for the photo
     analysis: v.object({
-      foods: v.array(v.object({
-        name: v.string(),
-        quantity: v.string(),
-        calories: v.number(),
-        protein: v.number(),
-        carbs: v.number(),
-        fat: v.number(),
-        confidence: v.string() // "low", "medium", "high"
-      })),
+      foods: v.array(
+        v.object({
+          name: v.string(),
+          quantity: v.string(),
+          calories: v.number(),
+          protein: v.number(),
+          carbs: v.number(),
+          fat: v.number(),
+          confidence: v.string(), // "low", "medium", "high"
+        }),
+      ),
       totalCalories: v.number(),
       totalProtein: v.number(),
       totalCarbs: v.number(),
       totalFat: v.number(),
       overallConfidence: v.string(), // "low", "medium", "high"
-      metadata: v.optional(v.object({
-        visualDescription: v.string(),
-        platingStyle: v.string(),
-        portionSize: v.string()
-      }))
+      metadata: v.optional(
+        v.object({
+          visualDescription: v.string(),
+          platingStyle: v.string(),
+          portionSize: v.string(),
+        }),
+      ),
     }),
     confirmed: v.boolean(),
     loggedFoodId: v.optional(v.id("foodLogs")),
-    embedding: v.optional(v.array(v.float64()))
+    embedding: v.optional(v.array(v.float64())),
   })
-  .index("by_user_date", ["userId", "timestamp"])
-  .vectorIndex("by_embedding", {
-    vectorField: "embedding",
-    dimensions: 1536,
-    filterFields: ["userId"]
-  }),
+    .index("by_user_date", ["userId", "timestamp"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["userId"],
+    }),
 
   // File uploads tracking
   files: defineTable({
@@ -306,14 +319,16 @@ export default defineSchema({
     storageId: v.optional(v.id("_storage")),
     uploadUrl: v.optional(v.string()),
     uploadedAt: v.number(),
-    metadata: v.optional(v.object({
-      type: v.string(),
-      purpose: v.string(),
-    })),
+    metadata: v.optional(
+      v.object({
+        type: v.string(),
+        purpose: v.string(),
+      }),
+    ),
   })
     .index("by_user", ["userId"])
     .index("by_upload_url", ["uploadUrl"]),
-    
+
   // Conversation summaries for context compression
   conversationSummaries: defineTable({
     userId: v.string(),
@@ -329,15 +344,15 @@ export default defineSchema({
     lastMessageId: v.optional(v.id("chatHistory")),
     createdAt: v.number(),
     updatedAt: v.number(),
-    embedding: v.optional(v.array(v.float64()))
+    embedding: v.optional(v.array(v.float64())),
   })
-  .index("by_user_date", ["userId", "date"])
-  .index("by_user_created", ["userId", "createdAt"])
-  .vectorIndex("by_embedding", {
-    vectorField: "embedding",
-    dimensions: 1536,
-    filterFields: ["userId"]
-  }),
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_created", ["userId", "createdAt"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["userId"],
+    }),
 
   // Context cache for performance optimization
   contextCache: defineTable({
@@ -348,8 +363,8 @@ export default defineSchema({
     expiresAt: v.number(), // Timestamp when cache expires
     invalidateOn: v.array(v.string()), // Events that clear this cache
   })
-  .index("by_user_key", ["userId", "cacheKey"])
-  .index("by_expiry", ["expiresAt"]),
+    .index("by_user_key", ["userId", "cacheKey"])
+    .index("by_expiry", ["expiresAt"]),
 
   // Daily thread tracking
   dailyThreads: defineTable({
@@ -361,15 +376,17 @@ export default defineSchema({
     lastMessageAt: v.number(),
     isComplete: v.optional(v.boolean()),
     completedAt: v.optional(v.number()),
-    summary: v.optional(v.object({
-      foodsLogged: v.number(),
-      totalCalories: v.number(),
-      weightLogged: v.boolean(),
-      keyTopics: v.array(v.string()),
-    })),
+    summary: v.optional(
+      v.object({
+        foodsLogged: v.number(),
+        totalCalories: v.number(),
+        weightLogged: v.boolean(),
+        keyTopics: v.array(v.string()),
+      }),
+    ),
   })
-  .index("by_user_date", ["userId", "date"])
-  .index("by_thread", ["threadId"]),
+    .index("by_user_date", ["userId", "date"])
+    .index("by_thread", ["threadId"]),
 
   // Pending confirmations for food logging
   pendingConfirmations: defineTable({
@@ -378,14 +395,16 @@ export default defineSchema({
     toolCallId: v.string(),
     confirmationData: v.object({
       description: v.string(),
-      items: v.array(v.object({
-        name: v.string(),
-        quantity: v.string(),
-        calories: v.number(),
-        protein: v.number(),
-        carbs: v.number(),
-        fat: v.number(),
-      })),
+      items: v.array(
+        v.object({
+          name: v.string(),
+          quantity: v.string(),
+          calories: v.number(),
+          protein: v.number(),
+          carbs: v.number(),
+          fat: v.number(),
+        }),
+      ),
       totalCalories: v.number(),
       totalProtein: v.number(),
       totalCarbs: v.number(),
@@ -397,9 +416,9 @@ export default defineSchema({
     expiresAt: v.number(), // Auto-cleanup after 5 minutes
     status: v.string(), // "pending", "confirmed", "expired"
   })
-  .index("by_user_thread", ["userId", "threadId"])
-  .index("by_expires", ["expiresAt"])
-  .index("by_status", ["status"]),
+    .index("by_user_thread", ["userId", "threadId"])
+    .index("by_expires", ["expiresAt"])
+    .index("by_status", ["status"]),
 
   // Message summaries for context compression
   messageSummaries: defineTable({
@@ -415,8 +434,7 @@ export default defineSchema({
       endTimestamp: v.number(),
     }),
     createdAt: v.number(),
-  })
-  .index("by_thread", ["threadId"]),
+  }).index("by_thread", ["threadId"]),
 
   // Confirmed bubble states for persistence across devices
   confirmedBubbles: defineTable({
@@ -430,10 +448,10 @@ export default defineSchema({
     confirmedAt: v.number(),
     expiresAt: v.number(), // Auto-cleanup after 7 days
   })
-  .index("by_user_thread", ["userId", "threadId"])
-  .index("by_expires", ["expiresAt"])
-  .index("by_confirmation_id", ["confirmationId"]),
-  
+    .index("by_user_thread", ["userId", "threadId"])
+    .index("by_expires", ["expiresAt"])
+    .index("by_confirmation_id", ["confirmationId"]),
+
   // Goal change history for tracking user progress
   goalHistory: defineTable({
     userId: v.string(),
@@ -446,9 +464,9 @@ export default defineSchema({
     triggeredBy: v.string(), // "user_request", "goal_reached", "bob_suggestion"
     changedAt: v.number(),
   })
-  .index("by_user", ["userId"])
-  .index("by_user_date", ["userId", "changedAt"]),
-  
+    .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "changedAt"]),
+
   // Goal achievements tracking
   goalAchievements: defineTable({
     userId: v.string(),
@@ -461,10 +479,10 @@ export default defineSchema({
     newGoalSet: v.optional(v.boolean()), // Did user accept new goal?
     daysAtGoal: v.optional(v.number()), // For maintenance goals
   })
-  .index("by_user", ["userId"])
-  .index("by_user_triggered", ["userId", "bobSuggested"])
-  .index("by_achieved_date", ["achievedAt"]),
-  
+    .index("by_user", ["userId"])
+    .index("by_user_triggered", ["userId", "bobSuggested"])
+    .index("by_achieved_date", ["achievedAt"]),
+
   // Weekly summaries for user progress tracking
   weeklySummaries: defineTable({
     userId: v.string(),
@@ -481,15 +499,17 @@ export default defineSchema({
     weightTrackingDays: v.number(),
     expectedWeightChange: v.number(), // Based on calorie deficit/surplus
     actualWeightChange: v.number(),
-    calibrationAdjustment: v.optional(v.object({
-      oldTarget: v.number(),
-      newTarget: v.number(),
-      reason: v.string(),
-    })),
+    calibrationAdjustment: v.optional(
+      v.object({
+        oldTarget: v.number(),
+        newTarget: v.number(),
+        reason: v.string(),
+      }),
+    ),
     insights: v.string(), // The full text Bob shares
     createdAt: v.number(),
   })
-  .index("by_user", ["userId"])
-  .index("by_user_week", ["userId", "weekStartDate"])
-  .index("by_created", ["createdAt"]),
+    .index("by_user", ["userId"])
+    .index("by_user_week", ["userId", "weekStartDate"])
+    .index("by_created", ["createdAt"]),
 });

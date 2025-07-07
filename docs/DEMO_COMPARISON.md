@@ -11,7 +11,7 @@ Add this to your chat page temporarily:
 import { StreamingToggle } from "~/app/components/StreamingToggle";
 
 // In the UI (maybe near settings button)
-<StreamingToggle />
+<StreamingToggle />;
 ```
 
 ### 2. Update Fetch Call
@@ -19,9 +19,10 @@ import { StreamingToggle } from "~/app/components/StreamingToggle";
 In `useStreamingChat.tsx`, modify the endpoint:
 
 ```typescript
-const endpoint = localStorage.getItem('useNewStreaming') === 'true' 
-  ? "/api/chat/stream-v2" 
-  : "/api/chat/stream";
+const endpoint =
+  localStorage.getItem("useNewStreaming") === "true"
+    ? "/api/chat/stream-v2"
+    : "/api/chat/stream";
 
 const response = await fetch(endpoint, {
   // ... rest of config
@@ -31,15 +32,16 @@ const response = await fetch(endpoint, {
 ## Side-by-Side Tests
 
 ### Test 1: Food Logging with Embeddings
+
 ```
 Current System:
 1. "I had a chicken salad"
 2. Check console: Should see embedding generation
 3. Check DB: foodLogs entry should have embedding field
 
-New System: 
+New System:
 1. Toggle to new system
-2. "I had a turkey wrap"  
+2. "I had a turkey wrap"
 3. Check console: Should see embedding generation
 4. Check DB: foodLogs entry should have embedding field
 
@@ -47,6 +49,7 @@ New System:
 ```
 
 ### Test 2: Pending Confirmations
+
 ```
 Both Systems:
 1. "I had pizza"
@@ -58,10 +61,11 @@ Both Systems:
 ```
 
 ### Test 3: Photo Analysis
+
 ```
 Both Systems:
 1. Upload food photo
-2. Check: 
+2. Check:
    - Photo analyzed
    - Embedding generated
    - Saved to photoAnalyses table
@@ -69,6 +73,7 @@ Both Systems:
 ```
 
 ### Test 4: Vector Search
+
 ```
 After logging some meals:
 1. "find similar meals to chicken"
@@ -80,11 +85,11 @@ After logging some meals:
 
 Open Network tab and compare:
 
-| Metric | Current | New |
-|--------|---------|-----|
-| Initial response time | ~2s | ~1.5s |
-| Token streaming | ✅ | ✅ |
-| Tool execution | Same | Same |
+| Metric                | Current | New   |
+| --------------------- | ------- | ----- |
+| Initial response time | ~2s     | ~1.5s |
+| Token streaming       | ✅      | ✅    |
+| Tool execution        | Same    | Same  |
 
 ## Database Verification
 
@@ -95,27 +100,22 @@ Run these in Convex dashboard:
 db.foodLogs
   .order("desc")
   .take(5)
-  .filter(log => log.embedding !== undefined)
+  .filter((log) => log.embedding !== undefined);
 
 // Check pending confirmations work
-db.pendingConfirmations
-  .order("desc") 
-  .take(5)
+db.pendingConfirmations.order("desc").take(5);
 
 // Check photo analyses
-db.photoAnalyses
-  .order("desc")
-  .take(5)
+db.photoAnalyses.order("desc").take(5);
 
 // Check thread management
-db.dailyThreads
-  .order("desc")
-  .take(5)
+db.dailyThreads.order("desc").take(5);
 ```
 
 ## What to Look For
 
 ### ✅ Both Systems Should:
+
 1. Generate embeddings for all food logs
 2. Save pending confirmations
 3. Handle photo analysis with embeddings
@@ -125,12 +125,14 @@ db.dailyThreads
 7. Track daily threads
 
 ### 🚀 New System Benefits:
+
 1. Simpler code path (check console logs)
 2. Single source of truth for prompts
 3. Direct database operations
 4. Less overhead
 
 ### 🔍 Edge Cases to Test:
+
 1. Rapid messages - both handle well?
 2. Tool failures - both recover?
 3. Context persistence - refresh page, continue conversation
@@ -139,12 +141,14 @@ db.dailyThreads
 ## Summary
 
 The new system provides identical functionality with:
+
 - 50% less code complexity
 - Same features and intelligence
 - Better maintainability
 - Easier debugging
 
 All while preserving:
+
 - Embeddings for search
 - Pending confirmations
 - Photo analysis

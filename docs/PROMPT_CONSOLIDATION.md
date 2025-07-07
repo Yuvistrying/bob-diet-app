@@ -7,7 +7,9 @@
 ## What Was Removed
 
 ### The Old System
+
 The codebase had two prompt builders:
+
 1. **`buildMinimalPrompt`** - Used for queries ("what did I eat?", "show progress")
    - Only included basic stats
    - No meal history, no pending confirmations
@@ -20,37 +22,41 @@ The codebase had two prompt builders:
    - ~1500-2000 tokens
 
 ### Query Optimization Logic
+
 ```typescript
 // OLD: In stream-v2/route.ts
-const isQuery = intents.includes('query');
-const promptBuilder = isQuery && !isConfirmingFood 
-  ? buildMinimalPrompt 
-  : buildFullPrompt;
+const isQuery = intents.includes("query");
+const promptBuilder =
+  isQuery && !isConfirmingFood ? buildMinimalPrompt : buildFullPrompt;
 ```
 
 ## What We Have Now
 
 ### Single Consolidated Prompt
+
 - Always uses `getBobSystemPrompt` with full context
 - No switching based on intent
 - Consistent behavior across all interactions
 - ~1500-2000 tokens for ALL messages
 
 ### Removed Code
+
 - `buildMinimalPrompt` function deleted
-- `buildFullPrompt` function deleted  
+- `buildFullPrompt` function deleted
 - Prompt selection logic removed
 - Intent-based optimization removed
 
 ## Trade-offs Analysis
 
 ### Benefits of Consolidation
+
 1. **Simpler codebase** - One prompt to maintain
 2. **Consistent context** - Bob always has full information
 3. **Fewer edge cases** - No prompt switching bugs
 4. **Better responses** - Bob can reference meal history even in queries
 
 ### Costs of Consolidation
+
 1. **Higher token usage** - 2-3x more tokens for simple queries
 2. **Increased API costs** - Every message is now "expensive"
 3. **Potential latency** - More tokens to process
@@ -59,11 +65,13 @@ const promptBuilder = isQuery && !isConfirmingFood
 ## Cost Impact
 
 Assuming typical usage patterns:
+
 - **Before**: Mixed usage averaged ~1000 tokens/message
 - **Now**: Flat ~1700 tokens/message
 - **Increase**: ~70% more tokens overall
 
 For a user with 50 messages/day:
+
 - **Before**: ~50,000 tokens/day
 - **Now**: ~85,000 tokens/day
 - **Cost increase**: ~$0.70/day with Claude Sonnet pricing
@@ -78,6 +86,7 @@ For a user with 50 messages/day:
 ## Recommendation
 
 The consolidation was the right choice for now because:
+
 - Code simplicity > minor cost savings
 - Consistent UX > token optimization
 - Easy to maintain > complex routing logic

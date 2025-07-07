@@ -28,7 +28,7 @@ export function DataCollectionBubble({
   onSubmit,
   isDisabled = false,
   minimized = false,
-  submittedValue
+  submittedValue,
 }: DataCollectionBubbleProps) {
   const [value, setValue] = useState("");
   const [selectedUnit, setSelectedUnit] = useState(initialUnit);
@@ -44,20 +44,20 @@ export function DataCollectionBubble({
 
   const handleSubmit = () => {
     if (!value.trim() && type !== "select") return;
-    
+
     let submissionValue: any = value;
-    
+
     if (type === "weight") {
       submissionValue = {
         weight: parseFloat(value),
-        unit: selectedUnit
+        unit: selectedUnit,
       };
     } else if (type === "number") {
       submissionValue = parseFloat(value);
     } else if (type === "date") {
       submissionValue = value; // Expecting YYYY-MM-DD format
     }
-    
+
     onSubmit(submissionValue);
   };
 
@@ -73,7 +73,9 @@ export function DataCollectionBubble({
       <div className="max-w-[80%] px-4 py-2 rounded-2xl border border-border bg-muted/50">
         <div className="text-sm text-muted-foreground">{question}</div>
         <div className="text-sm font-medium text-foreground mt-1">
-          {type === "weight" ? `${submittedValue.weight} ${submittedValue.unit}` : submittedValue}
+          {type === "weight"
+            ? `${submittedValue.weight} ${submittedValue.unit}`
+            : submittedValue}
         </div>
       </div>
     );
@@ -87,7 +89,7 @@ export function DataCollectionBubble({
       className="max-w-[80%] px-4 py-3 rounded-2xl border border-border bg-card"
     >
       <div className="text-sm text-foreground mb-3">{question}</div>
-      
+
       {type === "text" && (
         <div className="flex gap-2">
           <Input
@@ -110,7 +112,7 @@ export function DataCollectionBubble({
           </Button>
         </div>
       )}
-      
+
       {type === "number" && (
         <div className="flex gap-2">
           <Input
@@ -133,7 +135,7 @@ export function DataCollectionBubble({
           </Button>
         </div>
       )}
-      
+
       {type === "weight" && (
         <div className="flex gap-2">
           <Input
@@ -150,7 +152,9 @@ export function DataCollectionBubble({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setSelectedUnit(selectedUnit === "kg" ? "lbs" : "kg")}
+            onClick={() =>
+              setSelectedUnit(selectedUnit === "kg" ? "lbs" : "kg")
+            }
             className="h-9 min-w-[60px]"
           >
             {selectedUnit}
@@ -165,7 +169,7 @@ export function DataCollectionBubble({
           </Button>
         </div>
       )}
-      
+
       {type === "select" && (
         <div className="space-y-2">
           {options.map((option) => (
@@ -182,7 +186,7 @@ export function DataCollectionBubble({
           ))}
         </div>
       )}
-      
+
       {type === "date" && (
         <div className="flex gap-2">
           <Input
@@ -193,7 +197,7 @@ export function DataCollectionBubble({
             onKeyPress={handleKeyPress}
             className="flex-1 h-9 text-sm"
             disabled={isDisabled}
-            max={new Date().toISOString().split('T')[0]}
+            max={new Date().toISOString().split("T")[0]}
           />
           <Button
             size="sm"

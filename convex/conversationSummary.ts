@@ -11,13 +11,13 @@ export const getDailySummary = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
-    const targetDate = args.date || new Date().toISOString().split('T')[0];
-    
+
+    const targetDate = args.date || new Date().toISOString().split("T")[0];
+
     return await ctx.db
       .query("conversationSummaries")
-      .withIndex("by_user_date", (q) => 
-        q.eq("userId", identity.subject).eq("date", targetDate)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", targetDate),
       )
       .first();
   },
@@ -40,16 +40,16 @@ export const saveDailySummary = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const existing = await ctx.db
       .query("conversationSummaries")
-      .withIndex("by_user_date", (q) => 
-        q.eq("userId", identity.subject).eq("date", args.date)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", args.date),
       )
       .first();
-    
+
     let summaryId: any;
-    
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         summary: args.summary,
@@ -69,7 +69,7 @@ export const saveDailySummary = mutation({
         updatedAt: Date.now(),
       });
     }
-    
+
     // Generate embedding asynchronously
     ctx.scheduler.runAfter(0, api.embeddings.embedConversationSummary, {
       summaryId,
@@ -87,29 +87,29 @@ export const getHistoricalContext = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    
+
     const daysToFetch = args.days || 7;
     const dates: string[] = [];
-    
+
     // Generate dates for the last N days
     for (let i = 1; i <= daysToFetch; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      dates.push(date.toISOString().split('T')[0]);
+      dates.push(date.toISOString().split("T")[0]);
     }
-    
+
     // Fetch summaries for these dates
     const summaries = await Promise.all(
-      dates.map(date => 
+      dates.map((date) =>
         ctx.db
           .query("conversationSummaries")
-          .withIndex("by_user_date", (q) => 
-            q.eq("userId", identity.subject).eq("date", date)
+          .withIndex("by_user_date", (q) =>
+            q.eq("userId", identity.subject).eq("date", date),
           )
-          .first()
-      )
+          .first(),
+      ),
     );
-    
+
     return summaries.filter(Boolean);
   },
 });
@@ -119,22 +119,24 @@ export const generateDailySummary = internalAction({
   args: {
     userId: v.string(),
     date: v.string(),
-    messages: v.array(v.object({
-      role: v.string(),
-      content: v.string(),
-      metadata: v.optional(v.any()),
-    })),
+    messages: v.array(
+      v.object({
+        role: v.string(),
+        content: v.string(),
+        metadata: v.optional(v.any()),
+      }),
+    ),
   },
   handler: async (ctx, args): Promise<any> => {
     if (args.messages.length === 0) {
       return null;
     }
-    
+
     // Format messages for Claude
     const conversationText = args.messages
-      .map(m => `${m.role}: ${m.content}`)
-      .join('\n\n');
-    
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n\n");
+
     // Use Claude to generate summary
     const prompt = `Analyze this conversation between a user and their AI diet coach Bob. Extract key information that would be useful for future conversations.
 
@@ -167,25 +169,26 @@ Each should be an array of strings except contextNotes which is a single string.
         goals: [],
         contextNotes: "Daily conversation summary",
       };
-      
+
       // Extract food logs mentioned
-      const foodMentions = args.messages.filter(m => 
-        m.metadata?.toolCalls?.some((tc: any) => 
-          tc.toolName === "logFood" || tc.toolName === "confirmFood"
-        )
+      const foodMentions = args.messages.filter((m) =>
+        m.metadata?.toolCalls?.some(
+          (tc: any) =>
+            tc.toolName === "logFood" || tc.toolName === "confirmFood",
+        ),
       );
-      
+
       if (foodMentions.length > 0) {
         summary.foodPatterns = [`Logged ${foodMentions.length} meals today`];
       }
-      
+
       // Save the summary without lastMessageId for now
       await ctx.runMutation(api.conversationSummary.saveDailySummary, {
         date: args.date,
         summary,
         messageCount: args.messages.length,
       });
-      
+
       return summary;
     } catch (error) {
       console.error("Error generating summary:", error);
@@ -199,36 +202,39 @@ export const compressHistoricalContext = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     // Get last 7 days of summaries
-    const summaries = await ctx.runQuery(api.conversationSummary.getHistoricalContext, {
-      days: 7
-    });
-    
+    const summaries = await ctx.runQuery(
+      api.conversationSummary.getHistoricalContext,
+      {
+        days: 7,
+      },
+    );
+
     if (summaries.length === 0) return null;
-    
+
     // Combine summaries into a compressed format
     const compressed = {
       recentPatterns: [] as string[],
       establishedFacts: [] as string[],
       ongoingGoals: [] as string[],
     };
-    
+
     // Deduplicate and organize information
     const allKeyPoints = new Set<string>();
     const allPatterns = new Set<string>();
     const allGoals = new Set<string>();
-    
+
     summaries.forEach((summary: Doc<"conversationSummaries"> | null) => {
       summary?.summary.keyPoints.forEach((p: string) => allKeyPoints.add(p));
       summary?.summary.foodPatterns.forEach((p: string) => allPatterns.add(p));
       summary?.summary.goals.forEach((g: string) => allGoals.add(g));
     });
-    
+
     compressed.establishedFacts = Array.from(allKeyPoints);
     compressed.recentPatterns = Array.from(allPatterns);
     compressed.ongoingGoals = Array.from(allGoals);
-    
+
     return compressed;
   },
 });
