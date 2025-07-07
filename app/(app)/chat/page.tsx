@@ -793,12 +793,21 @@ export default function Chat() {
         // Check if we need to refresh when tab becomes visible
         const threadDate = threadId.split('_').pop();
         if (threadDate) {
-          const threadDay = new Date(parseInt(threadDate)).toDateString();
-          const today = new Date().toDateString();
-          
-          if (threadDay !== today) {
-            logger.info('[Chat] Tab became visible on new day, refreshing...');
-            window.location.reload();
+          // Validate timestamp
+          const timestamp = parseInt(threadDate);
+          if (!isNaN(timestamp) && timestamp > 1000000000000) {
+            const threadDay = new Date(timestamp).toDateString();
+            const today = new Date().toDateString();
+            
+            if (threadDay !== today) {
+              // Only refresh if we haven't already today
+              const refreshKey = `refreshed_${today}`;
+              if (!sessionStorage.getItem(refreshKey)) {
+                sessionStorage.setItem(refreshKey, 'true');
+                logger.info('[Chat] Tab became visible on new day, refreshing...');
+                window.location.reload();
+              }
+            }
           }
         }
       }
@@ -1444,13 +1453,22 @@ export default function Chat() {
       const threadDate = threadId.split('_').pop();
       if (!threadDate) return false;
       
-      const threadDay = new Date(parseInt(threadDate)).toDateString();
+      // Validate timestamp
+      const timestamp = parseInt(threadDate);
+      if (isNaN(timestamp) || timestamp < 1000000000000) return false;
+      
+      const threadDay = new Date(timestamp).toDateString();
       const today = new Date().toDateString();
       
       if (threadDay !== today) {
-        logger.info('[Chat] New day detected before sending message, refreshing...');
-        window.location.reload();
-        return true;
+        // Only refresh if we haven't already today
+        const refreshKey = `refreshed_${today}`;
+        if (!sessionStorage.getItem(refreshKey)) {
+          sessionStorage.setItem(refreshKey, 'true');
+          logger.info('[Chat] New day detected before sending message, refreshing...');
+          window.location.reload();
+          return true;
+        }
       }
       return false;
     };
