@@ -747,17 +747,26 @@ export default function Chat() {
       const threadDate = threadId.split('_').pop();
       if (!threadDate) return false;
       
-      const threadDay = new Date(parseInt(threadDate)).toDateString();
+      // Validate it's a valid timestamp
+      const timestamp = parseInt(threadDate);
+      if (isNaN(timestamp) || timestamp < 1000000000000) return false; // Must be milliseconds
+      
+      const threadDay = new Date(timestamp).toDateString();
       const today = new Date().toDateString();
       
       return threadDay !== today;
     };
 
-    // If it's already a new day, refresh immediately
+    // If it's already a new day, refresh immediately (but only once)
     if (checkIfNewDay()) {
-      logger.info('[Chat] Thread is from a different day, refreshing...');
-      window.location.reload();
-      return;
+      // Check if we've already tried to refresh in this session
+      const refreshKey = `refreshed_${new Date().toDateString()}`;
+      if (!sessionStorage.getItem(refreshKey)) {
+        sessionStorage.setItem(refreshKey, 'true');
+        logger.info('[Chat] Thread is from a different day, refreshing...');
+        window.location.reload();
+        return;
+      }
     }
 
     // Set timer for 3:30 AM refresh
