@@ -41,35 +41,37 @@ To get concrete, let’s look at defining an agent using my new Agent component
 
 Defining an agent
 import { Agent } from "@convex-dev/agent";
-import { components, internal } from "./_generated/api";
+import { components, internal } from "./\_generated/api";
 import { openai } from "@ai-sdk/openai";
 
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
 });
 
 Starting a conversation
 export const createThread = action({
-  args: { prompt: v.string() },
-  handler: async (ctx, { prompt }) => {
-+   const { threadId, thread } = await supportAgent.createThread(ctx, {});
-+   const result = await thread.generateText({ prompt });
-    return { threadId, text: result.text };
+args: { prompt: v.string() },
+handler: async (ctx, { prompt }) => {
+
+- const { threadId, thread } = await supportAgent.createThread(ctx, {});
+- const result = await thread.generateText({ prompt });
+  return { threadId, text: result.text };
   },
-});
+  });
 
 Continuing a conversation
 export const continueThread = action({
-  args: { prompt: v.string(), threadId: v.string() },
-  handler: async (ctx, { prompt, threadId }) => {
-    // This includes previous message history from the thread automatically.
-+   const { thread } = await supportAgent.continueThread(ctx, { threadId });
-+   const result = await thread.generateText({ prompt });
-    return result.text;
+args: { prompt: v.string(), threadId: v.string() },
+handler: async (ctx, { prompt, threadId }) => {
+// This includes previous message history from the thread automatically.
+
+- const { thread } = await supportAgent.continueThread(ctx, { threadId });
+- const result = await thread.generateText({ prompt });
+  return result.text;
   },
-});
+  });
 
 Using tools
 Tools are functions that the LLM can call. We use the AI SDK Tool syntax
@@ -77,111 +79,115 @@ Tools are functions that the LLM can call. We use the AI SDK Tool syntax
 Configuring tools:
 
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
-+ tools: { accountLookup, fileTicket, sendEmail },
-});
-//...
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
+
+- tools: { accountLookup, fileTicket, sendEmail },
+  });
+  //...
   // or per-invocation in an action
-  await thread.generateText({ 
-    prompt,
-+   tools: { accountLookup, fileTicket, sendEmail },
+  await thread.generateText({
+  prompt,
+- tools: { accountLookup, fileTicket, sendEmail },
   });
 
 Defining Convex tools that have access to the function’s context, including userId, threadId, messageId, and the action ctx object which you can use to call queries, mutations, or actions:
 
 export const ideaSearch = createTool({
-  description: "Search for ideas by space-delimited keywords",
-  args: z.object({ search: z.string().describe("What you seek") }),
-+ handler: async (ctx, { search }): Promise<Doc<"ideas">[]> =>
-+    ctx.runQuery(api.ideas.searchIdeas, { search }),
-});
+description: "Search for ideas by space-delimited keywords",
+args: z.object({ search: z.string().describe("What you seek") }),
+
+- handler: async (ctx, { search }): Promise<Doc<"ideas">[]> =>
+- ctx.runQuery(api.ideas.searchIdeas, { search }),
+  });
 
 Incorporating into a durable workflow
-import { components, internal } from "./_generated/api";
+import { components, internal } from "./\_generated/api";
 import { WorkflowManager } from "@convex-dev/workflow";
 
 const workflow = new WorkflowManager(components.workflow);
 
 export const weatherAgentWorkflow = workflow.define({
-  args: { location: v.string() },
-  handler: async (step, { location }): Promise<Outfit> => {
-+   const { threadId } = await step.runMutation(agent.createThread, {
-+     userId: "123",
-+   });
-+   await step.runAction(
-+     internal.example.getForecast,
-+     { prompt: `What is the weather in ${location}?`, threadId },
-+     { retry: true },
-+   );
-+   const { object: fashionSuggestion } = await step.runAction(
-+     internal.example.getFashionAdvice,
-+     { prompt: `What should I wear based on the weather?`, threadId },
-+     { runAfter: 2 * SECOND },
-+   );
-+   return fashionSuggestion;
+args: { location: v.string() },
+handler: async (step, { location }): Promise<Outfit> => {
+
+- const { threadId } = await step.runMutation(agent.createThread, {
+-     userId: "123",
+- });
+- await step.runAction(
+-     internal.example.getForecast,
+-     { prompt: `What is the weather in ${location}?`, threadId },
+-     { retry: true },
+- );
+- const { object: fashionSuggestion } = await step.runAction(
+-     internal.example.getFashionAdvice,
+-     { prompt: `What should I wear based on the weather?`, threadId },
+-     { runAfter: 2 * SECOND },
+- );
+- return fashionSuggestion;
   },
-});
+  });
 
 Subscribing to asynchronously-generated messages
 This will fetch the thread’s messages, and re-run whenever new messages are created (within the query range). React clients can subscribe to the results with useQuery.
 
 export const listMessages = query({
-  args: {
-    threadId: v.string(),
-    paginationOpts: paginationOptsValidator,
+args: {
+threadId: v.string(),
+paginationOpts: paginationOptsValidator,
+},
+handler: async (ctx, args) => {
+const { threadId, paginationOpts } = args;
+await authorizeThreadAccess(ctx, threadId);
+
+- const msgs = await agent.listMessages(ctx, {
+-     threadId,
+-     paginationOpts,
+- });
+  // Here you could add more fields to the messages, like the user's name.
+  return msgs;
   },
-  handler: async (ctx, args) => {
-    const { threadId, paginationOpts } = args;
-    await authorizeThreadAccess(ctx, threadId);
-+   const msgs = await agent.listMessages(ctx, {
-+     threadId,
-+     paginationOpts,
-+   });
-    // Here you could add more fields to the messages, like the user's name.
-    return msgs;
-  },
-});
+  });
 
 Using a user’s previous conversations as context manually
 The agent will automatically pull in context based on the contextOptions parameter. If you don’t want the automatic behavior, you can provide messages yourself. You can also use the Agent's API to query for messages in the same way it would internally:
 
 const messages = await weatherAgent.fetchContextMessages(ctx, {
-	userId,
-	threadId,
-	messages: [{ role: "user", content: text }],
-	contextOptions: {
-		searchOtherThreads: true,
-		recentMessages: 10,
-		searchOptions: {
-			textSearch: true,
-			vectorSearch: true,
-			messageRange: { before: 1, after: 1 },
-			limit: 10,
-		},
-	},
+userId,
+threadId,
+messages: [{ role: "user", content: text }],
+contextOptions: {
+searchOtherThreads: true,
+recentMessages: 10,
+searchOptions: {
+textSearch: true,
+vectorSearch: true,
+messageRange: { before: 1, after: 1 },
+limit: 10,
+},
+},
 });
 // do customization and add a final prompt message
 const result = await thread.generateText({
-  messages,
-	{ prompt }, // either provide a prompt here or as the last message
-	saveMessages: "none",
-	// don't automatically fetch any context
-  contextOptions: {
-	  recentMessages: 0,
-		searchOptions: { limit: 0 },
-  },
+messages,
+{ prompt }, // either provide a prompt here or as the last message
+saveMessages: "none",
+// don't automatically fetch any context
+contextOptions: {
+recentMessages: 0,
+searchOptions: { limit: 0 },
+},
 });
 
 Retrying pesky LLMs who mean well but frequently goof up
 Per-agent call retries (immediate, accounting for LLM blips):
 
 const supportAgent = new Agent(components.agent, {
-  chat: openai.chat("gpt-4o-mini"),
-  textEmbedding: openai.embedding("text-embedding-3-small"),
-  instructions: "You are a helpful assistant.",
-  maxRetries: 3,
+chat: openai.chat("gpt-4o-mini"),
+textEmbedding: openai.embedding("text-embedding-3-small"),
+instructions: "You are a helpful assistant.",
+maxRetries: 3,
 });
 
 Retrying the whole action if the server restarts or the API provider is having issues by using the Workpool or Workflow components. This will use backoff and jitter to avoid thundering herds.
@@ -189,27 +195,27 @@ Retrying the whole action if the server restarts or the API provider is having i
 Workpool:
 
 const workpool = new Workpool(components.workpool, {
-  maxParallelism: 10,
-  retryActionsByDefault: true,
-  defaultRetryBehavior: {
-    maxAttempts: 5,
-    initialBackoffMs: 1000,
-    base: 2,
-  },
+maxParallelism: 10,
+retryActionsByDefault: true,
+defaultRetryBehavior: {
+maxAttempts: 5,
+initialBackoffMs: 1000,
+base: 2,
+},
 });
 
 Workflow:
 
 const workflow = new WorkflowManager(components.workflow, {
-  workpoolOptions: {
-    maxParallelism: 10,
-    retryActionsByDefault: true,
-    defaultRetryBehavior: {
-      maxAttempts: 5,
-      initialBackoffMs: 1000,
-      base: 2,
-    },
-  },
+workpoolOptions: {
+maxParallelism: 10,
+retryActionsByDefault: true,
+defaultRetryBehavior: {
+maxAttempts: 5,
+initialBackoffMs: 1000,
+base: 2,
+},
+},
 });
 
 Other capabiliities
@@ -256,7 +262,7 @@ To stay up to date with all the developments, join the #agents channel in Discor
 Summary
 With agents you can organize and orchestrate complex workflows. With the new Agent component, you can store and retrieve message history automatically.
 
-As always, let me know what you think in Discord, on 🦋  or on 𝕏
+As always, let me know what you think in Discord, on 🦋 or on 𝕏
 
 Footnotes
 If you pass saveMessages: "all" it will save all of the messages automatically. The default is to only save the prompt / final input message and output messages since it’s common to pass in a lot of custom context that should not be saved, followed by a final user prompt. ↩
@@ -271,8 +277,6 @@ Join the Convex Community
 Ask the team questions, learn from others, and stay up-to-date on the latest with Convex.
 Discord logoJoin the Discord community
 Share this article
-
-
 
 Read next
 Components for your Backend

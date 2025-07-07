@@ -76,8 +76,8 @@ export default function Success() {
           <CardDescription className="text-lg">
             {timedOut ? (
               <>
-                Your payment was successful, but we're still setting up your subscription.
-                Please contact support if this continues.
+                Your payment was successful, but we're still setting up your
+                subscription. Please contact support if this continues.
               </>
             ) : isWaiting ? (
               "Setting up your subscription..."
@@ -86,21 +86,23 @@ export default function Success() {
             )}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {timedOut ? (
             <div className="space-y-4">
-              <Button 
-                onClick={() => window.location.href = "mailto:support@yourapp.com"} 
-                className="w-full" 
+              <Button
+                onClick={() =>
+                  (window.location.href = "mailto:support@yourapp.com")
+                }
+                className="w-full"
                 size="lg"
                 variant="outline"
               >
                 Contact Support
               </Button>
-              <Button 
-                onClick={() => router.push("/chat")} 
-                className="w-full" 
+              <Button
+                onClick={() => router.push("/chat")}
+                className="w-full"
                 size="lg"
               >
                 Try Continuing Anyway
@@ -108,10 +110,10 @@ export default function Success() {
               </Button>
             </div>
           ) : (
-            <Button 
-              onClick={handleContinue} 
-              disabled={isWaiting} 
-              className="w-full" 
+            <Button
+              onClick={handleContinue}
+              disabled={isWaiting}
+              className="w-full"
               size="lg"
             >
               {isWaiting ? (

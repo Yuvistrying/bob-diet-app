@@ -45,10 +45,10 @@ interface PromptContext {
 }
 
 export function getBobSystemPrompt(context: PromptContext): string {
-  const { 
-    userName, 
-    caloriesRemaining, 
-    proteinConsumed, 
+  const {
+    userName,
+    caloriesRemaining,
+    proteinConsumed,
     proteinTarget,
     hasWeighedToday,
     isStealthMode,
@@ -58,21 +58,25 @@ export function getBobSystemPrompt(context: PromptContext): string {
     calibrationInsights,
     todayFoodLogs,
     achievement,
-    dietaryPreferences
+    dietaryPreferences,
   } = context;
-  
+
   // Format today's food logs for the prompt
-  const foodLogDetails = todayFoodLogs && todayFoodLogs.length > 0 
-    ? todayFoodLogs.map((log: any) => 
-        `${log.meal}: ${log.foods.map((f: any) => `${f.name} (${f.calories}cal)`).join(", ")}`
-      ).join("\n")
-    : "";
-  
+  const foodLogDetails =
+    todayFoodLogs && todayFoodLogs.length > 0
+      ? todayFoodLogs
+          .map(
+            (log: any) =>
+              `${log.meal}: ${log.foods.map((f: any) => `${f.name} (${f.calories}cal)`).join(", ")}`,
+          )
+          .join("\n")
+      : "";
+
   // Format dietary preferences
-  const dietaryInfo = dietaryPreferences 
+  const dietaryInfo = dietaryPreferences
     ? `DIETARY RESTRICTIONS: ${dietaryPreferences.restrictions.join(", ")}${dietaryPreferences.customNotes ? ` (${dietaryPreferences.customNotes})` : ""}${dietaryPreferences.intermittentFasting ? ` | Fasting window: ${dietaryPreferences.intermittentFasting.startHour}:00-${dietaryPreferences.intermittentFasting.endHour}:00` : ""}`
     : "";
-  
+
   return `You are Bob, ${userName}'s friendly AI diet coach. Your purpose is to help people make better diet choices and achieve their health goals through understanding, not just blind logging.
 
 STATS: ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein
@@ -162,13 +166,17 @@ Total: 436 calories, 39g protein
 Look right? Any oil or butter used in cooking?"
 
 User: "What should I eat?"
-Bob: ${dietaryPreferences?.restrictions.includes("vegan") ? `"3 vegan options:
+Bob: ${
+    dietaryPreferences?.restrictions.includes("vegan")
+      ? `"3 vegan options:
 - Quinoa Buddha bowl (400 cal, 15g protein)
 - Lentil curry with rice (450 cal, 18g protein)
-- Chickpea salad wrap (350 cal, 14g protein)"` : `"3 options:
+- Chickpea salad wrap (350 cal, 14g protein)"`
+      : `"3 options:
 - Greek yogurt parfait (250 cal, 20g protein)
 - Tuna sandwich (320 cal, 28g protein)
-- Protein smoothie (280 cal, 25g protein)"`}
+- Protein smoothie (280 cal, 25g protein)"`
+  }
 
 User: "I weighed 91 kg today"
 Bob: [uses logWeight tool with weight=91, unit="kg"] "Great job logging your weight at 91kg! Consistency is key - keep it up! 💪"
@@ -212,14 +220,18 @@ Is this correct?"
 User: "log 90kg"
 Bob: [uses logWeight tool] "Logged your weight at 90kg! Keep tracking consistently! 💪"
 
-${achievement ? `GOAL ACHIEVEMENT HANDLING:
+${
+  achievement
+    ? `GOAL ACHIEVEMENT HANDLING:
 - Congratulate ${userName} on reaching their ${achievement.goalType} goal!
 - Suggest appropriate next goal:
   * After cut → maintenance (4-8 weeks to stabilize)
   * After maintenance → bulk or continue maintaining
   * After gain → mini-cut or maintenance
 - Explain benefits of the suggested transition
-- Be encouraging and celebrate their success!` : ""}
+- Be encouraging and celebrate their success!`
+    : ""
+}
 
 RELIABILITY:
 - ALWAYS complete logging when user confirms
@@ -235,7 +247,7 @@ RELIABILITY:
 // OPTIMIZATION NOTE: Previously had a minimal prompt system for queries
 // that could save ~70-75% tokens on simple requests.
 // See commit history for buildMinimalPrompt and buildFullPrompt functions.
-// 
+//
 // Current token usage (measured Jan 2025):
 // - System prompt: ~1,327 tokens
 // - Tools: ~500 tokens (all 6 tools loaded)
@@ -251,7 +263,7 @@ RELIABILITY:
 // - Detected intent (queries vs food logging vs weight)
 // - Used minimal prompt for queries
 // - Loaded only required tools (not all 6)
-// 
+//
 // Removed for code simplicity but worth reconsidering if costs scale.
 
 // Meal type determination
@@ -274,13 +286,14 @@ export function buildPromptContext(
   hasWeighedToday?: boolean,
   todayFoodLogs?: any[],
   achievement?: any,
-  dietaryPreferences?: any
+  dietaryPreferences?: any,
 ): PromptContext {
   const hour = new Date().getHours();
-  
+
   return {
     userName: profile?.name || "there",
-    caloriesRemaining: (profile?.dailyCalorieTarget || 2000) - (stats?.calories || 0),
+    caloriesRemaining:
+      (profile?.dailyCalorieTarget || 2000) - (stats?.calories || 0),
     proteinConsumed: stats?.protein || 0,
     proteinTarget: profile?.proteinTarget || 150,
     hasWeighedToday: hasWeighedToday || false,
@@ -293,6 +306,6 @@ export function buildPromptContext(
     pendingConfirmation,
     calibrationInsights: calibrationData,
     achievement,
-    dietaryPreferences
+    dietaryPreferences,
   };
 }

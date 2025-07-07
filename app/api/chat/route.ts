@@ -4,13 +4,13 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    
+
     // Forward the request to Convex HTTP action
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
     if (!convexUrl) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": req.headers.get("Authorization") || "",
+        Authorization: req.headers.get("Authorization") || "",
       },
       body: JSON.stringify(body),
     });
@@ -30,14 +30,15 @@ export async function POST(req: NextRequest) {
     return new NextResponse(response.body, {
       status: response.status,
       headers: {
-        "Content-Type": response.headers.get("Content-Type") || "application/json",
+        "Content-Type":
+          response.headers.get("Content-Type") || "application/json",
       },
     });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

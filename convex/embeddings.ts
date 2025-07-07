@@ -16,18 +16,28 @@ export const generateEmbedding = action({
   handler: async (ctx, { text }) => {
     // Skip embedding for empty or very short text
     if (!text || text.trim().length < 3) {
-      console.log("[generateEmbedding] Skipping embedding for empty/short text:", text);
+      console.log(
+        "[generateEmbedding] Skipping embedding for empty/short text:",
+        text,
+      );
       return Array(1536).fill(0); // Return zero vector for compatibility
     }
-    
-    console.log("[generateEmbedding] Generating embedding for text:", text.substring(0, 100) + "...");
-    
+
+    console.log(
+      "[generateEmbedding] Generating embedding for text:",
+      text.substring(0, 100) + "...",
+    );
+
     const model = openai.embedding("text-embedding-3-small");
     const result = await model.doEmbed({ values: [text] });
     const embedding = result.embeddings[0];
-    
-    console.log("[generateEmbedding] Successfully generated embedding with", embedding.length, "dimensions");
-    
+
+    console.log(
+      "[generateEmbedding] Successfully generated embedding with",
+      embedding.length,
+      "dimensions",
+    );
+
     return embedding;
   },
 });
@@ -113,19 +123,24 @@ export const embedNewFoodLog = action({
     description: v.string(),
   },
   handler: async (ctx, { foodLogId, description }) => {
-    console.log("[embedNewFoodLog] Starting embedding for food log:", foodLogId, "with description:", description);
-    
+    console.log(
+      "[embedNewFoodLog] Starting embedding for food log:",
+      foodLogId,
+      "with description:",
+      description,
+    );
+
     // Generate embedding
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: description,
     });
-    
+
     // Store embedding
     await ctx.runMutation(api.embeddings.updateFoodLogEmbedding, {
       foodLogId,
       embedding,
     });
-    
+
     console.log("[embedNewFoodLog] Successfully embedded food log:", foodLogId);
   },
 });
@@ -138,16 +153,35 @@ export const embedNewChatMessage = action({
   handler: async (ctx, { chatId, content }) => {
     // Skip embeddings for simple messages
     const simpleMessages = [
-      'hi', 'hello', 'hey', 'yes', 'no', 'thanks', 'thank you', 
-      'ok', 'okay', 'sure', 'yep', 'nope', 'yeah', 'good morning',
-      'good afternoon', 'good evening', 'bye', 'goodbye', 'please'
+      "hi",
+      "hello",
+      "hey",
+      "yes",
+      "no",
+      "thanks",
+      "thank you",
+      "ok",
+      "okay",
+      "sure",
+      "yep",
+      "nope",
+      "yeah",
+      "good morning",
+      "good afternoon",
+      "good evening",
+      "bye",
+      "goodbye",
+      "please",
     ];
-    
+
     const contentLower = content.toLowerCase().trim();
-    
+
     // Skip if it's a simple message or too short
     if (simpleMessages.includes(contentLower) || contentLower.length < 10) {
-      console.log("[embedNewChatMessage] Skipping embedding for simple message:", content);
+      console.log(
+        "[embedNewChatMessage] Skipping embedding for simple message:",
+        content,
+      );
       // Store zero vector for compatibility
       await ctx.runMutation(api.embeddings.updateChatEmbedding, {
         chatId,
@@ -155,22 +189,25 @@ export const embedNewChatMessage = action({
       });
       return;
     }
-    
+
     // Skip embeddings for confirmation responses
     if (contentLower.match(/^(yes|no|correct|wrong|right|confirm|cancel)/)) {
-      console.log("[embedNewChatMessage] Skipping embedding for confirmation:", content);
+      console.log(
+        "[embedNewChatMessage] Skipping embedding for confirmation:",
+        content,
+      );
       await ctx.runMutation(api.embeddings.updateChatEmbedding, {
         chatId,
         embedding: Array(1536).fill(0),
       });
       return;
     }
-    
+
     // Generate embedding for meaningful messages
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: content,
     });
-    
+
     // Store embedding
     await ctx.runMutation(api.embeddings.updateChatEmbedding, {
       chatId,
@@ -190,12 +227,12 @@ export const embedWeightLogNote = action({
   handler: async (ctx, { weightLogId, weight, unit, date, notes }) => {
     // Create descriptive text including weight context
     const embeddingText = `Weight log ${date}: ${weight} ${unit}. Notes: ${notes}`;
-    
+
     // Generate embedding
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: embeddingText,
     });
-    
+
     // Store embedding
     await ctx.runMutation(api.embeddings.updateWeightLogEmbedding, {
       weightLogId,
@@ -220,18 +257,26 @@ export const embedConversationSummary = action({
     // Create comprehensive text from all summary fields
     const embeddingText = [
       `Daily summary for ${date}:`,
-      summary.keyPoints.length > 0 ? `Key points: ${summary.keyPoints.join('. ')}` : '',
-      summary.foodPatterns.length > 0 ? `Food patterns: ${summary.foodPatterns.join('. ')}` : '',
-      summary.userPreferences.length > 0 ? `Preferences: ${summary.userPreferences.join('. ')}` : '',
-      summary.goals.length > 0 ? `Goals: ${summary.goals.join('. ')}` : '',
-      summary.contextNotes ? `Context: ${summary.contextNotes}` : ''
-    ].filter(Boolean).join(' ');
-    
+      summary.keyPoints.length > 0
+        ? `Key points: ${summary.keyPoints.join(". ")}`
+        : "",
+      summary.foodPatterns.length > 0
+        ? `Food patterns: ${summary.foodPatterns.join(". ")}`
+        : "",
+      summary.userPreferences.length > 0
+        ? `Preferences: ${summary.userPreferences.join(". ")}`
+        : "",
+      summary.goals.length > 0 ? `Goals: ${summary.goals.join(". ")}` : "",
+      summary.contextNotes ? `Context: ${summary.contextNotes}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     // Generate embedding
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: embeddingText,
     });
-    
+
     // Store embedding
     await ctx.runMutation(api.embeddings.updateSummaryEmbedding, {
       summaryId,

@@ -19,11 +19,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Apply theme from preferences or localStorage
     const applyTheme = () => {
       const savedTheme = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+
       // Priority: user preferences from DB > localStorage > system preference
       let theme: "light" | "dark" = "light";
-      
+
       if (preferences?.darkMode !== undefined) {
         theme = preferences.darkMode ? "dark" : "light";
       } else if (savedTheme === "dark" || savedTheme === "light") {
@@ -31,12 +33,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } else if (prefersDark) {
         theme = "dark";
       }
-      
+
       // Apply theme
       document.documentElement.classList.toggle("dark", theme === "dark");
       localStorage.setItem("theme", theme);
     };
-    
+
     applyTheme();
   }, [preferences?.darkMode]);
 

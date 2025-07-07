@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalQuery,
+  internalMutation,
+} from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
 // Get photo usage for today
@@ -8,15 +13,15 @@ export const getPhotoUsageToday = query({
     userId: v.string(),
   },
   handler: async (ctx, { userId }) => {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const today = new Date().toISOString().split("T")[0];
+
     const usage = await ctx.db
       .query("usageTracking")
-      .withIndex("by_user_date", (q) => 
-        q.eq("userId", userId).eq("date", today)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", userId).eq("date", today),
       )
       .first();
-    
+
     return usage?.photoAnalysisCount || 0;
   },
 });
@@ -27,15 +32,15 @@ export const incrementPhotoUsage = mutation({
     userId: v.string(),
   },
   handler: async (ctx, { userId }) => {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const today = new Date().toISOString().split("T")[0];
+
     const existingUsage = await ctx.db
       .query("usageTracking")
-      .withIndex("by_user_date", (q) => 
-        q.eq("userId", userId).eq("date", today)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", userId).eq("date", today),
       )
       .first();
-    
+
     if (existingUsage) {
       await ctx.db.patch(existingUsage._id, {
         photoAnalysisCount: (existingUsage.photoAnalysisCount || 0) + 1,
@@ -59,13 +64,13 @@ export const getUserSubscriptionStatus = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { isPro: false };
-    
+
     const subscription = await ctx.db
       .query("subscriptions")
       .withIndex("userId", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.eq(q.field("status"), "active"))
       .first();
-    
+
     return {
       isPro: !!subscription,
       subscription,
@@ -81,50 +86,53 @@ export const getUsageStats = query({
   handler: async (ctx, { timeframe = "today" }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     const now = new Date();
     let startDate: string;
-    
+
     switch (timeframe) {
       case "week":
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        startDate = weekAgo.toISOString().split('T')[0];
+        startDate = weekAgo.toISOString().split("T")[0];
         break;
       case "month":
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        startDate = monthAgo.toISOString().split('T')[0];
+        startDate = monthAgo.toISOString().split("T")[0];
         break;
       default:
-        startDate = now.toISOString().split('T')[0];
+        startDate = now.toISOString().split("T")[0];
     }
-    
+
     const usageRecords = await ctx.db
       .query("usageTracking")
       .withIndex("by_user_date")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("userId"), identity.subject),
-          q.gte(q.field("date"), startDate)
-        )
+          q.gte(q.field("date"), startDate),
+        ),
       )
       .collect();
-    
-    const totals = usageRecords.reduce((acc, record) => ({
-      chats: acc.chats + (record.chatCount || 0),
-      photos: acc.photos + (record.photoAnalysisCount || 0),
-      opusCalls: acc.opusCalls + (record.opusCallsCount || 0),
-      sonnetCalls: acc.sonnetCalls + (record.sonnetCallsCount || 0),
-    }), { chats: 0, photos: 0, opusCalls: 0, sonnetCalls: 0 });
-    
+
+    const totals = usageRecords.reduce(
+      (acc, record) => ({
+        chats: acc.chats + (record.chatCount || 0),
+        photos: acc.photos + (record.photoAnalysisCount || 0),
+        opusCalls: acc.opusCalls + (record.opusCallsCount || 0),
+        sonnetCalls: acc.sonnetCalls + (record.sonnetCallsCount || 0),
+      }),
+      { chats: 0, photos: 0, opusCalls: 0, sonnetCalls: 0 },
+    );
+
     // Get subscription status
     const subscription = await ctx.db
       .query("subscriptions")
       .withIndex("userId", (q) => q.eq("userId", identity.subject))
       .filter((q) => q.eq(q.field("status"), "active"))
       .first();
-    
+
     const isPro = !!subscription;
-    
+
     return {
       timeframe,
       totals,
@@ -143,19 +151,19 @@ export const resetDailyUsage = internalMutation({
   handler: async (ctx) => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
     // Archive yesterday's usage records
     const oldRecords = await ctx.db
       .query("usageTracking")
       .filter((q) => q.lte(q.field("date"), yesterdayStr))
       .collect();
-    
+
     // Delete old records (keeping 30 days of history)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const cutoffDate = thirtyDaysAgo.toISOString().split('T')[0];
-    
+    const cutoffDate = thirtyDaysAgo.toISOString().split("T")[0];
+
     for (const record of oldRecords) {
       if (record.date < cutoffDate) {
         await ctx.db.delete(record._id);

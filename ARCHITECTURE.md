@@ -1,9 +1,11 @@
 # Bob Diet Coach - Architecture Documentation
 
 ## Overview
+
 Bob Diet Coach is a diet tracking application built with Next.js, Convex, and AI (Claude). It provides conversational diet coaching with food logging, photo analysis, and progress tracking.
 
 ## Tech Stack
+
 - **Frontend**: Next.js 14 (App Router), React, TypeScript, Tailwind CSS
 - **Backend**: Convex (real-time database and serverless functions)
 - **AI**: Anthropic Claude (Sonnet for chat, Opus for analysis)
@@ -16,12 +18,14 @@ Bob Diet Coach is a diet tracking application built with Next.js, Convex, and AI
 ### Core Tables
 
 #### `userProfiles`
+
 - User's personal info (weight, height, age, gender)
 - Diet goals (cut/gain/maintain)
 - Calorie and macro targets
 - Onboarding status
 
 #### `foodLogs`
+
 - Daily food entries with date/time
 - Food items array with nutrition info
 - Total calories/macros
@@ -29,6 +33,7 @@ Bob Diet Coach is a diet tracking application built with Next.js, Convex, and AI
 - Links to photo analysis if applicable
 
 #### `chatHistory`
+
 - All messages between user and Bob
 - Metadata includes:
   - `foodLogId`: Links to food log if message resulted in logging
@@ -38,11 +43,13 @@ Bob Diet Coach is a diet tracking application built with Next.js, Convex, and AI
   - `usage`: Token usage tracking
 
 #### `dailyThreads`
+
 - One thread per user per day
 - Tracks message count and timestamps
 - Used for conversation continuity
 
 #### `pendingConfirmations`
+
 - Temporary storage for food confirmations
 - Expires after 5 minutes
 - Allows "yes" to confirm without re-analyzing
@@ -94,6 +101,7 @@ graph TD
 ## State Management
 
 ### Client State (React)
+
 - `messages`: Current chat messages
 - `confirmedFoodLogs`: Set of confirmed food IDs
 - `editedFoodItems`: User edits to food items
@@ -101,7 +109,8 @@ graph TD
 - `isStreaming`: Active AI response
 
 ### Persisted State
-- **localStorage**: 
+
+- **localStorage**:
   - `foodConfirmations`: Today's confirmations (cleared daily)
   - Theme preferences
 - **Convex**: All chat history and food logs
@@ -109,6 +118,7 @@ graph TD
 ## AI Tools
 
 ### Available Tools
+
 1. **confirmFood**: Show food for user confirmation
 2. **logFood**: Actually log food to database
 3. **analyzePhoto**: Analyze food photo (deprecated)
@@ -118,6 +128,7 @@ graph TD
 7. **findSimilarMeals**: Vector search past meals
 
 ### Tool Selection Logic
+
 - Intent detection prevents tools for queries ("what did I eat")
 - Minimal tools loaded based on context
 - Confirmation + pending state = only logFood tool
@@ -125,22 +136,26 @@ graph TD
 ## Key Features
 
 ### 1. Confirmation Bubbles
+
 - Show food details for user approval
 - Editable before confirming
 - Minimize to compact view after logging
 - **Issue**: Must wait for user click, not auto-confirm
 
 ### 2. Direct Food Logging
+
 - Clicking "Yes, log it!" logs directly via mutation
 - Bypasses streaming API for faster response
 - Must save chat history with foodLogId
 
 ### 3. Context Management
+
 - Only last 5 messages sent to AI (token optimization)
 - Summaries provide older context
 - Skip embeddings for simple messages
 
 ### 4. Duplicate Prevention
+
 - Track recent logs (30-second window)
 - Prevent double-clicks from creating duplicates
 - Active request tracking
@@ -148,7 +163,9 @@ graph TD
 ## API Routes
 
 ### `/api/chat/stream-v2`
+
 Main streaming endpoint for AI responses:
+
 - Token optimization (5 message context)
 - Intent detection
 - Tool loading
@@ -156,25 +173,30 @@ Main streaming endpoint for AI responses:
 - Message persistence
 
 ### `/api/webhooks/polar`
+
 Subscription webhook handling
 
 ## Common Issues & Solutions
 
 ### 1. Confirmation Bubbles Auto-Confirming
+
 **Problem**: Bubbles show as already logged
 **Solution**: Don't restore confirmed state from localStorage on mount
 
 ### 2. Food Logs Not Showing in History
+
 **Problem**: "0 food logs" despite logging
 **Solution**: Save foodLogId to chat history metadata
 
 ### 3. Persistence Across Tabs ✅ FIXED
+
 **Problem**: Confirmation bubbles disappearing on tab switch
 **Root Cause**: Tool calls not being saved to database
 **Solution**: Collect tool calls from streaming chunks and persist to database
 **Details**: See [TOOLCALLS_PERSISTENCE_FIX.md](./docs/TOOLCALLS_PERSISTENCE_FIX.md)
 
 ### 4. Duplicate Food Logs
+
 **Problem**: Multiple clicks create duplicates
 **Solution**: Track active requests and recent logs
 

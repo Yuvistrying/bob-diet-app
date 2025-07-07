@@ -6,12 +6,12 @@ export const getUserPreferences = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     const prefs = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
-    
+
     // Return default preferences if none exist
     if (!prefs) {
       return {
@@ -30,11 +30,11 @@ export const getUserPreferences = query({
           mealReminders: false,
           reminderTimes: {
             weighIn: "08:00",
-          }
+          },
         },
       };
     }
-    
+
     return prefs;
   },
 });
@@ -48,12 +48,12 @@ export const saveAgentThreadId = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const existing = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
-    
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         agentThreadId: args.threadId,
@@ -77,7 +77,7 @@ export const saveAgentThreadId = mutation({
           mealReminders: false,
           reminderTimes: {
             weighIn: "08:00",
-          }
+          },
         },
         updatedAt: Date.now(),
       });
@@ -95,31 +95,33 @@ export const updatePreferences = mutation({
     language: v.optional(v.string()),
     darkMode: v.optional(v.boolean()),
     cuteMode: v.optional(v.boolean()),
-    reminderSettings: v.optional(v.object({
-      weighInReminder: v.boolean(),
-      mealReminders: v.boolean(),
-      reminderTimes: v.object({
-        weighIn: v.optional(v.string()),
-        breakfast: v.optional(v.string()),
-        lunch: v.optional(v.string()),
-        dinner: v.optional(v.string()),
-      })
-    })),
+    reminderSettings: v.optional(
+      v.object({
+        weighInReminder: v.boolean(),
+        mealReminders: v.boolean(),
+        reminderTimes: v.object({
+          weighIn: v.optional(v.string()),
+          breakfast: v.optional(v.string()),
+          lunch: v.optional(v.string()),
+          dinner: v.optional(v.string()),
+        }),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const existing = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
-    
+
     const updates = {
       ...args,
       updatedAt: Date.now(),
     };
-    
+
     if (existing) {
       await ctx.db.patch(existing._id, updates);
     } else {
@@ -139,7 +141,7 @@ export const updatePreferences = mutation({
           mealReminders: false,
           reminderTimes: {
             weighIn: "08:00",
-          }
+          },
         },
         updatedAt: Date.now(),
       });
@@ -152,12 +154,12 @@ export const toggleDisplayMode = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const prefs = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
-    
+
     if (!prefs) {
       // Create with stealth mode
       await ctx.db.insert("userPreferences", {
@@ -175,7 +177,7 @@ export const toggleDisplayMode = mutation({
           mealReminders: false,
           reminderTimes: {
             weighIn: "08:00",
-          }
+          },
         },
         updatedAt: Date.now(),
       });
@@ -201,12 +203,12 @@ export const updateTheme = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const existing = await ctx.db
       .query("userPreferences")
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
-    
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         darkMode: args.darkMode,
@@ -229,7 +231,7 @@ export const updateTheme = mutation({
           mealReminders: false,
           reminderTimes: {
             weighIn: "08:00",
-          }
+          },
         },
         updatedAt: Date.now(),
       });

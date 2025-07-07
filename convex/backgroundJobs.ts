@@ -12,7 +12,7 @@ crons.daily(
 
 // Run every 30 minutes to clean up expired cache
 crons.interval(
-  "cleanup-expired-cache", 
+  "cleanup-expired-cache",
   { minutes: 30 },
   internal.sessionCache.cleanupExpiredCache,
 );

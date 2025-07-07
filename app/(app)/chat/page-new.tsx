@@ -10,7 +10,15 @@ import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
 import { Card, CardContent } from "~/app/components/ui/card";
 import { cn } from "~/lib/utils";
-import { Camera, ArrowUp, X, Check, Settings, PenSquare, ChevronDown } from "lucide-react";
+import {
+  Camera,
+  ArrowUp,
+  X,
+  Check,
+  Settings,
+  PenSquare,
+  ChevronDown,
+} from "lucide-react";
 import { ClientOnly } from "~/app/components/ClientOnly";
 import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
@@ -27,7 +35,7 @@ interface Message {
 export default function Chat() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
-  
+
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -37,14 +45,16 @@ export default function Chat() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(new Set());
+  const [confirmedFoodLogs, setConfirmedFoodLogs] = useState<Set<string>>(
+    new Set(),
+  );
   const [editingFoodLog, setEditingFoodLog] = useState<string | null>(null);
   const [editedFoodItems, setEditedFoodItems] = useState<any>({});
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Convex queries
   const profile = useQuery(api.userProfiles.getUserProfile, {});
   const todayStats = useQuery(api.foodLogs.getTodayStats);
@@ -54,25 +64,27 @@ export default function Chat() {
   const chatHistory = useQuery(api.chatHistory.getTodayChats);
   const sessionStats = useQuery(api.chatSessions.getSessionStats);
   const hasLoggedWeightToday = useQuery(api.weightLogs.hasLoggedWeightToday);
-  
+
   // Convex mutations/actions
   const sendMessage = useAction(api.agentActions.chat);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   const storeFileId = useMutation(api.files.storeFileId);
   const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
   const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
-  const getOrCreateDailySession = useMutation(api.chatSessions.getOrCreateDailySession);
+  const getOrCreateDailySession = useMutation(
+    api.chatSessions.getOrCreateDailySession,
+  );
 
   // Get image URLs for messages with storage IDs
   const storageIdsFromMessages = messages
-    .filter(msg => msg.storageId)
-    .map(msg => msg.storageId as Id<"_storage">);
-    
+    .filter((msg) => msg.storageId)
+    .map((msg) => msg.storageId as Id<"_storage">);
+
   const imageUrls = useQuery(
-    api.files.getMultipleImageUrls, 
-    storageIdsFromMessages.length > 0 
+    api.files.getMultipleImageUrls,
+    storageIdsFromMessages.length > 0
       ? { storageIds: storageIdsFromMessages }
-      : "skip"
+      : "skip",
   );
 
   // Redirect if not signed in
@@ -84,10 +96,10 @@ export default function Chat() {
 
   // Clear old localStorage data
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('chatMessages');
-      localStorage.removeItem('agentThreadId');
-      localStorage.removeItem('threadId');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("chatMessages");
+      localStorage.removeItem("agentThreadId");
+      localStorage.removeItem("threadId");
     }
   }, []);
 
@@ -115,12 +127,14 @@ export default function Chat() {
   // Update message image URLs when they're loaded
   useEffect(() => {
     if (imageUrls) {
-      setMessages(prev => prev.map(msg => {
-        if (msg.storageId && imageUrls[msg.storageId]) {
-          return { ...msg, imageUrl: imageUrls[msg.storageId] };
-        }
-        return msg;
-      }));
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.storageId && imageUrls[msg.storageId]) {
+            return { ...msg, imageUrl: imageUrls[msg.storageId] };
+          }
+          return msg;
+        }),
+      );
     }
   }, [imageUrls]);
 
@@ -166,24 +180,25 @@ export default function Chat() {
           headers: { "Content-Type": selectedImage.type },
           body: selectedImage,
         });
-        
+
         if (!response.ok) {
           throw new Error("Failed to upload image");
         }
-        
+
         const { storageId: uploadedStorageId } = await response.json();
         storageId = uploadedStorageId;
-        
+
         await storeFileId({ storageId: uploadedStorageId });
-        
+
         userMessage.storageId = storageId;
-        userMessage.content = userMessage.content || "Please analyze this food photo";
+        userMessage.content =
+          userMessage.content || "Please analyze this food photo";
       } catch (error) {
         console.error("Error uploading image:", error);
       }
     }
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setSelectedImage(null);
     setImagePreview(null);
@@ -193,28 +208,28 @@ export default function Chat() {
       const result = await sendMessage({
         prompt: userMessage.content,
         threadId: threadId || undefined,
-        storageId: storageId || undefined
+        storageId: storageId || undefined,
       });
-      
+
       if (result.threadId && !threadId) {
         setThreadId(result.threadId);
         await saveAgentThreadId({ threadId: result.threadId });
       }
-      
+
       const assistantMessage: Message = {
         role: "assistant",
         content: result.text,
         toolCalls: result.toolCalls,
       };
-      
-      setMessages(prev => [...prev, assistantMessage]);
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
       const errorMessage: Message = {
         role: "assistant",
         content: "I'm sorry, I encountered an error. Please try again.",
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -242,30 +257,30 @@ export default function Chat() {
 
   const confirmFoodLog = async (toolCall: any) => {
     const foodData = toolCall.args;
-    setConfirmedFoodLogs(prev => new Set([...prev, toolCall.toolCallId]));
-    
+    setConfirmedFoodLogs((prev) => new Set([...prev, toolCall.toolCallId]));
+
     // Trigger a confirmation message
     const confirmationMessage: Message = {
       role: "user",
       content: "Yes, that's correct!",
     };
-    
-    setMessages(prev => [...prev, confirmationMessage]);
+
+    setMessages((prev) => [...prev, confirmationMessage]);
     setIsLoading(true);
-    
+
     try {
       const result = await sendMessage({
         prompt: "Yes, that's correct!",
         threadId: threadId || undefined,
       });
-      
+
       const assistantMessage: Message = {
         role: "assistant",
         content: result.text,
         toolCalls: result.toolCalls,
       };
-      
-      setMessages(prev => [...prev, assistantMessage]);
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error confirming food:", error);
     } finally {
@@ -275,7 +290,7 @@ export default function Chat() {
 
   const handleQuickResponse = (response: string) => {
     setInput(response);
-    const form = document.querySelector('form');
+    const form = document.querySelector("form");
     if (form) {
       form.requestSubmit();
     }
@@ -289,7 +304,9 @@ export default function Chat() {
       <div className="flex items-center justify-center h-screen">
         <Card>
           <CardContent className="p-6">
-            <p className="text-muted-foreground">Please sign in to use the chat.</p>
+            <p className="text-muted-foreground">
+              Please sign in to use the chat.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -313,7 +330,7 @@ export default function Chat() {
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               {/* Stats bar */}
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div className="text-center p-2 bg-muted/50 rounded-lg">
@@ -325,7 +342,9 @@ export default function Chat() {
                   <div className="text-xs text-muted-foreground">protein</div>
                 </div>
                 <div className="text-center p-2 bg-muted/50 rounded-lg">
-                  <div className="font-semibold">{latestWeight?.weight || '--'}</div>
+                  <div className="font-semibold">
+                    {latestWeight?.weight || "--"}
+                  </div>
                   <div className="text-xs text-muted-foreground">lbs</div>
                 </div>
               </div>
@@ -334,31 +353,31 @@ export default function Chat() {
         )}
 
         {/* Messages */}
-        <div 
+        <div
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4"
         >
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground mt-8">
               <p className="text-lg font-medium mb-2">
-                {needsOnboarding 
+                {needsOnboarding
                   ? "👋 Hi! I'm Bob, your AI diet coach."
-                  : `Welcome back${profile?.name ? `, ${profile.name}` : ''}!`}
+                  : `Welcome back${profile?.name ? `, ${profile.name}` : ""}!`}
               </p>
               <p>
-                {needsOnboarding 
+                {needsOnboarding
                   ? "Let's get started by learning about your goals."
                   : "How can I help you today?"}
               </p>
             </div>
           )}
-          
+
           {messages.map((message, index) => (
             <div
               key={index}
               className={cn(
                 "flex",
-                message.role === "user" ? "justify-end" : "justify-start"
+                message.role === "user" ? "justify-end" : "justify-start",
               )}
             >
               <div
@@ -366,13 +385,13 @@ export default function Chat() {
                   "max-w-[85%] rounded-lg p-3",
                   message.role === "user"
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    : "bg-muted",
                 )}
               >
                 {message.imageUrl && (
-                  <img 
-                    src={message.imageUrl} 
-                    alt="Uploaded" 
+                  <img
+                    src={message.imageUrl}
+                    alt="Uploaded"
                     className="mb-2 rounded max-w-full h-auto"
                   />
                 )}
@@ -381,18 +400,22 @@ export default function Chat() {
                 ) : (
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 )}
-                
+
                 {/* Tool calls */}
                 {message.toolCalls?.map((toolCall: any, tcIndex: number) => {
                   if (toolCall.toolName === "confirmFood" && toolCall.args) {
                     const foodData = toolCall.args;
-                    const isConfirmed = confirmedFoodLogs.has(toolCall.toolCallId);
-                    
+                    const isConfirmed = confirmedFoodLogs.has(
+                      toolCall.toolCallId,
+                    );
+
                     return (
                       <Card key={`${index}-${tcIndex}`} className="mt-3">
                         <CardContent className="p-3">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold capitalize">{foodData.meal || 'Food'}</h4>
+                            <h4 className="font-semibold capitalize">
+                              {foodData.meal || "Food"}
+                            </h4>
                             {!isConfirmed && (
                               <Button
                                 size="sm"
@@ -410,7 +433,7 @@ export default function Chat() {
                               </span>
                             )}
                           </div>
-                          
+
                           <ul className="text-sm space-y-1">
                             {foodData.items?.map((item: any, idx: number) => (
                               <li key={idx}>
@@ -419,16 +442,20 @@ export default function Chat() {
                               </li>
                             ))}
                           </ul>
-                          
+
                           {foodData.totalCalories && (
                             <div className="mt-2 pt-2 border-t text-sm">
                               <div className="flex justify-between">
                                 <span>Total:</span>
-                                <span className="font-medium">{foodData.totalCalories} calories</span>
+                                <span className="font-medium">
+                                  {foodData.totalCalories} calories
+                                </span>
                               </div>
                               {foodData.totalProtein && (
                                 <div className="text-xs text-muted-foreground mt-1">
-                                  P: {foodData.totalProtein}g • C: {foodData.totalCarbs}g • F: {foodData.totalFat}g
+                                  P: {foodData.totalProtein}g • C:{" "}
+                                  {foodData.totalCarbs}g • F:{" "}
+                                  {foodData.totalFat}g
                                 </div>
                               )}
                             </div>
@@ -442,7 +469,7 @@ export default function Chat() {
               </div>
             </div>
           ))}
-          
+
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg p-3">
@@ -478,9 +505,9 @@ export default function Chat() {
         <div className="border-t p-4">
           {imagePreview && (
             <div className="relative inline-block mb-2">
-              <img 
-                src={imagePreview} 
-                alt="Selected" 
+              <img
+                src={imagePreview}
+                alt="Selected"
                 className="h-20 w-20 object-cover rounded"
               />
               <Button
@@ -493,7 +520,7 @@ export default function Chat() {
               </Button>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input
               ref={fileInputRef}
@@ -502,7 +529,7 @@ export default function Chat() {
               onChange={handleImageSelect}
               className="hidden"
             />
-            
+
             <Button
               type="button"
               size="icon"
@@ -511,16 +538,24 @@ export default function Chat() {
             >
               <Camera className="h-4 w-4" />
             </Button>
-            
+
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={needsOnboarding ? "Tell me about yourself..." : "Ask me anything..."}
+              placeholder={
+                needsOnboarding
+                  ? "Tell me about yourself..."
+                  : "Ask me anything..."
+              }
               disabled={isLoading}
               className="flex-1"
             />
-            
-            <Button type="submit" size="icon" disabled={isLoading || (!input.trim() && !selectedImage)}>
+
+            <Button
+              type="submit"
+              size="icon"
+              disabled={isLoading || (!input.trim() && !selectedImage)}
+            >
               <ArrowUp className="h-4 w-4" />
             </Button>
           </form>

@@ -17,18 +17,18 @@ interface PromptContext {
 }
 
 export function getBobSystemPrompt(context: PromptContext): string {
-  const { 
-    userName, 
-    caloriesRemaining, 
-    proteinConsumed, 
+  const {
+    userName,
+    caloriesRemaining,
+    proteinConsumed,
     proteinTarget,
     hasWeighedToday,
     isStealthMode,
     currentHour,
     mealType,
-    pendingConfirmation
+    pendingConfirmation,
   } = context;
-  
+
   return `You are Bob, ${userName}'s diet coach. Be direct and concise.
 
 STATS: ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein
@@ -65,7 +65,10 @@ RELIABILITY:
 }
 
 // For onboarding mode
-export function getBobOnboardingPrompt(currentStep: string, responses: any): string {
+export function getBobOnboardingPrompt(
+  currentStep: string,
+  responses: any,
+): string {
   return `You are Bob, a friendly AI diet coach helping with user onboarding.
 
 CURRENT STEP: ${currentStep}

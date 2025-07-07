@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { type Icon } from "@tabler/icons-react"
-import { Link, useLocation } from "react-router"
+import * as React from "react";
+import { type Icon } from "@tabler/icons-react";
+import { Link, useLocation } from "react-router";
 
 import {
   SidebarGroup,
@@ -10,17 +10,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "~/app/components/ui/sidebar"
+} from "~/app/components/ui/sidebar";
 
 export function NavSecondary({
   items,
   ...props
 }: {
   items: {
-    title: string
-    url: string
-    icon: Icon
-  }[]
+    title: string;
+    url: string;
+    icon: Icon;
+  }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   const location = useLocation();
 
@@ -29,10 +29,12 @@ export function NavSecondary({
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
-            const isActive = location.pathname === item.url ||
-                           (item.url.startsWith("/dashboard") && location.pathname.startsWith(item.url));
+            const isActive =
+              location.pathname === item.url ||
+              (item.url.startsWith("/dashboard") &&
+                location.pathname.startsWith(item.url));
             const isImplemented = item.url !== "#";
-            
+
             return (
               <SidebarMenuItem key={item.title}>
                 {isImplemented ? (
@@ -54,5 +56,5 @@ export function NavSecondary({
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
-  )
+  );
 }

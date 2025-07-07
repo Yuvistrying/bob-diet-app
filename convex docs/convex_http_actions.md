@@ -27,12 +27,12 @@ import { internal } from "./_generated/api";
 
 export const postMessage = httpAction(async (ctx, request) => {
   const { author, body } = await request.json();
-  
+
   await ctx.runMutation(internal.messages.sendOne, {
     body: `Sent via HTTP action: ${body}`,
     author,
   });
-  
+
   return new Response(null, {
     status: 200,
   });
@@ -62,24 +62,26 @@ export default http;
 The following options can be passed to the `route` method:
 
 ### `path`
+
 The route path. Uses path-to-regexp for parsing.
 
 ```typescript
 // matches /product/1, /product/2, etc. and extracts "1" or "2" as the `productId` param
-path: "/product/:productId"
+path: "/product/:productId";
 
 // matches /file/folder, /file/folder/sub, etc. and extracts everything after "/file" as the `path` param
-path: "/file/:path+"
+path: "/file/:path+";
 
 // matches /assets/folder, /assets/folder/sub, etc. and extracts everything after "/assets" as the `path` param
 // (e.g. ["folder"] or ["folder", "sub"])
-path: "/assets/{:path}*"
+path: "/assets/{:path}*";
 
 // matches /user/1, /users/2
-path: "/users?/:id"
+path: "/users?/:id";
 ```
 
 ### `method`
+
 The route method is a case-insensitive HTTP method (`GET` or `get` are treated identically). Defaults to `"GET"` if the method is not specified.
 
 You can specify multiple methods for a single route:
@@ -93,6 +95,7 @@ http.route({
 ```
 
 ### `pathPrefix`
+
 Use the `pathPrefix` field instead of `path` to match any requests matching the specified prefix. This can be used in combination with `Request.url` to implement slash commands or to directly serve HTTP traffic from Convex in a traditional web server setup.
 
 ### Examples
@@ -129,12 +132,14 @@ export default http;
 HTTP actions are built on the Fetch API and can manipulate `Request` and return `Response` instances.
 
 `Request` can be used to access information about the request:
+
 - `request.url`
-- `request.method` 
+- `request.method`
 - `request.json()`, `request.text()`, `request.blob()`, `request.arrayBuffer()`
 - `request.headers.get("Header-Name")`
 
 `Response` can be used to return a custom HTTP response:
+
 - `new Response("Hello world")` returns a 200 response
 - `new Response(null, { status: 404 })` returns a 404
 - `new Response(null, { status: 301, headers: { Location: "https://example.com" }}` redirects to example.com

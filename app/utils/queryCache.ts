@@ -72,14 +72,14 @@ const queryCache = new QueryCache();
 export function getCached<T>(
   key: string,
   fetcher: () => Promise<T>,
-  ttlMs: number = 300000 // 5 minutes default
+  ttlMs: number = 300000, // 5 minutes default
 ): Promise<T> {
   const cached = queryCache.get<T>(key);
   if (cached !== null) {
     return Promise.resolve(cached);
   }
 
-  return fetcher().then(data => {
+  return fetcher().then((data) => {
     queryCache.set(key, data, ttlMs);
     return data;
   });
@@ -103,8 +103,8 @@ export const CACHE_KEYS = {
 
 // Cache TTLs in milliseconds
 export const CACHE_TTL = {
-  todayStats: 5 * 60 * 1000,      // 5 minutes
-  userProfile: 10 * 60 * 1000,    // 10 minutes
-  dailySummary: 5 * 60 * 1000,    // 5 minutes
-  preferences: 15 * 60 * 1000,    // 15 minutes
+  todayStats: 5 * 60 * 1000, // 5 minutes
+  userProfile: 10 * 60 * 1000, // 10 minutes
+  dailySummary: 5 * 60 * 1000, // 5 minutes
+  preferences: 15 * 60 * 1000, // 15 minutes
 };

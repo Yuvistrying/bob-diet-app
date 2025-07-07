@@ -15,7 +15,7 @@ You need to add these to your config file:
    - Replace `YOUR_GITHUB_TOKEN` in the config
 
 2. **Convex Deploy Key**
-   - Run: `npx convex auth` 
+   - Run: `npx convex auth`
    - Or find in: https://dashboard.convex.dev/deployment/settings
    - Replace `YOUR_CONVEX_DEPLOY_KEY`
 
@@ -33,6 +33,7 @@ You need to add these to your config file:
    - Upstash, Figma, Bright Data - add when needed
 
 ### Next Steps:
+
 1. Add your environment variables to the config
 2. Restart Claude Desktop
 3. Test with: "Show me my Convex tables" or "List my GitHub repos"
@@ -47,6 +48,7 @@ For Cursor, you can install MCP extensions:
 4. Install relevant extensions
 
 ### Priority MCPs for Development:
+
 1. **Filesystem** - Already works in Cursor!
 2. **Convex** - Query your database
 3. **GitHub** - Manage commits
@@ -56,6 +58,7 @@ For Cursor, you can install MCP extensions:
 ### Testing Your Setup
 
 Try these commands in Claude Desktop:
+
 - "Show me all users in my Convex database"
 - "What's my current GitHub repo status?"
 - "List files in my bob diet coach project"

@@ -21,11 +21,16 @@ export const saveConfirmedBubble = mutation({
     // Check if already exists
     const existing = await ctx.db
       .query("confirmedBubbles")
-      .withIndex("by_confirmation_id", q => q.eq("confirmationId", args.confirmationId))
+      .withIndex("by_confirmation_id", (q) =>
+        q.eq("confirmationId", args.confirmationId),
+      )
       .first();
 
     if (existing) {
-      console.log(`[saveConfirmedBubble] Updating existing bubble state:`, args.confirmationId);
+      console.log(
+        `[saveConfirmedBubble] Updating existing bubble state:`,
+        args.confirmationId,
+      );
       await ctx.db.patch(existing._id, {
         status: args.status,
         confirmedAt: now,
@@ -64,18 +69,21 @@ export const getConfirmedBubbles = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    console.log(`[getConfirmedBubbles] Fetching bubble states for thread:`, args.threadId);
+    console.log(
+      `[getConfirmedBubbles] Fetching bubble states for thread:`,
+      args.threadId,
+    );
 
     const bubbles = await ctx.db
       .query("confirmedBubbles")
-      .withIndex("by_user_thread", q => 
-        q.eq("userId", identity.subject).eq("threadId", args.threadId)
+      .withIndex("by_user_thread", (q) =>
+        q.eq("userId", identity.subject).eq("threadId", args.threadId),
       )
       .collect();
 
     console.log(`[getConfirmedBubbles] Found ${bubbles.length} bubble states`);
 
-    return bubbles.map(bubble => ({
+    return bubbles.map((bubble) => ({
       confirmationId: bubble.confirmationId,
       messageIndex: bubble.messageIndex,
       status: bubble.status,
@@ -90,13 +98,15 @@ export const cleanupOldBubbles = mutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    
+
     const expired = await ctx.db
       .query("confirmedBubbles")
-      .withIndex("by_expires", q => q.lt("expiresAt", now))
+      .withIndex("by_expires", (q) => q.lt("expiresAt", now))
       .collect();
 
-    console.log(`[cleanupOldBubbles] Cleaning up ${expired.length} expired bubble states`);
+    console.log(
+      `[cleanupOldBubbles] Cleaning up ${expired.length} expired bubble states`,
+    );
 
     for (const bubble of expired) {
       await ctx.db.delete(bubble._id);

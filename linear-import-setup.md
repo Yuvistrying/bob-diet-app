@@ -3,6 +3,7 @@
 ## Prerequisites
 
 1. Install the Linear SDK:
+
 ```bash
 npm install @linear/sdk
 ```
@@ -15,18 +16,22 @@ npm install @linear/sdk
 ## Running the Import
 
 ### Option 1: Using environment variable (recommended)
+
 ```bash
 LINEAR_API_KEY="your-api-key-here" npx tsx linear-import.ts
 ```
 
 ### Option 2: Using direct execution
+
 ```bash
 # First, edit linear-import.ts and replace 'YOUR_LINEAR_API_KEY' with your actual key
 npx tsx linear-import.ts
 ```
 
 ### Option 3: Add to package.json
+
 Add this script to your package.json:
+
 ```json
 "scripts": {
   "linear:import": "tsx linear-import.ts"
@@ -34,6 +39,7 @@ Add this script to your package.json:
 ```
 
 Then run:
+
 ```bash
 LINEAR_API_KEY="your-api-key-here" npm run linear:import
 ```
@@ -41,9 +47,9 @@ LINEAR_API_KEY="your-api-key-here" npm run linear:import
 ## What the Script Does
 
 1. **Creates/Uses Team**: Creates "Bob Diet Coach" team with key "BOB"
-2. **Creates Projects**: 
+2. **Creates Projects**:
    - Core Features (CORE)
-   - Bug Fixes (BUGS) 
+   - Bug Fixes (BUGS)
    - UI/UX Polish (UIUX)
    - Business & Growth (BIZ)
    - Advanced AI (AI)

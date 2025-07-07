@@ -1,8 +1,9 @@
 # Storing Users in the Convex Database | Convex Developer Hub
 
-*If you're using Convex Auth the user information is automatically stored in the database.*
+_If you're using Convex Auth the user information is automatically stored in the database._
 
 When using external authentication providers like Clerk or Auth0, you often want to store user information in your Convex database. This allows you to:
+
 - Associate user data with other application data
 - Query user information efficiently
 - Maintain user profiles with additional fields
@@ -114,7 +115,7 @@ http.route({
     if (!event) {
       return new Response("Error occured", { status: 400 });
     }
-    
+
     switch (event.type) {
       case "user.created": // intentional fallthrough
       case "user.updated":
@@ -122,7 +123,7 @@ http.route({
           data: event.data,
         });
         break;
-        
+
       case "user.deleted": {
         const clerkUserId = event.data.id!;
         await ctx.runMutation(internal.users.deleteFromClerk, {
@@ -130,11 +131,11 @@ http.route({
         });
         break;
       }
-      
+
       default:
         console.log("Ignored Clerk webhook event", event.type);
     }
-    
+
     return new Response(null, { status: 200 });
   }),
 });
@@ -146,7 +147,7 @@ async function validateRequest(req: Request): Promise<WebhookEvent | null> {
     "svix-timestamp": req.headers.get("svix-timestamp")!,
     "svix-signature": req.headers.get("svix-signature")!,
   };
-  
+
   const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
   try {
     return wh.verify(payloadString, svixHeaders) as unknown as WebhookEvent;
@@ -182,12 +183,12 @@ export function useStoreUserEffect() {
     if (!isAuthenticated) {
       return;
     }
-    
+
     async function createUser() {
       const id = await storeUser();
       setUserId(id);
     }
-    
+
     createUser();
     return () => setUserId(null);
   }, [isAuthenticated, storeUser, user?.id]);
@@ -211,7 +212,7 @@ import { useStoreUserEffect } from "./useStoreUserEffect.js";
 
 function App() {
   const { isLoading, isAuthenticated } = useStoreUserEffect();
-  
+
   return (
     <main>
       {isLoading ? (
@@ -252,7 +253,7 @@ import { api } from "../convex/_generated/api";
 export function useCurrentUser() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const user = useQuery(api.users.current);
-  
+
   // Combine the authentication state with the user existence check
   return {
     isLoading: isLoading || (isAuthenticated && user === null),

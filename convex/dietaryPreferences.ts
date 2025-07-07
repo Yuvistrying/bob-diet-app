@@ -8,14 +8,14 @@ export const getUserDietaryPreferences = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     const userId = identity.subject;
-    
+
     const preferences = await ctx.db
       .query("dietaryPreferences")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     return preferences;
   },
 });
@@ -25,26 +25,28 @@ export const setDietaryPreferences = mutation({
   args: {
     restrictions: v.array(v.string()),
     customNotes: v.optional(v.string()),
-    intermittentFasting: v.optional(v.object({
-      enabled: v.boolean(),
-      startHour: v.number(),
-      endHour: v.number(),
-      daysOfWeek: v.optional(v.array(v.number())),
-    })),
+    intermittentFasting: v.optional(
+      v.object({
+        enabled: v.boolean(),
+        startHour: v.number(),
+        endHour: v.number(),
+        daysOfWeek: v.optional(v.array(v.number())),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const userId = identity.subject;
     const now = Date.now();
-    
+
     // Check if preferences already exist
     const existing = await ctx.db
       .query("dietaryPreferences")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (existing) {
       // Update existing preferences
       await ctx.db.patch(existing._id, {
@@ -75,14 +77,14 @@ export const addDietaryRestriction = mutation({
   handler: async (ctx, { restriction }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const userId = identity.subject;
-    
+
     const preferences = await ctx.db
       .query("dietaryPreferences")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!preferences) {
       // Create new preferences with just this restriction
       await ctx.db.insert("dietaryPreferences", {
@@ -112,16 +114,18 @@ export const removeDietaryRestriction = mutation({
   handler: async (ctx, { restriction }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const userId = identity.subject;
-    
+
     const preferences = await ctx.db
       .query("dietaryPreferences")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (preferences && preferences.restrictions) {
-      const newRestrictions = preferences.restrictions.filter(r => r !== restriction);
+      const newRestrictions = preferences.restrictions.filter(
+        (r) => r !== restriction,
+      );
       await ctx.db.patch(preferences._id, {
         restrictions: newRestrictions,
         updatedAt: Date.now(),
@@ -141,16 +145,16 @@ export const updateIntermittentFasting = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const userId = identity.subject;
     const now = Date.now();
-    
+
     const preferences = await ctx.db
       .query("dietaryPreferences")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
-    const intermittentFasting = args.enabled 
+
+    const intermittentFasting = args.enabled
       ? {
           enabled: true,
           startHour: args.startHour || 12,
@@ -158,7 +162,7 @@ export const updateIntermittentFasting = mutation({
           daysOfWeek: args.daysOfWeek,
         }
       : undefined;
-    
+
     if (preferences) {
       await ctx.db.patch(preferences._id, {
         intermittentFasting,
@@ -179,7 +183,7 @@ export const updateIntermittentFasting = mutation({
 // Common dietary restrictions for UI
 export const COMMON_RESTRICTIONS = [
   "vegan",
-  "vegetarian", 
+  "vegetarian",
   "gluten-free",
   "dairy-free",
   "nut-free",
@@ -196,18 +200,18 @@ export const COMMON_RESTRICTIONS = [
 // Helper to check if currently in fasting window
 export function isInFastingWindow(preferences: any): boolean {
   if (!preferences?.intermittentFasting?.enabled) return false;
-  
+
   const now = new Date();
   const currentHour = now.getHours();
   const currentDay = now.getDay();
-  
+
   const { startHour, endHour, daysOfWeek } = preferences.intermittentFasting;
-  
+
   // Check if today is a fasting day
   if (daysOfWeek && daysOfWeek.length > 0 && !daysOfWeek.includes(currentDay)) {
     return false;
   }
-  
+
   // Check if current time is outside eating window (i.e., in fasting window)
   if (endHour > startHour) {
     // Normal case: eating window doesn't cross midnight

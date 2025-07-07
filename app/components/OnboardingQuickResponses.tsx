@@ -16,7 +16,12 @@ interface OnboardingQuickResponsesProps {
   currentInput?: string;
 }
 
-export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInput }: OnboardingQuickResponsesProps) {
+export function OnboardingQuickResponses({
+  step,
+  onSelect,
+  isLoading,
+  currentInput,
+}: OnboardingQuickResponsesProps) {
   const [ageValue, setAgeValue] = useState("");
   const [heightValue, setHeightValue] = useState("");
   const [heightUnit, setHeightUnit] = useState<"cm" | "ft">("cm");
@@ -24,41 +29,45 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   const [inchesValue, setInchesValue] = useState("");
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">("kg");
-  
+
   const options: Record<string, QuickResponseOption[]> = {
     gender: [
       { label: "Male", value: "male", icon: "👨" },
       { label: "Female", value: "female", icon: "👩" },
-      { label: "Prefer not to say", value: "other", icon: "🤐" }
+      { label: "Prefer not to say", value: "other", icon: "🤐" },
     ],
     activity_level: [
       { label: "Sedentary", value: "sedentary", icon: "🪑" },
       { label: "Light Exercise", value: "light", icon: "🚶" },
       { label: "Moderate", value: "moderate", icon: "🏃" },
-      { label: "Very Active", value: "active", icon: "💪" }
+      { label: "Very Active", value: "active", icon: "💪" },
     ],
     goal: [
       { label: "Lose Weight", value: "cut", icon: "📉" },
       { label: "Build Muscle", value: "gain", icon: "📈" },
       { label: "Maintain", value: "maintain", icon: "⚖️" },
-      { label: "I'm not sure - help me decide", value: "help", icon: "🤔" }
+      { label: "I'm not sure - help me decide", value: "help", icon: "🤔" },
     ],
     display_mode: [
       { label: "Show All Numbers", value: "standard", icon: "📊" },
-      { label: "Stealth Mode", value: "stealth", icon: "🤫" }
+      { label: "Stealth Mode", value: "stealth", icon: "🤫" },
     ],
     dietary_setup: [
-      { label: "Set Dietary Preferences", value: "set_preferences", icon: "🥗" },
-      { label: "Skip for Now", value: "skip_preferences", icon: "⏭️" }
+      {
+        label: "Set Dietary Preferences",
+        value: "set_preferences",
+        icon: "🥗",
+      },
+      { label: "Skip for Now", value: "skip_preferences", icon: "⏭️" },
     ],
     current_weight: [
       { label: "kg", value: "kg" },
-      { label: "lbs", value: "lbs" }
+      { label: "lbs", value: "lbs" },
     ],
     target_weight: [
       { label: "kg", value: "kg" },
-      { label: "lbs", value: "lbs" }
-    ]
+      { label: "lbs", value: "lbs" },
+    ],
   };
 
   // Special handling for height_age step
@@ -68,7 +77,9 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
         <div className="space-y-3">
           {/* Height input with unit toggle */}
           <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">Height</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">
+              Height
+            </label>
             <div className="flex gap-2">
               {heightUnit === "cm" ? (
                 <Input
@@ -130,10 +141,12 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
               </div>
             </div>
           </div>
-          
+
           {/* Age input */}
           <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">Age</label>
+            <label className="text-sm font-medium text-foreground mb-1 block">
+              Age
+            </label>
             <Input
               type="number"
               placeholder="25"
@@ -145,7 +158,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
             />
           </div>
         </div>
-        
+
         <Button
           onClick={() => {
             let heightStr = "";
@@ -153,16 +166,21 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
               heightStr = `${heightValue}cm`;
             } else if (heightUnit === "ft" && feetValue) {
               // Convert feet and inches to cm for backend
-              const totalInches = parseInt(feetValue) * 12 + (parseInt(inchesValue) || 0);
+              const totalInches =
+                parseInt(feetValue) * 12 + (parseInt(inchesValue) || 0);
               const cm = Math.round(totalInches * 2.54);
               heightStr = `${cm}cm`;
             }
-            
+
             if (heightStr && ageValue) {
               onSelect(`I am ${heightStr} tall and ${ageValue} years old`);
             }
           }}
-          disabled={isLoading || !ageValue || (heightUnit === "cm" ? !heightValue : !feetValue)}
+          disabled={
+            isLoading ||
+            !ageValue ||
+            (heightUnit === "cm" ? !heightValue : !feetValue)
+          }
           className="w-full h-10 text-sm font-medium bg-primary text-primary-foreground"
         >
           Continue →
@@ -175,7 +193,7 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
   if (step === "dietary_preferences") {
     return (
       <div className="p-3">
-        <DietaryPreferencesCard 
+        <DietaryPreferencesCard
           showTitle={false}
           compact={true}
           onComplete={() => onSelect("preferences_saved")}
@@ -252,7 +270,8 @@ export function OnboardingQuickResponses({ step, onSelect, isLoading, currentInp
     <div className="space-y-2 p-3">
       {step === "goal" && (
         <p className="text-sm text-muted-foreground text-center mb-2">
-          If you're not sure, describe your situation and I'll help you figure it out!
+          If you're not sure, describe your situation and I'll help you figure
+          it out!
         </p>
       )}
       {currentOptions.map((option) => (

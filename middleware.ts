@@ -20,7 +20,7 @@ const isProtectedRoute = createRouteMatcher([
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
-  
+
   // For protected routes, require authentication
   if (isProtectedRoute(req) && !userId) {
     const signInUrl = new URL("/sign-in", req.url);

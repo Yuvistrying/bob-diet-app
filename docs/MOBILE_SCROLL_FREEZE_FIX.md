@@ -1,10 +1,13 @@
 # Mobile Scroll Freeze Fix Documentation
 
 ## Overview
+
 This document describes the fix for a critical mobile UX issue where the chat interface would freeze when scrolling to boundaries, making buttons unresponsive.
 
 ## The Problem
+
 On mobile devices (iOS Safari specifically), when users scrolled to the very top or bottom of the chat container, the interface would enter a "frozen" state where:
+
 - Buttons became unresponsive
 - Navigation was blocked
 - Users had to force-close the app
@@ -14,6 +17,7 @@ This was caused by iOS's scroll boundary behavior conflicting with our fixed pos
 ## The Solution
 
 ### Touch Event Handlers
+
 Added custom touch event handling in `/app/(app)/chat/page.tsx`:
 
 ```tsx
@@ -50,6 +54,7 @@ const handleTouchMove = useCallback((e: React.TouchEvent) => {
 ```
 
 ### Applied to Scroll Container
+
 ```tsx
 <div
   ref={scrollAreaRef}
@@ -80,12 +85,14 @@ const handleTouchMove = useCallback((e: React.TouchEvent) => {
 - `overscrollBehavior: 'none'`: CSS to disable browser's pull-to-refresh
 
 ## Benefits
+
 - Buttons remain responsive at all times
 - Natural scrolling preserved in the middle of content
 - No more app freezing on mobile
 - Better mobile UX especially for one-handed use
 
 ## Testing
+
 1. Open chat on mobile device (iOS Safari preferred)
 2. Scroll to very top - verify you can still tap buttons
 3. Scroll to very bottom - verify navigation remains responsive

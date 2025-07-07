@@ -12,19 +12,22 @@ export const searchSimilarMeals = action({
   handler: async (ctx, { searchText, limit = 5 }): Promise<any[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    
+
     // Generate embedding for search text
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: searchText,
     });
-    
+
     // Use internal query to perform vector search
-    const results = await ctx.runQuery(internal.vectorSearch.vectorSearchFoodLogs, {
-      userId: identity.subject,
-      embedding,
-      limit,
-    });
-    
+    const results = await ctx.runQuery(
+      internal.vectorSearch.vectorSearchFoodLogs,
+      {
+        userId: identity.subject,
+        embedding,
+        limit,
+      },
+    );
+
     return results;
   },
 });
@@ -38,19 +41,22 @@ export const searchChatHistory = action({
   handler: async (ctx, { searchText, limit = 10 }): Promise<any[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    
+
     // Generate embedding for search text
     const embedding = await ctx.runAction(api.embeddings.generateEmbedding, {
       text: searchText,
     });
-    
+
     // Use internal query to perform vector search
-    const results = await ctx.runQuery(internal.vectorSearch.vectorSearchChatHistory, {
-      userId: identity.subject,
-      embedding,
-      limit,
-    });
-    
+    const results = await ctx.runQuery(
+      internal.vectorSearch.vectorSearchChatHistory,
+      {
+        userId: identity.subject,
+        embedding,
+        limit,
+      },
+    );
+
     return results;
   },
 });
@@ -64,14 +70,17 @@ export const searchSimilarPhotos = action({
   handler: async (ctx, { embedding, limit = 5 }): Promise<any[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    
+
     // Use internal query to perform vector search
-    const results = await ctx.runQuery(internal.vectorSearch.vectorSearchPhotos, {
-      userId: identity.subject,
-      embedding,
-      limit,
-    });
-    
+    const results = await ctx.runQuery(
+      internal.vectorSearch.vectorSearchPhotos,
+      {
+        userId: identity.subject,
+        embedding,
+        limit,
+      },
+    );
+
     return results;
   },
 });
@@ -87,17 +96,17 @@ export const vectorSearchFoodLogs = internalQuery({
     // Temporarily return empty array until vector search is properly configured
     // TODO: Implement proper vector search when Convex supports it
     return [];
-    
+
     // Original implementation for reference:
     // const results = await ctx.db
     //   .query("foodLogs")
-    //   .withSearchIndex("by_embedding", (q: any) => 
+    //   .withSearchIndex("by_embedding", (q: any) =>
     //     q
     //       .search("embedding", embedding)
     //       .eq("userId", userId)
     //   )
     //   .take(limit);
-    // 
+    //
     // return results;
   },
 });
@@ -112,17 +121,17 @@ export const vectorSearchChatHistory = internalQuery({
     // Temporarily return empty array until vector search is properly configured
     // TODO: Implement proper vector search when Convex supports it
     return [];
-    
+
     // Original implementation for reference:
     // const results = await ctx.db
     //   .query("chatHistory")
-    //   .withSearchIndex("by_embedding", (q: any) => 
+    //   .withSearchIndex("by_embedding", (q: any) =>
     //     q
     //       .search("embedding", embedding)
     //       .eq("userId", userId)
     //   )
     //   .take(limit);
-    // 
+    //
     // return results;
   },
 });
@@ -137,17 +146,17 @@ export const vectorSearchPhotos = internalQuery({
     // Temporarily return empty array until vector search is properly configured
     // TODO: Implement proper vector search when Convex supports it
     return [];
-    
+
     // Original implementation for reference:
     // const results = await ctx.db
     //   .query("photoAnalyses")
-    //   .withSearchIndex("by_embedding", (q: any) => 
+    //   .withSearchIndex("by_embedding", (q: any) =>
     //     q
     //       .search("embedding", embedding)
     //       .eq("userId", userId)
     //   )
     //   .take(limit);
-    // 
+    //
     // return results;
   },
 });

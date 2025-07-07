@@ -37,6 +37,7 @@ export const listTasks = query({
 ```
 
 Then you can:
+
 - filter
 - order
 - and await the results
@@ -48,6 +49,7 @@ We'll see how this works in the examples below.
 The best way to filter in Convex is to use indexes. Indexes build a special internal structure in your database to speed up lookups.
 
 There are two steps to using indexes:
+
 1. Define the index in your `convex/schema.ts` file.
 2. Query via the `withIndex()` syntax.
 

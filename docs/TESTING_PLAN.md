@@ -6,14 +6,15 @@
 
 ```typescript
 // In app/(app)/chat/page.tsx
-const USE_NEW_STREAMING = localStorage.getItem('useNewStreaming') === 'true';
+const USE_NEW_STREAMING = localStorage.getItem("useNewStreaming") === "true";
 
-const endpoint = USE_NEW_STREAMING ? '/api/chat/stream-v2' : '/api/chat/stream';
+const endpoint = USE_NEW_STREAMING ? "/api/chat/stream-v2" : "/api/chat/stream";
 ```
 
 ### 2. Test Cases with Expected Results
 
 ## Test 1: Basic Food Logging
+
 ```
 User: "I had a chicken salad for lunch"
 Expected:
@@ -24,6 +25,7 @@ Expected:
 ```
 
 ## Test 2: Confirmation Memory
+
 ```
 User: "I had a banana"
 Bob: [Shows confirmation]
@@ -35,6 +37,7 @@ Expected:
 ```
 
 ## Test 3: Photo Analysis with Embeddings
+
 ```
 User: [uploads pizza photo]
 Expected:
@@ -45,6 +48,7 @@ Expected:
 ```
 
 ## Test 4: Vector Search
+
 ```
 User: "what similar meals have I had before?"
 Expected:
@@ -54,6 +58,7 @@ Expected:
 ```
 
 ## Test 5: Weight Tracking
+
 ```
 User: "I weigh 180 lbs today"
 Expected:
@@ -63,6 +68,7 @@ Expected:
 ```
 
 ## Test 6: Context Persistence
+
 ```
 Conversation 1:
 User: "I don't like mushrooms"
@@ -76,6 +82,7 @@ Expected:
 ```
 
 ## Test 7: Caching Performance
+
 ```
 User: "how am I doing?"
 Expected:
@@ -85,6 +92,7 @@ Expected:
 ```
 
 ## Test 8: Similar Photo Search
+
 ```
 After logging pizza photo:
 User: [uploads another pizza photo]
@@ -96,48 +104,48 @@ Expected:
 ## Verification Queries
 
 ### Check Embeddings Are Saved:
+
 ```javascript
 // In Convex dashboard
-db.foodLogs
-  .filter(log => log.embedding !== undefined)
-  .count()
+db.foodLogs.filter((log) => log.embedding !== undefined).count();
 // Should increase with each food log
 ```
 
 ### Check Vector Search Works:
+
 ```javascript
 // Test in Convex functions
 const results = await vectorSearch.searchSimilarMeals({
   searchText: "pizza",
-  limit: 5
+  limit: 5,
 });
 // Should return pizza-related meals
 ```
 
 ### Check Pending Confirmations:
+
 ```javascript
-db.pendingConfirmations
-  .filter(c => c.status === "pending")
+db.pendingConfirmations.filter((c) => c.status === "pending");
 // Should show current confirmations
 ```
 
 ### Check Cache Performance:
+
 ```javascript
-db.contextCache
-  .filter(c => c.userId === "user_xxx")
+db.contextCache.filter((c) => c.userId === "user_xxx");
 // Should show cached entries with TTL
 ```
 
 ## Performance Comparison
 
-| Metric | Current (Agent) | New (Vercel-Only) |
-|--------|----------------|-------------------|
-| Initial Response | ~2s | ~1.5s |
-| Tool Execution | Same | Same |
-| Embedding Generation | ✅ | ✅ |
-| Vector Search | ✅ | ✅ |
-| Cache Hit Rate | 85% | 85% |
-| Memory Usage | Higher | Lower |
+| Metric               | Current (Agent) | New (Vercel-Only) |
+| -------------------- | --------------- | ----------------- |
+| Initial Response     | ~2s             | ~1.5s             |
+| Tool Execution       | Same            | Same              |
+| Embedding Generation | ✅              | ✅                |
+| Vector Search        | ✅              | ✅                |
+| Cache Hit Rate       | 85%             | 85%               |
+| Memory Usage         | Higher          | Lower             |
 
 ## Migration Validation
 
@@ -150,6 +158,7 @@ db.contextCache
 ## Rollback Plan
 
 If any test fails:
+
 1. Toggle back to original endpoint
 2. No data loss (same database)
 3. Investigate specific failure

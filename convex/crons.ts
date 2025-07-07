@@ -8,10 +8,10 @@ crons.weekly(
   "weekly calibration",
   {
     dayOfWeek: "sunday",
-    hourUTC: 0,   // midnight
-    minuteUTC: 0
+    hourUTC: 0, // midnight
+    minuteUTC: 0,
   },
-  internal.calibration.runWeeklyCalibration
+  internal.calibration.runWeeklyCalibration,
 );
 
 // Daily thread reset - runs every day at 5 AM local time (using UTC conversion)
@@ -19,10 +19,10 @@ crons.weekly(
 crons.daily(
   "daily thread reset",
   {
-    hourUTC: 10,  // 10 AM UTC = 5 AM EST
-    minuteUTC: 0
+    hourUTC: 10, // 10 AM UTC = 5 AM EST
+    minuteUTC: 0,
   },
-  internal.threads.resetDailyThreads
+  internal.threads.resetDailyThreads,
 );
 
 export default crons;

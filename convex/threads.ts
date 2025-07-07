@@ -11,25 +11,25 @@ export const getOrCreateDailyThread = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
-    const today = new Date().toISOString().split('T')[0];
-    
+
+    const today = new Date().toISOString().split("T")[0];
+
     // Check for existing thread today
     const existing = await ctx.db
       .query("dailyThreads")
-      .withIndex("by_user_date", q => 
-        q.eq("userId", identity.subject).eq("date", today)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", today),
       )
       .first();
-    
+
     if (existing) {
-      return { 
-        threadId: existing.threadId, 
+      return {
+        threadId: existing.threadId,
         isNew: false,
-        messageCount: existing.messageCount 
+        messageCount: existing.messageCount,
       };
     }
-    
+
     // Create new thread
     const threadId = `thread_${identity.subject}_${Date.now()}`;
     await ctx.db.insert("dailyThreads", {
@@ -40,7 +40,7 @@ export const getOrCreateDailyThread = mutation({
       firstMessageAt: Date.now(),
       lastMessageAt: Date.now(),
     });
-    
+
     return { threadId, isNew: true, messageCount: 0 };
   },
 });
@@ -53,13 +53,13 @@ export const createNewThread = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const now = Date.now();
-    const today = new Date().toISOString().split('T')[0];
-    
+    const today = new Date().toISOString().split("T")[0];
+
     // Create new thread ID
     const newThreadId = `thread_${identity.subject}_${now}`;
-    
+
     // If there's a previous thread, trigger summarization
     if (args.previousThreadId) {
       // Schedule the summarization to run asynchronously
@@ -67,7 +67,7 @@ export const createNewThread = mutation({
         threadId: args.previousThreadId,
       });
     }
-    
+
     // Create new daily thread entry
     await ctx.db.insert("dailyThreads", {
       userId: identity.subject,
@@ -77,18 +77,18 @@ export const createNewThread = mutation({
       firstMessageAt: now,
       lastMessageAt: now,
     });
-    
+
     // Get today's food logs to provide context
     const todayFoodLogs = await ctx.db
       .query("foodLogs")
-      .withIndex("by_user_date", q => 
-        q.eq("userId", identity.subject).eq("date", today)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", today),
       )
       .collect();
-    
-    return { 
-      threadId: newThreadId, 
-      isNew: true, 
+
+    return {
+      threadId: newThreadId,
+      isNew: true,
       messageCount: 0,
       foodLogsCount: todayFoodLogs.length,
       previousThreadSummarized: !!args.previousThreadId,
@@ -108,34 +108,50 @@ export const saveMessage = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     // Save to chat history
-    const messageMetadata = args.metadata ? {
-      ...args.metadata,
-      threadId: args.threadId,
-    } : {
-      threadId: args.threadId,
-    };
-    
+    const messageMetadata = args.metadata
+      ? {
+          ...args.metadata,
+          threadId: args.threadId,
+        }
+      : {
+          threadId: args.threadId,
+        };
+
     // Add toolCalls to metadata only if they exist
     if (args.toolCalls && args.toolCalls.length > 0) {
       messageMetadata.toolCalls = args.toolCalls;
     }
-    
-    console.log(`[saveMessage] Saving ${args.role} message to thread ${args.threadId}: "${args.content.substring(0, 50)}..."`);
-    
+
+    console.log(
+      `[saveMessage] Saving ${args.role} message to thread ${args.threadId}: "${args.content.substring(0, 50)}..."`,
+    );
+
     // Log if we have toolCalls
     if (args.toolCalls && args.toolCalls.length > 0) {
-      console.log(`[saveMessage] Message has ${args.toolCalls.length} tool calls:`, args.toolCalls.map(tc => tc.toolName));
-      console.log(`[saveMessage] Full toolCalls data:`, JSON.stringify(args.toolCalls, null, 2));
+      console.log(
+        `[saveMessage] Message has ${args.toolCalls.length} tool calls:`,
+        args.toolCalls.map((tc) => tc.toolName),
+      );
+      console.log(
+        `[saveMessage] Full toolCalls data:`,
+        JSON.stringify(args.toolCalls, null, 2),
+      );
     }
-    
+
     // Log the final metadata object
-    console.log(`[saveMessage] Final metadata object keys:`, Object.keys(messageMetadata));
+    console.log(
+      `[saveMessage] Final metadata object keys:`,
+      Object.keys(messageMetadata),
+    );
     if (messageMetadata.toolCalls) {
-      console.log(`[saveMessage] Metadata contains toolCalls:`, messageMetadata.toolCalls.length);
+      console.log(
+        `[saveMessage] Metadata contains toolCalls:`,
+        messageMetadata.toolCalls.length,
+      );
     }
-    
+
     const messageId = await ctx.db.insert("chatHistory", {
       userId: identity.subject,
       role: args.role,
@@ -143,34 +159,44 @@ export const saveMessage = mutation({
       timestamp: Date.now(),
       metadata: messageMetadata,
     });
-    
+
     // Generate embedding asynchronously (skip for simple messages)
-    const simpleMessages = ['hi', 'hello', 'hey', 'yes', 'no', 'thanks', 'ok', 'bye'];
+    const simpleMessages = [
+      "hi",
+      "hello",
+      "hey",
+      "yes",
+      "no",
+      "thanks",
+      "ok",
+      "bye",
+    ];
     const contentLower = args.content.toLowerCase().trim();
-    const isSimple = simpleMessages.includes(contentLower) || contentLower.length < 10;
-    
+    const isSimple =
+      simpleMessages.includes(contentLower) || contentLower.length < 10;
+
     if (!isSimple) {
       ctx.scheduler.runAfter(0, api.embeddings.embedNewChatMessage, {
         chatId: messageId,
         content: args.content,
       });
     }
-    
+
     // Update thread stats
     const thread = await ctx.db
       .query("dailyThreads")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .first();
-    
+
     if (thread) {
       await ctx.db.patch(thread._id, {
         messageCount: thread.messageCount + 1,
         lastMessageAt: Date.now(),
       });
     }
-    
+
     // No cache invalidation needed - we're using direct queries now
-    
+
     return messageId;
   },
 });
@@ -184,65 +210,75 @@ export const getThreadMessages = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    
+
     const limit = args.limit || 1000; // Much higher default limit
-    
+
     // Get the daily thread info to find the timestamp range
     const thread = await ctx.db
       .query("dailyThreads")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .first();
-    
+
     if (!thread) {
       console.log(`[getThreadMessages] No thread found for ${args.threadId}`);
       return [];
     }
-    
+
     // Get messages for this specific thread only
     const messages = await ctx.db
       .query("chatHistory")
-      .withIndex("by_user_timestamp", q => 
-        q.eq("userId", identity.subject)
-      )
+      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .filter(q => 
-        q.eq(q.field("metadata.threadId"), args.threadId)
-      )
+      .filter((q) => q.eq(q.field("metadata.threadId"), args.threadId))
       .take(limit);
-    
-    console.log(`[getThreadMessages] Found ${messages.length} total messages for thread ${args.threadId}`);
-    
+
+    console.log(
+      `[getThreadMessages] Found ${messages.length} total messages for thread ${args.threadId}`,
+    );
+
     // Debug: Show what types of messages we have
-    const conversationMessages = messages.filter(m => m.metadata?.threadId === args.threadId);
-    const foodLogMessages = messages.filter(m => m.metadata?.foodLogId);
-    console.log(`[getThreadMessages] Breakdown: ${conversationMessages.length} conversation, ${foodLogMessages.length} food logs`);
-    
+    const conversationMessages = messages.filter(
+      (m) => m.metadata?.threadId === args.threadId,
+    );
+    const foodLogMessages = messages.filter((m) => m.metadata?.foodLogId);
+    console.log(
+      `[getThreadMessages] Breakdown: ${conversationMessages.length} conversation, ${foodLogMessages.length} food logs`,
+    );
+
     if (messages.length > 0) {
       const last = messages[0];
-      console.log(`[getThreadMessages] Most recent: [${last.role}] "${last.content.substring(0, 50)}..."`);
-      
+      console.log(
+        `[getThreadMessages] Most recent: [${last.role}] "${last.content.substring(0, 50)}..."`,
+      );
+
       // Debug: Check for messages with toolCalls
-      const messagesWithToolCalls = messages.filter(m => m.metadata?.toolCalls && m.metadata.toolCalls.length > 0);
+      const messagesWithToolCalls = messages.filter(
+        (m) => m.metadata?.toolCalls && m.metadata.toolCalls.length > 0,
+      );
       if (messagesWithToolCalls.length > 0) {
-        console.log(`[getThreadMessages] Found ${messagesWithToolCalls.length} messages with tool calls`);
+        console.log(
+          `[getThreadMessages] Found ${messagesWithToolCalls.length} messages with tool calls`,
+        );
         messagesWithToolCalls.forEach((msg, idx) => {
           console.log(`[getThreadMessages] Message ${idx} toolCalls:`, {
             role: msg.role,
             content: msg.content.substring(0, 50),
             toolCallCount: msg.metadata?.toolCalls?.length,
-            toolNames: msg.metadata?.toolCalls?.map((tc: any) => tc.toolName)
+            toolNames: msg.metadata?.toolCalls?.map((tc: any) => tc.toolName),
           });
         });
       } else {
-        console.log(`[getThreadMessages] No messages found with toolCalls in metadata`);
+        console.log(
+          `[getThreadMessages] No messages found with toolCalls in metadata`,
+        );
       }
     }
-    
+
     // Return messages with toolCalls properly extracted
-    return messages.reverse().map(msg => ({
+    return messages.reverse().map((msg) => ({
       ...msg,
-      toolCalls: msg.metadata?.toolCalls || undefined
-    }))
+      toolCalls: msg.metadata?.toolCalls || undefined,
+    }));
   },
 });
 
@@ -254,35 +290,38 @@ export const getThreadSummary = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    
+
     const thread = await ctx.db
       .query("dailyThreads")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .first();
-    
+
     if (!thread || thread.userId !== identity.subject) {
       return null;
     }
-    
+
     // Get food logs for the day
     const foodLogs = await ctx.db
       .query("foodLogs")
-      .withIndex("by_user_date", q => 
-        q.eq("userId", identity.subject).eq("date", thread.date)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", thread.date),
       )
       .collect();
-    
-    const totalCalories = foodLogs.reduce((sum, log) => sum + log.totalCalories, 0);
+
+    const totalCalories = foodLogs.reduce(
+      (sum, log) => sum + log.totalCalories,
+      0,
+    );
     const foodsLogged = foodLogs.length;
-    
+
     // Check if weight was logged
     const weightLog = await ctx.db
       .query("weightLogs")
-      .withIndex("by_user_date", q => 
-        q.eq("userId", identity.subject).eq("date", thread.date)
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", thread.date),
       )
       .first();
-    
+
     return {
       ...thread,
       summary: {
@@ -303,26 +342,24 @@ export const cleanupOldThreads = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    
+
     const daysToKeep = args.daysToKeep || 30;
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
-    
+    const cutoffStr = cutoffDate.toISOString().split("T")[0];
+
     const oldThreads = await ctx.db
       .query("dailyThreads")
-      .withIndex("by_user_date", q => 
-        q.eq("userId", identity.subject)
-      )
-      .filter(q => q.lt(q.field("date"), cutoffStr))
+      .withIndex("by_user_date", (q) => q.eq("userId", identity.subject))
+      .filter((q) => q.lt(q.field("date"), cutoffStr))
       .collect();
-    
+
     let deleted = 0;
     for (const thread of oldThreads) {
       await ctx.db.delete(thread._id);
       deleted++;
     }
-    
+
     return { deleted };
   },
 });
@@ -334,42 +371,42 @@ export const resetDailyThreads = internalMutation({
     // This runs at 5 AM to prepare for the new day
     // We don't actually delete threads, just mark yesterday as complete
     // The getOrCreateDailyThread will handle creating new threads
-    
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
     // Mark yesterday's threads as complete
     const yesterdayThreads = await ctx.db
       .query("dailyThreads")
-      .filter(q => q.eq(q.field("date"), yesterdayStr))
+      .filter((q) => q.eq(q.field("date"), yesterdayStr))
       .collect();
-    
+
     for (const thread of yesterdayThreads) {
       await ctx.db.patch(thread._id, {
         isComplete: true,
-        completedAt: Date.now()
+        completedAt: Date.now(),
       });
     }
-    
+
     // Clear any stale pending confirmations from yesterday
     const stalePendingConfirmations = await ctx.db
       .query("pendingConfirmations")
-      .filter(q => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("status"), "pending"),
-          q.lt(q.field("_creationTime"), Date.now() - 24 * 60 * 60 * 1000)
-        )
+          q.lt(q.field("_creationTime"), Date.now() - 24 * 60 * 60 * 1000),
+        ),
       )
       .collect();
-    
+
     for (const confirmation of stalePendingConfirmations) {
       await ctx.db.delete(confirmation._id);
     }
-    
+
     return {
       threadsCompleted: yesterdayThreads.length,
-      confirmationsCleared: stalePendingConfirmations.length
+      confirmationsCleared: stalePendingConfirmations.length,
     };
   },
 });
@@ -415,64 +452,78 @@ export const checkAndSummarize = action({
       threadId: args.threadId,
       limit: 50,
     });
-    
+
     // Need at least 10 messages total (5 to summarize + 5 to keep recent)
     if (messages.length < 10) {
-      console.log(`[checkAndSummarize] Not enough messages: ${messages.length} < 10`);
+      console.log(
+        `[checkAndSummarize] Not enough messages: ${messages.length} < 10`,
+      );
       return null;
     }
-    
+
     // Get existing summaries for this thread
     const summaries = await ctx.runQuery(api.threads.getThreadSummaries, {
       threadId: args.threadId,
     });
-    
+
     // Find the total messages already summarized
     let totalMessagesSummarized = 0;
     if (summaries.length > 0) {
       const lastSummary = summaries[summaries.length - 1];
       totalMessagesSummarized = lastSummary.messageRange.endIndex;
     }
-    
+
     // Calculate how many new messages we have since last summary
     const newMessageCount = messages.length - totalMessagesSummarized;
-    
-    console.log(`[checkAndSummarize] Status: ${messages.length} total messages, ${totalMessagesSummarized} already summarized, ${newMessageCount} new messages`);
-    
+
+    console.log(
+      `[checkAndSummarize] Status: ${messages.length} total messages, ${totalMessagesSummarized} already summarized, ${newMessageCount} new messages`,
+    );
+
     // Only summarize if we have at least 5 new messages
     if (newMessageCount < 5) {
-      console.log(`[checkAndSummarize] Not enough new messages: ${newMessageCount} < 5`);
+      console.log(
+        `[checkAndSummarize] Not enough new messages: ${newMessageCount} < 5`,
+      );
       return null;
     }
-    
+
     // Check if we should summarize
     const messagesToCheck = messages.map((m: any, idx: number) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
       timestamp: m.timestamp,
     }));
-    
+
     if (!shouldSummarizeMessages(messagesToCheck, totalMessagesSummarized)) {
-      console.log(`[checkAndSummarize] Should not summarize - conditions not met`);
+      console.log(
+        `[checkAndSummarize] Should not summarize - conditions not met`,
+      );
       return null;
     }
-    
+
     // Get messages to summarize (from last summary to 5 messages ago)
     const endIndex = messages.length - 5;
-    const messagesToSummarize = messages.slice(totalMessagesSummarized, endIndex);
-    
+    const messagesToSummarize = messages.slice(
+      totalMessagesSummarized,
+      endIndex,
+    );
+
     if (messagesToSummarize.length === 0) {
       console.log(`[checkAndSummarize] No messages to summarize`);
       return null;
     }
-    
-    console.log(`[checkAndSummarize] Will summarize ${messagesToSummarize.length} messages (indexes ${totalMessagesSummarized} to ${endIndex})`)
-    
+
+    console.log(
+      `[checkAndSummarize] Will summarize ${messagesToSummarize.length} messages (indexes ${totalMessagesSummarized} to ${endIndex})`,
+    );
+
     // Get previous summary for context
-    const previousSummary = summaries.length > 0 
-      ? summaries[summaries.length - 1].summary 
-      : undefined;
-    
+    const previousSummary =
+      summaries.length > 0
+        ? summaries[summaries.length - 1].summary
+        : undefined;
+
     // Summarize the messages
     const summary = await ctx.runAction(internal.summarizer.summarizeMessages, {
       messages: messagesToSummarize.map((m: any) => ({
@@ -482,7 +533,7 @@ export const checkAndSummarize = action({
       })),
       previousSummary,
     });
-    
+
     // Store the summary
     await ctx.runMutation(internal.threads.storeSummary, {
       threadId: args.threadId,
@@ -491,10 +542,11 @@ export const checkAndSummarize = action({
         startIndex: totalMessagesSummarized,
         endIndex: endIndex,
         startTimestamp: messagesToSummarize[0].timestamp,
-        endTimestamp: messagesToSummarize[messagesToSummarize.length - 1].timestamp,
+        endTimestamp:
+          messagesToSummarize[messagesToSummarize.length - 1].timestamp,
       },
     });
-    
+
     return summary;
   },
 });
@@ -507,10 +559,10 @@ export const getThreadSummaries = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    
+
     return await ctx.db
       .query("messageSummaries")
-      .withIndex("by_thread", q => q.eq("threadId", args.threadId))
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc")
       .collect();
   },

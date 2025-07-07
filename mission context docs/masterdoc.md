@@ -1,8 +1,9 @@
 # Bob Diet Coach - Complete Master Documentation 🏆
 
-*Last Updated: December 2024*
+_Last Updated: December 2024_
 
 ## Table of Contents
+
 1. [Executive Summary](#executive-summary)
 2. [Product Vision & Philosophy](#product-vision--philosophy)
 3. [Technical Architecture](#technical-architecture)
@@ -23,6 +24,7 @@
 Bob Diet Coach is an AI-powered diet coaching SaaS that revolutionizes weight management through natural conversation. Unlike traditional calorie counting apps that rely on generic formulas, Bob learns each user's unique metabolism by observing actual weight results, providing truly personalized coaching based on what YOUR scale shows, not what calculators predict.
 
 ### Key Differentiators
+
 - **Conversational Interface** - No forms, just natural chat
 - **Results-Based Learning** - Calibrates to YOUR actual weight changes
 - **Stealth Mode** - For users who prefer not to see numbers
@@ -75,7 +77,7 @@ Every interaction happens through natural conversation with Bob. Users talk to h
 - **Frontend**: React Router v7 + TypeScript
 - **UI Framework**: TailwindCSS v4 + shadcn/ui
 - **Backend**: Convex (real-time database + serverless functions)
-- **AI Integration**: 
+- **AI Integration**:
   - Convex Agent SDK (@convex-dev/agent)
   - Claude 4 Sonnet (all interactions including photo analysis)
   - OpenAI Embeddings (text-embedding-3-small)
@@ -120,8 +122,9 @@ Bob leverages Convex's real-time capabilities throughout:
 ### 1. Photo Analysis ✅ [COMPLETED]
 
 Advanced food recognition with intelligent learning:
+
 - **Convex File Storage** for secure image hosting
-- **Claude Vision API** for accurate food recognition  
+- **Claude Vision API** for accurate food recognition
 - **Vector similarity search** finds past similar meals
 - **One-click confirmation** for frictionless logging
 - **Smart error handling** with personality
@@ -145,6 +148,7 @@ Bob tracks moving averages and learns the relationship between your intake and w
 ### 3. Progress Visualization ✅
 
 Real-time progress cards showing:
+
 - Daily calorie progress
 - Macro breakdown (protein, carbs, fats)
 - Weight trend visualization
@@ -156,10 +160,10 @@ For users who prefer qualitative feedback:
 
 ```javascript
 // Standard Mode
-Bob: "You've consumed 1,250 calories with 95g protein"
+Bob: "You've consumed 1,250 calories with 95g protein";
 
 // Stealth Mode
-Bob: "You're on track for the day! Plenty of room for a satisfying dinner 🎯"
+Bob: "You're on track for the day! Plenty of room for a satisfying dinner 🎯";
 ```
 
 ### 5. Smart Onboarding ✅
@@ -167,9 +171,9 @@ Bob: "You're on track for the day! Plenty of room for a satisfying dinner 🎯"
 Conversational profile building:
 
 ```javascript
-Bob: "What's your main goal - losing, gaining, or maintaining weight?"
-User: "I want to lose 10kg"
-Bob: "Great goal! To personalize your plan, I need a few details. What's your current weight?"
+Bob: "What's your main goal - losing, gaining, or maintaining weight?";
+User: "I want to lose 10kg";
+Bob: "Great goal! To personalize your plan, I need a few details. What's your current weight?";
 // Continues gathering: height, age, activity level, display preferences
 ```
 
@@ -190,6 +194,7 @@ Would you like tips for managing this?"
 ### 7. Usage Tracking & Limits ✅
 
 Freemium enforcement:
+
 - 5 AI chats per day (free tier)
 - 2 photo analyses per day (free tier)
 - Unlimited for Pro users
@@ -222,6 +227,7 @@ If this isn't accurate, just tell me what to change!"
 ```
 
 **Implementation Details:**
+
 - **Convex File Storage** for secure image hosting (no base64!)
 - **Claude Vision API** for food recognition
 - **Vector embeddings** for similarity search
@@ -235,13 +241,14 @@ Bob learns each user's actual metabolism using rolling averages:
 
 ```javascript
 // After 14 days of data
-Bob: "I've noticed something interesting, Sarah. Based on your intake and weight changes, 
-your metabolism runs about 200 calories slower than typical calculators suggest. 
-I'm adjusting your daily target from 1,500 to 1,300 calories for steady progress. 
+Bob: "I've noticed something interesting, Sarah. Based on your intake and weight changes,
+your metabolism runs about 200 calories slower than typical calculators suggest.
+I'm adjusting your daily target from 1,500 to 1,300 calories for steady progress.
 This personalization is why I'm different from generic apps!"
 ```
 
 **Implementation:**
+
 - 7-day rolling averages for weight and calories
 - Dynamic calibration triggers (not fixed weekly)
 - Confidence scoring based on data quality
@@ -263,8 +270,8 @@ Bob: "I've discovered a pattern! You lose weight most effectively when you:
 Automatic detection and science-based solutions:
 
 ```javascript
-Bob: "You've maintained 78kg for 2 weeks despite perfect adherence. 
-This is a normal plateau! I recommend a 2-day refeed at maintenance calories 
+Bob: "You've maintained 78kg for 2 weeks despite perfect adherence.
+This is a normal plateau! I recommend a 2-day refeed at maintenance calories
 to reset your hormones. Trust the process - this works for 85% of users!"
 ```
 
@@ -274,7 +281,7 @@ Context-aware nudges:
 
 ```javascript
 // If user typically logs breakfast by 9am but hasn't today
-Bob (10am): "Good morning! Haven't seen your breakfast log yet. 
+Bob (10am): "Good morning! Haven't seen your breakfast log yet.
 Everything okay, or just running late? ☕"
 ```
 
@@ -440,35 +447,35 @@ calibrationHistory: {
 const bobAgent = new Agent(components.agent, {
   // Primary model for conversations
   chat: anthropic.chat("claude-sonnet-4-20250514"),
-  
+
   // System instructions defining Bob's personality
   instructions: `You are Bob, a friendly and knowledgeable AI diet coach who learns 
   from real results, not generic formulas. You understand that weight change is the 
   ultimate truth, and you adjust recommendations based on what each user's scale 
   actually shows, not what calculators predict...`,
-  
+
   // Tools Bob can use
   tools: {
-    confirmFood,          // Parse and confirm food
-    logFood,              // Save to database
-    logWeight,            // Track weight
-    showProgress,         // Display stats
-    analyzePhoto,         // Vision analysis
-    findSimilarMeals,     // Vector search
+    confirmFood, // Parse and confirm food
+    logFood, // Save to database
+    logWeight, // Track weight
+    showProgress, // Display stats
+    analyzePhoto, // Vision analysis
+    findSimilarMeals, // Vector search
     getCalibrationInsights, // Learn from weight results
-    getWeightTrends       // Show moving averages
+    getWeightTrends, // Show moving averages
   },
-  
+
   // Embeddings for semantic search
   textEmbedding: openai.embedding("text-embedding-3-small"),
-  
+
   // Allow multi-step operations
   maxSteps: 5,
-  
+
   // Usage tracking for billing
   usageHandler: async (ctx, { userId, usage }) => {
     await trackUsage(ctx, userId, usage);
-  }
+  },
 });
 ```
 
@@ -505,12 +512,14 @@ export const toolName = createTool({
 ### Pricing Tiers
 
 #### Free Tier
+
 - 5 AI conversations per day
 - 2 photo analyses per day
 - Basic progress tracking
 - 7-day history
 
 #### Pro Tier ($9.99/month)
+
 - Unlimited AI conversations
 - Unlimited photo analyses
 - Advanced insights & patterns
@@ -530,16 +539,16 @@ export const toolName = createTool({
 
 ```javascript
 // Strategic upgrade prompts
-Bob: "I'd love to analyze this photo, but you've used today's free analyses. 
-     Pro users get unlimited photo insights that improve over time! 
+Bob: "I'd love to analyze this photo, but you've used today's free analyses.
+     Pro users get unlimited photo insights that improve over time!
      Want to upgrade for just $9.99/month?"
 
 // Value demonstration
-Bob: "I've noticed you could benefit from metabolism calibration - 
+Bob: "I've noticed you could benefit from metabolism calibration -
      a Pro feature that could help break through this plateau!"
 
 // Social proof
-Bob: "Pro users lose 2.3x more weight on average. 
+Bob: "Pro users lose 2.3x more weight on average.
      Ready to accelerate your progress?"
 ```
 
@@ -560,7 +569,7 @@ Bob: "Pro users lose 2.3x more weight on average.
   - Body: System fonts (performance)
   - Chat: SF Pro (native feel)
 
-- **Components**: 
+- **Components**:
   - Card-based layouts
   - Smooth animations
   - Touch-friendly targets
@@ -569,6 +578,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 ### Mobile-First Screens
 
 #### 1. Chat Dashboard (Primary)
+
 ```
 ┌─────────────────────┐
 │ Daily Stats Cards   │ (6 cards: goal, calories, etc.)
@@ -582,6 +592,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 ```
 
 #### 2. Food Diary
+
 ```
 ┌─────────────────────┐
 │ Today - 1,234 cal   │
@@ -595,6 +606,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 ```
 
 #### 3. Weight Progress
+
 ```
 ┌─────────────────────┐
 │   Weight Chart      │
@@ -607,6 +619,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 ```
 
 #### 4. Profile & Settings
+
 ```
 ┌─────────────────────┐
 │ Profile Info        │
@@ -632,31 +645,36 @@ Bob: "Pro users lose 2.3x more weight on average.
 ## Development Roadmap
 
 ### Phase 1: Core Experience ✅ [COMPLETE]
+
 - Basic chat with Bob
-- Food/weight logging  
+- Food/weight logging
 - Progress tracking
 - Freemium limits
 - Real-time sync
 
 ### Phase 2: Intelligence Layer 🚧 [CURRENT]
+
 - ✅ Photo analysis with learning
 - 🔄 Metabolism calibration (next priority)
 - 📅 Pattern recognition
 - 📅 Similar meal search
 
 ### Phase 3: Engagement Features 📅 [Q1 2025]
+
 - Smart reminders via Convex cron
 - Email summaries
 - Plateau detection algorithms
 - Advanced insights dashboard
 
 ### Phase 4: Platform Expansion 📅 [Q2 2025]
+
 - WhatsApp integration
 - Voice input processing
 - Apple Health sync
 - Meal planning with Convex functions
 
 ### Phase 5: Social & Gamification 📅 [Q3 2025]
+
 - Progress sharing
 - Challenges system
 - Community features
@@ -667,6 +685,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 ## Success Metrics
 
 ### User Engagement KPIs
+
 - **Daily Active Users**: 60%+ (industry avg: 15%)
 - **Messages per DAU**: 8+ (3+ meals, weight, chat)
 - **Photo uploads**: 2+ per day for Pro users
@@ -674,6 +693,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 - **30-day retention**: 40%+ (industry avg: 10%)
 
 ### Business KPIs
+
 - **Free to Pro conversion**: 20%+ in first month
 - **Monthly churn**: <5% (industry avg: 10%)
 - **LTV:CAC ratio**: 3:1 within 6 months
@@ -681,12 +701,14 @@ Bob: "Pro users lose 2.3x more weight on average.
 - **NPS score**: 50+ (promoters love Bob!)
 
 ### Health Outcomes
+
 - **Goal achievement**: 70%+ reach target weight
 - **Avg weekly loss**: 0.5-1kg (sustainable)
 - **Calibration accuracy**: 85%+ predictions correct
 - **Plateau resolution**: 80%+ break through
 
 ### Technical Performance
+
 - **Response time**: <2s for Bob replies
 - **Uptime**: 99.9%+ (Convex SLA)
 - **Error rate**: <0.1% of interactions
@@ -697,6 +719,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 ## Implementation Guidelines
 
 ### Code Quality Standards
+
 - **TypeScript** everywhere (strict mode)
 - **Component patterns** from shadcn/ui
 - **Error boundaries** for graceful failures
@@ -704,6 +727,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 - **Accessibility** (WCAG 2.1 AA)
 
 ### Testing Strategy
+
 - **Unit tests** for business logic
 - **Integration tests** for tools
 - **E2E tests** for critical paths
@@ -711,6 +735,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 - **A/B tests** for conversion
 
 ### Security & Privacy
+
 - **Data encryption** at rest and transit
 - **GDPR compliant** data handling
 - **User data export** on request
@@ -718,6 +743,7 @@ Bob: "Pro users lose 2.3x more weight on average.
 - **Rate limiting** on all endpoints
 
 ### Deployment Process
+
 1. **Development** → Local testing
 2. **Preview** → Vercel preview deploys
 3. **Staging** → Full environment test
@@ -729,18 +755,21 @@ Bob: "Pro users lose 2.3x more weight on average.
 ## Competitive Advantages
 
 ### vs. MyFitnessPal
+
 - **Natural language** vs form filling
 - **Learns your metabolism** vs generic formulas
 - **Conversational** vs database UI
 - **AI-powered insights** vs basic tracking
 
 ### vs. Noom
+
 - **Affordable** ($9.99 vs $60/month)
 - **AI coach always available** vs scheduled humans
 - **Instant responses** vs delayed feedback
 - **Personalized to metabolism** vs one-size-fits-all
 
 ### vs. ChatGPT
+
 - **Purpose-built for dieting** vs general
 - **Persistent memory** vs session-based
 - **Integrated tracking** vs just advice
@@ -751,24 +780,28 @@ Bob: "Pro users lose 2.3x more weight on average.
 ## Future Vision
 
 ### Year 1: Foundation
+
 - Perfect the core chat experience
 - Build loyal user base
 - Achieve product-market fit
 - Sustainable unit economics
 
 ### Year 2: Expansion
+
 - WhatsApp/SMS channels
 - Voice interaction
 - Wearable integration
 - International markets
 
 ### Year 3: Platform
+
 - API for developers
 - White-label solution
 - Corporate wellness
 - Insurance partnerships
 
 ### Long-term: Health Companion
+
 - Beyond diet (exercise, sleep, stress)
 - Medical provider integration
 - Predictive health insights
@@ -786,4 +819,4 @@ Bob Diet Coach represents a paradigm shift in diet tracking - from tedious data 
 
 ---
 
-*This document serves as the single source of truth for Bob Diet Coach. Update it as features evolve and lessons are learned.*
+_This document serves as the single source of truth for Bob Diet Coach. Update it as features evolve and lessons are learned._

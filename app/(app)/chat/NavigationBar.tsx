@@ -16,7 +16,7 @@ export function NavigationBar({
   userName = "Bob",
   onNewChat,
   onSettings,
-  isStreaming = false
+  isStreaming = false,
 }: NavigationBarProps) {
   const { triggerHaptic } = useHapticFeedback();
 
@@ -27,7 +27,7 @@ export function NavigationBar({
         <button
           onClick={() => {
             onSettings?.();
-            triggerHaptic('light');
+            triggerHaptic("light");
           }}
           className="w-11 h-11 -ml-2 flex items-center justify-center rounded-full ios-button"
         >
@@ -47,13 +47,13 @@ export function NavigationBar({
           onClick={() => {
             if (!isStreaming) {
               onNewChat?.();
-              triggerHaptic('light');
+              triggerHaptic("light");
             }
           }}
           disabled={isStreaming}
           className={cn(
             "w-11 h-11 -mr-2 flex items-center justify-center rounded-full ios-button",
-            isStreaming && "opacity-50"
+            isStreaming && "opacity-50",
           )}
         >
           <MessageSquarePlus className="w-5 h-5 text-foreground" />

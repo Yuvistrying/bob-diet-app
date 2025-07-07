@@ -6,52 +6,64 @@ import { api } from "../../convex/_generated/api";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
-import { 
-  Code, 
-  Database, 
-  MessageSquare, 
-  Activity, 
+import {
+  Code,
+  Database,
+  MessageSquare,
+  Activity,
   Zap,
   Calendar,
   Target,
   ChefHat,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 
 export default function Playground() {
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
-  
+
   // State
   const [testPrompt, setTestPrompt] = useState("");
   const [testThreadId, setTestThreadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<any>(null);
   const [selectedTool, setSelectedTool] = useState<string>("chat");
-  
+
   // Queries
   const profile = useQuery(api.userProfiles.getUserProfile, {});
   const usageStats = useQuery(api.usageTracking.getUsageStats, {});
-  const agentUsage = useQuery(api.agentUsageTracking.getRecentUsage, { limit: 10 });
+  const agentUsage = useQuery(api.agentUsageTracking.getRecentUsage, {
+    limit: 10,
+  });
   const calibrationNeeded = useQuery(api.calibrationHistory.shouldCalibrate);
-  
+
   // Actions
   const chat = useAction(api.agentActions.chat);
   const streamChat = useAction(api.agentActions.streamChat);
-  const generateMealPlan = useAction(api.structuredGeneration.generateDetailedMealPlan);
-  const generateCalibration = useAction(api.structuredGeneration.generateCalibrationReport);
-  
+  const generateMealPlan = useAction(
+    api.structuredGeneration.generateDetailedMealPlan,
+  );
+  const generateCalibration = useAction(
+    api.structuredGeneration.generateCalibrationReport,
+  );
+
   // Redirect if not signed in
   if (!isSignedIn) {
     navigate("/sign-in");
     return null;
   }
-  
+
   // Test scenarios
   const testScenarios = [
     {
@@ -60,7 +72,7 @@ export default function Playground() {
         { prompt: "I had a chicken salad for lunch", icon: "🥗" },
         { prompt: "Just ate 2 slices of pizza and a coke", icon: "🍕" },
         { prompt: "Had oatmeal with berries and a protein shake", icon: "🥣" },
-      ]
+      ],
     },
     {
       category: "Weight & Progress",
@@ -68,7 +80,7 @@ export default function Playground() {
         { prompt: "My weight today is 75.5kg", icon: "⚖️" },
         { prompt: "How am I doing with my goals?", icon: "📊" },
         { prompt: "Show me my progress this week", icon: "📈" },
-      ]
+      ],
     },
     {
       category: "Meal Search",
@@ -76,7 +88,7 @@ export default function Playground() {
         { prompt: "What did I eat yesterday?", icon: "🔍" },
         { prompt: "Show me high protein meals from last week", icon: "💪" },
         { prompt: "Find meals under 400 calories", icon: "🎯" },
-      ]
+      ],
     },
     {
       category: "Planning & Analysis",
@@ -84,42 +96,42 @@ export default function Playground() {
         { prompt: "Create a 3-day meal plan for me", icon: "📅" },
         { prompt: "Analyze my progress for the last 2 weeks", icon: "📊" },
         { prompt: "Should I adjust my calorie target?", icon: "🎯" },
-      ]
-    }
+      ],
+    },
   ];
-  
+
   const handleTest = async (prompt: string) => {
     setIsLoading(true);
     setResponse(null);
-    
+
     try {
       let result;
       switch (selectedTool) {
         case "stream":
-          result = await streamChat({ 
-            prompt, 
-            threadId: testThreadId || undefined 
+          result = await streamChat({
+            prompt,
+            threadId: testThreadId || undefined,
           });
           break;
         case "meal_plan":
-          result = await generateMealPlan({ 
+          result = await generateMealPlan({
             days: 3,
-            threadId: testThreadId || undefined 
+            threadId: testThreadId || undefined,
           });
           break;
         case "calibration":
-          result = await generateCalibration({ 
+          result = await generateCalibration({
             periodDays: 14,
-            threadId: testThreadId || undefined 
+            threadId: testThreadId || undefined,
           });
           break;
         default:
-          result = await chat({ 
-            prompt, 
-            threadId: testThreadId || undefined 
+          result = await chat({
+            prompt,
+            threadId: testThreadId || undefined,
           });
       }
-      
+
       setResponse(result);
       if (result.threadId && !testThreadId) {
         setTestThreadId(result.threadId);
@@ -131,14 +143,16 @@ export default function Playground() {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Bob Agent Playground</h1>
-        <p className="text-gray-600">Test and debug Bob's Convex Agent capabilities</p>
+        <p className="text-gray-600">
+          Test and debug Bob's Convex Agent capabilities
+        </p>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Panel - Stats & Info */}
         <div className="space-y-4">
@@ -153,7 +167,9 @@ export default function Playground() {
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Name:</span>
-                <span className="font-medium">{profile?.name || "Not set"}</span>
+                <span className="font-medium">
+                  {profile?.name || "Not set"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Goal:</span>
@@ -161,17 +177,21 @@ export default function Playground() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Daily Target:</span>
-                <span className="font-medium">{profile?.dailyCalorieTarget || 0} cal</span>
+                <span className="font-medium">
+                  {profile?.dailyCalorieTarget || 0} cal
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Thread ID:</span>
                 <span className="font-mono text-xs">
-                  {testThreadId ? testThreadId.slice(0, 8) + "..." : "New thread"}
+                  {testThreadId
+                    ? testThreadId.slice(0, 8) + "..."
+                    : "New thread"}
                 </span>
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Usage Stats */}
           <Card>
             <CardHeader>
@@ -195,7 +215,7 @@ export default function Playground() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Calibration Status */}
           {calibrationNeeded?.needed && (
             <Card className="border-orange-200 bg-orange-50">
@@ -206,19 +226,23 @@ export default function Playground() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700">{calibrationNeeded.reason}</p>
+                <p className="text-sm text-gray-700">
+                  {calibrationNeeded.reason}
+                </p>
               </CardContent>
             </Card>
           )}
         </div>
-        
+
         {/* Middle Panel - Testing Interface */}
         <div className="lg:col-span-2 space-y-4">
           {/* Tool Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Test Tools</CardTitle>
-              <CardDescription>Select which agent capability to test</CardDescription>
+              <CardDescription>
+                Select which agent capability to test
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -247,7 +271,9 @@ export default function Playground() {
                   <span className="text-xs">Meal Plan</span>
                 </Button>
                 <Button
-                  variant={selectedTool === "calibration" ? "default" : "outline"}
+                  variant={
+                    selectedTool === "calibration" ? "default" : "outline"
+                  }
                   onClick={() => setSelectedTool("calibration")}
                   className="h-auto flex-col py-3"
                 >
@@ -257,7 +283,7 @@ export default function Playground() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Test Scenarios */}
           <Card>
             <CardHeader>
@@ -273,8 +299,8 @@ export default function Playground() {
                   <TabsTrigger value="planning">Planning</TabsTrigger>
                 </TabsList>
                 {testScenarios.map((category, idx) => (
-                  <TabsContent 
-                    key={idx} 
+                  <TabsContent
+                    key={idx}
                     value={category.category.toLowerCase().split(" ")[0]}
                     className="space-y-2"
                   >
@@ -297,7 +323,7 @@ export default function Playground() {
               </Tabs>
             </CardContent>
           </Card>
-          
+
           {/* Custom Input */}
           <Card>
             <CardHeader>
@@ -330,7 +356,7 @@ export default function Playground() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Response Display */}
           {response && (
             <Card>
@@ -348,40 +374,57 @@ export default function Playground() {
                     <>
                       {response.text && (
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Text Response:</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">
+                            Text Response:
+                          </p>
                           <div className="p-3 bg-gray-50 rounded whitespace-pre-wrap">
                             {response.text}
                           </div>
                         </div>
                       )}
-                      
+
                       {response.toolCalls && response.toolCalls.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Tool Calls:</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">
+                            Tool Calls:
+                          </p>
                           <div className="space-y-2">
-                            {response.toolCalls.map((tool: any, idx: number) => (
-                              <div key={idx} className="p-3 bg-blue-50 rounded">
-                                <p className="font-medium text-blue-700">{tool.toolName}</p>
-                                <pre className="text-xs mt-1 overflow-auto">
-                                  {JSON.stringify(tool.args, null, 2)}
-                                </pre>
-                              </div>
-                            ))}
+                            {response.toolCalls.map(
+                              (tool: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="p-3 bg-blue-50 rounded"
+                                >
+                                  <p className="font-medium text-blue-700">
+                                    {tool.toolName}
+                                  </p>
+                                  <pre className="text-xs mt-1 overflow-auto">
+                                    {JSON.stringify(tool.args, null, 2)}
+                                  </pre>
+                                </div>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
-                      
+
                       {(response.mealPlan || response.report) && (
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Structured Output:</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">
+                            Structured Output:
+                          </p>
                           <div className="p-3 bg-gray-50 rounded">
                             <pre className="text-xs overflow-auto">
-                              {JSON.stringify(response.mealPlan || response.report, null, 2)}
+                              {JSON.stringify(
+                                response.mealPlan || response.report,
+                                null,
+                                2,
+                              )}
                             </pre>
                           </div>
                         </div>
                       )}
-                      
+
                       {response.usageInfo && (
                         <div className="p-3 bg-yellow-50 rounded">
                           <p className="text-sm text-yellow-700">
@@ -397,7 +440,7 @@ export default function Playground() {
               </CardContent>
             </Card>
           )}
-          
+
           {/* Recent Agent Usage */}
           {agentUsage && agentUsage.length > 0 && (
             <Card>
@@ -407,7 +450,10 @@ export default function Playground() {
               <CardContent>
                 <div className="space-y-2">
                   {agentUsage.slice(0, 5).map((usage: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-sm py-2 border-b last:border-0">
+                    <div
+                      key={idx}
+                      className="flex justify-between text-sm py-2 border-b last:border-0"
+                    >
                       <div>
                         <span className="font-medium">{usage.model}</span>
                         <span className="text-gray-500 ml-2">
@@ -415,8 +461,12 @@ export default function Playground() {
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-gray-600">{usage.totalTokens} tokens</span>
-                        <span className="text-green-600 ml-2">${usage.cost.toFixed(4)}</span>
+                        <span className="text-gray-600">
+                          {usage.totalTokens} tokens
+                        </span>
+                        <span className="text-green-600 ml-2">
+                          ${usage.cost.toFixed(4)}
+                        </span>
                       </div>
                     </div>
                   ))}

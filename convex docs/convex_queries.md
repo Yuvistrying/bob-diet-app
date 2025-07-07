@@ -55,6 +55,7 @@ export default …;
 The same rules apply to mutations and actions, while HTTP actions use a different routing approach.
 
 Client libraries in languages other than JavaScript and TypeScript use strings instead of API objects:
+
 - `api.myFunctions.myQuery` is `"myFunctions:myQuery"`
 - `api.foo.myQueries.myQuery` is `"foo/myQueries:myQuery"`
 - `api.myFunction.default` is `"myFunction:default"` or `"myFunction"`

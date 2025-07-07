@@ -43,12 +43,12 @@ export const updateTask = mutation({
     const { id } = args;
     console.log(await ctx.db.get(id));
     // { text: "foo", status: { done: true }, _id: ... }
-    
+
     // Add `tag` and overwrite `status`:
     await ctx.db.patch(id, { tag: "bar", status: { archived: true } });
     console.log(await ctx.db.get(id));
     // { text: "foo", tag: "bar", status: { archived: true }, _id: ... }
-    
+
     // Unset `tag` by setting it to `undefined`
     await ctx.db.patch(id, { tag: undefined });
     console.log(await ctx.db.get(id));
@@ -71,7 +71,7 @@ export const replaceTask = mutation({
     const { id } = args;
     console.log(await ctx.db.get(id));
     // { text: "foo", _id: ... }
-    
+
     // Replace the whole document
     await ctx.db.replace(id, { invalid: true });
     console.log(await ctx.db.get(id));
@@ -102,7 +102,7 @@ If you are used to SQL you might be looking for some sort of bulk insert or bulk
 
 You can just insert or update in a loop in the mutation function. Convex queues up all database changes in the function and executes them all in a single transaction when the function ends, leading to a single efficient change to the database.
 
-```typescript
+````typescript
 /**
  * Bulk insert multiple products into the database.
  *
@@ -130,7 +130,7 @@ export const bulkInsertProducts = mutation({
   },
   handler: async (ctx, args) => {
     const { products } = args;
-    
+
     // Insert in a loop. This is efficient because Convex queues all the changes
     // to be executed in a single transaction when the mutation ends.
     for (const product of products) {
@@ -143,7 +143,7 @@ export const bulkInsertProducts = mutation({
     }
   },
 });
-```
+````
 
 ## Migrations
 

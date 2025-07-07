@@ -22,6 +22,7 @@ A modern, production-ready SaaS starter template for building full-stack React a
 ## Tech Stack
 
 ### Frontend
+
 - **React Router v7** - Full-stack React framework
 - **TailwindCSS v4** - Utility-first CSS framework
 - **shadcn/ui** - Modern component library with Radix UI
@@ -30,12 +31,14 @@ A modern, production-ready SaaS starter template for building full-stack React a
 - **Motion** - Smooth animations
 
 ### Backend & Services
+
 - **Convex** - Real-time database and serverless functions
 - **Clerk** - Authentication and user management
 - **Polar.sh** - Subscription billing and payments
 - **OpenAI** - AI chat capabilities
 
 ### Development & Deployment
+
 - **Vite** - Fast build tool
 - **TypeScript** - Type safety
 - **Vercel** - Deployment platform
@@ -44,7 +47,7 @@ A modern, production-ready SaaS starter template for building full-stack React a
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - Clerk account for authentication
 - Convex account for database
 - Polar.sh account for subscriptions
@@ -164,6 +167,7 @@ Make sure to deploy the output of `npm run build`
 ## Architecture
 
 ### Key Routes
+
 - `/` - Homepage with pricing
 - `/pricing` - Dynamic pricing page
 - `/dashboard` - Protected user dashboard
@@ -175,11 +179,13 @@ Make sure to deploy the output of `npm run build`
 ### Key Components
 
 #### Authentication & Authorization
+
 - Protected routes with Clerk authentication
 - Server-side user data loading with loaders
 - Automatic user synchronization
 
 #### Subscription Management
+
 - Dynamic pricing cards fetched from Polar.sh
 - Secure checkout flow with redirect handling
 - Real-time subscription status updates
@@ -187,6 +193,7 @@ Make sure to deploy the output of `npm run build`
 - Webhook handling for payment events
 
 #### Dashboard Features
+
 - Interactive sidebar navigation
 - Real-time data updates
 - User profile management
@@ -194,6 +201,7 @@ Make sure to deploy the output of `npm run build`
 - Subscription status display
 
 #### AI Chat Integration
+
 - OpenAI-powered conversations
 - Real-time message streaming
 - Chat history persistence

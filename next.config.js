@@ -15,26 +15,26 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'img.clerk.com',
+        protocol: "https",
+        hostname: "img.clerk.com",
       },
       {
-        protocol: 'https',
-        hostname: '**.convex.cloud',
+        protocol: "https",
+        hostname: "**.convex.cloud",
       },
     ],
   },
   experimental: {
     // Enable server actions
     serverActions: {
-      bodySizeLimit: '10mb',
+      bodySizeLimit: "10mb",
     },
   },
   // Convex requires WebSocket support
   webpack: (config) => {
     config.externals.push({
-      'utf-8-validate': 'commonjs utf-8-validate',
-      'bufferutil': 'commonjs bufferutil',
+      "utf-8-validate": "commonjs utf-8-validate",
+      bufferutil: "commonjs bufferutil",
     });
     return config;
   },

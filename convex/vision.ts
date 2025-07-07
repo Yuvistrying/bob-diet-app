@@ -22,7 +22,7 @@ export const analyzeFood = internalAction({
       if (!imageUrl) {
         throw new Error("Image not found in storage");
       }
-      
+
       // Use Claude's vision capabilities with the Vercel AI SDK
       const { text } = await generateText({
         model: anthropic("claude-sonnet-4-20250514"),
@@ -37,7 +37,7 @@ export const analyzeFood = internalAction({
               {
                 type: "text",
                 text: `You are a nutrition expert. Analyze this food image and provide detailed nutritional information.
-                ${context ? `Additional context: ${context}` : ''}
+                ${context ? `Additional context: ${context}` : ""}
                 
                 Provide a JSON response with this exact structure:
                 {
@@ -73,7 +73,7 @@ export const analyzeFood = internalAction({
 
       // Log the raw response for debugging
       console.log("Claude Vision response:", text);
-      
+
       // Check if Claude detected no food in the image
       const noFoodIndicators = [
         "don't see any food",
@@ -81,22 +81,24 @@ export const analyzeFood = internalAction({
         "without any food",
         "not a food",
         "doesn't contain food",
-        "can't identify any food"
+        "can't identify any food",
       ];
-      
+
       const lowerText = text.toLowerCase();
-      const isNoFoodResponse = noFoodIndicators.some(indicator => lowerText.includes(indicator));
-      
+      const isNoFoodResponse = noFoodIndicators.some((indicator) =>
+        lowerText.includes(indicator),
+      );
+
       if (isNoFoodResponse) {
         // Return a structured error response with what Claude saw
         return {
           error: true,
           noFood: true,
           description: text,
-          message: "No food detected in image"
+          message: "No food detected in image",
         };
       }
-      
+
       // Parse the response
       try {
         // Extract JSON from the response text
@@ -109,8 +111,9 @@ export const analyzeFood = internalAction({
           // Return generic error if we can't parse but it's not a "no food" response
           return {
             error: true,
-            message: "Could not analyze the image. Please try again with a clearer photo.",
-            rawResponse: text
+            message:
+              "Could not analyze the image. Please try again with a clearer photo.",
+            rawResponse: text,
           };
         }
       } catch (parseError) {
@@ -119,7 +122,7 @@ export const analyzeFood = internalAction({
         return {
           error: true,
           message: "Could not analyze the image. Please try again.",
-          rawResponse: text
+          rawResponse: text,
         };
       }
     } catch (error) {
@@ -128,7 +131,7 @@ export const analyzeFood = internalAction({
       return {
         error: true,
         message: "Failed to analyze image. Please try again.",
-        systemError: error instanceof Error ? error.message : "Unknown error"
+        systemError: error instanceof Error ? error.message : "Unknown error",
       };
     }
   },
@@ -139,25 +142,29 @@ export const savePhotoAnalysis = action({
   args: {
     storageId: v.id("_storage"),
     analysis: v.object({
-      foods: v.array(v.object({
-        name: v.string(),
-        quantity: v.string(),
-        calories: v.number(),
-        protein: v.number(),
-        carbs: v.number(),
-        fat: v.number(),
-        confidence: v.string(),
-      })),
+      foods: v.array(
+        v.object({
+          name: v.string(),
+          quantity: v.string(),
+          calories: v.number(),
+          protein: v.number(),
+          carbs: v.number(),
+          fat: v.number(),
+          confidence: v.string(),
+        }),
+      ),
       totalCalories: v.number(),
       totalProtein: v.number(),
       totalCarbs: v.number(),
       totalFat: v.number(),
       overallConfidence: v.string(),
-      metadata: v.optional(v.object({
-        visualDescription: v.string(),
-        platingStyle: v.string(),
-        portionSize: v.string(),
-      })),
+      metadata: v.optional(
+        v.object({
+          visualDescription: v.string(),
+          platingStyle: v.string(),
+          portionSize: v.string(),
+        }),
+      ),
     }),
     embedding: v.optional(v.array(v.float64())),
   },
@@ -165,14 +172,17 @@ export const savePhotoAnalysis = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    const photoId = await ctx.runMutation(internal.vision.insertPhotoAnalysisMutation, {
-      userId: identity.subject,
-      timestamp: Date.now(),
-      storageId,
-      analysis,
-      confirmed: false,
-      embedding,
-    });
+    const photoId = await ctx.runMutation(
+      internal.vision.insertPhotoAnalysisMutation,
+      {
+        userId: identity.subject,
+        timestamp: Date.now(),
+        storageId,
+        analysis,
+        confirmed: false,
+        embedding,
+      },
+    );
 
     return photoId;
   },

@@ -15,16 +15,16 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav 
+    <nav
       className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="max-w-lg mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            
+
             return (
               <Link
                 key={item.name}
@@ -35,20 +35,17 @@ export function BottomNav() {
                   "touch-manipulation select-none",
                   isActive
                     ? "text-foreground bg-muted border-border"
-                    : "text-muted-foreground hover:text-foreground border-transparent hover:border-border"
+                    : "text-muted-foreground hover:text-foreground border-transparent hover:border-border",
                 )}
                 style={{
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation'
+                  WebkitTapHighlightColor: "transparent",
+                  touchAction: "manipulation",
                 }}
               >
-                <Icon className={cn(
-                  "h-5 w-5",
-                  isActive && "stroke-2"
-                )} />
-                <span className={cn(
-                  isActive && "font-semibold"
-                )}>{item.name}</span>
+                <Icon className={cn("h-5 w-5", isActive && "stroke-2")} />
+                <span className={cn(isActive && "font-semibold")}>
+                  {item.name}
+                </span>
               </Link>
             );
           })}

@@ -16,7 +16,10 @@ export const listThreadMessages = query({
     streamArgs: vStreamArgs,
   },
   handler: async (ctx, { threadId, paginationOpts, streamArgs }) => {
-    const paginated = await bobAgent.listMessages(ctx, { threadId, paginationOpts });
+    const paginated = await bobAgent.listMessages(ctx, {
+      threadId,
+      paginationOpts,
+    });
     const streams = await bobAgent.syncStreams(ctx, { threadId, streamArgs });
     return { ...paginated, streams };
   },
@@ -24,6 +27,7 @@ export const listThreadMessages = query({
 ```
 
 Key features:
+
 - `syncStreams` syncs real-time streaming deltas with the thread
 - `vStreamArgs` validator handles streaming configuration
 - Returns both paginated messages and streaming data
@@ -44,19 +48,24 @@ export const streamStoryAsynchronously = mutation({
       userId,
       message: { role: "user", content: messageContent },
     });
-    
+
     // Schedule async generation
-    await ctx.scheduler.runAfter(0, internal.streaming.generateStreamingResponse, {
-      threadId,
-      promptMessageId: messageId,
-      userId,
-      storageId,
-    });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.streaming.generateStreamingResponse,
+      {
+        threadId,
+        promptMessageId: messageId,
+        userId,
+        storageId,
+      },
+    );
   },
 });
 ```
 
 This pattern:
+
 - Saves the user message immediately for optimistic UI updates
 - Schedules asynchronous generation in the background
 - Supports image uploads via `storageId`
@@ -66,23 +75,33 @@ This pattern:
 **File: `/app/hooks/useConvexStreamingChat.tsx`**
 
 ```typescript
-import { useThreadMessages, toUIMessages, optimisticallySendMessage } from "@convex-dev/agent/react";
+import {
+  useThreadMessages,
+  toUIMessages,
+  optimisticallySendMessage,
+} from "@convex-dev/agent/react";
 
 export function useConvexStreamingChat(options) {
   const threadMessages = useThreadMessages(
     api.streaming.listThreadMessages,
     threadId ? { threadId } : null,
-    { initialNumItems: 10, stream: true }
+    { initialNumItems: 10, stream: true },
   );
-  
-  const messages = threadMessages?.results ? toUIMessages(threadMessages.results) : [];
-  
-  const sendMessageMutation = useMutation(api.streaming.streamStoryAsynchronously)
-    .withOptimisticUpdate(optimisticallySendMessage(api.streaming.listThreadMessages));
+
+  const messages = threadMessages?.results
+    ? toUIMessages(threadMessages.results)
+    : [];
+
+  const sendMessageMutation = useMutation(
+    api.streaming.streamStoryAsynchronously,
+  ).withOptimisticUpdate(
+    optimisticallySendMessage(api.streaming.listThreadMessages),
+  );
 }
 ```
 
 Key features:
+
 - `useThreadMessages` - Native hook for streaming messages
 - `toUIMessages` - Converts messages to UI-friendly format
 - `optimisticallySendMessage` - Immediate UI feedback
@@ -95,7 +114,7 @@ import { useSmoothText } from "@convex-dev/agent/react";
 
 function StreamingMessage({ content, isStreaming }) {
   const [visibleText] = useSmoothText(content);
-  
+
   return (
     <div className="relative">
       <MarkdownMessage content={visibleText} />
@@ -121,17 +140,12 @@ function StreamingMessage({ content, isStreaming }) {
 ### Basic Chat Implementation
 
 ```typescript
-const {
-  messages,
-  isStreaming,
-  threadId,
-  sendMessage,
-  stopStreaming,
-} = useConvexStreamingChat({
-  onComplete: (threadId) => {
-    console.log('Message complete', threadId);
-  }
-});
+const { messages, isStreaming, threadId, sendMessage, stopStreaming } =
+  useConvexStreamingChat({
+    onComplete: (threadId) => {
+      console.log("Message complete", threadId);
+    },
+  });
 
 // Send a message
 await sendMessage("I had a banana for breakfast", threadId);
@@ -166,6 +180,7 @@ To migrate from the custom SSE implementation:
 ## Future Enhancements
 
 When Convex Agent fully supports token-by-token streaming:
+
 - The `generateText` call will stream tokens progressively
 - `syncStreams` will provide real-time token deltas
 - No changes needed to the React implementation

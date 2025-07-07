@@ -85,68 +85,68 @@ Here's a simple example of how to use the component:
 In convex/chat.ts:
 
 const persistentTextStreaming = new PersistentTextStreaming(
-  components.persistentTextStreaming
+components.persistentTextStreaming
 );
 
 // Create a stream using the component and store the id in the database with
 // our chat message.
 export const createChat = mutation({
-  args: {
-    prompt: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const streamId = await persistentTextStreaming.createStream(ctx);
-    const chatId = await ctx.db.insert("chats", {
-      title: "...",
-      prompt: args.prompt,
-      stream: streamId,
-    });
-    return chatId;
-  },
+args: {
+prompt: v.string(),
+},
+handler: async (ctx, args) => {
+const streamId = await persistentTextStreaming.createStream(ctx);
+const chatId = await ctx.db.insert("chats", {
+title: "...",
+prompt: args.prompt,
+stream: streamId,
+});
+return chatId;
+},
 });
 
 // Create a query that returns the chat body.
 export const getChatBody = query({
-  args: {
-    streamId: StreamIdValidator,
-  },
-  handler: async (ctx, args) => {
-    return await persistentTextStreaming.getStreamBody(
-      ctx,
-      args.streamId as StreamId
-    );
-  },
+args: {
+streamId: StreamIdValidator,
+},
+handler: async (ctx, args) => {
+return await persistentTextStreaming.getStreamBody(
+ctx,
+args.streamId as StreamId
+);
+},
 });
 
 // Create an HTTP action that generates chunks of the chat body
 // and uses the component to stream them to the client and save them to the database.
 export const streamChat = httpAction(async (ctx, request) => {
-  const body = (await request.json()) as {streamId: string};
-  const generateChat = async (ctx, request, streamId, chunkAppender) => {
-    await chunkAppender("Hi there!");
-    await chunkAppender("How are you?");
-    await chunkAppender("Pretend I'm an AI or something!");
-  };
+const body = (await request.json()) as {streamId: string};
+const generateChat = async (ctx, request, streamId, chunkAppender) => {
+await chunkAppender("Hi there!");
+await chunkAppender("How are you?");
+await chunkAppender("Pretend I'm an AI or something!");
+};
 
-  const response = await persistentTextStreaming.stream(
-    ctx,
-    request,
-    body.streamId as StreamId,
-    generateChat
-  );
+const response = await persistentTextStreaming.stream(
+ctx,
+request,
+body.streamId as StreamId,
+generateChat
+);
 
-  // Set CORS headers appropriately.
-  response.headers.set("Access-Control-Allow-Origin", "*");
-  response.headers.set("Vary", "Origin");
-  return response;
+// Set CORS headers appropriately.
+response.headers.set("Access-Control-Allow-Origin", "\*");
+response.headers.set("Vary", "Origin");
+return response;
 });
 
 You need to expose this HTTP endpoint in your backend, so in convex/http.ts:
 
 http.route({
-  path: "/chat-stream",
-  method: "POST",
-  handler: streamChat,
+path: "/chat-stream",
+method: "POST",
+handler: streamChat,
 });
 
 Finally, in your app, you can now create chats and them subscribe to them via stream and/or database query as optimal:
@@ -154,10 +154,10 @@ Finally, in your app, you can now create chats and them subscribe to them via st
 // chat-input.tsx, maybe?
 const createChat = useMutation(api.chat.createChat);
 const formSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const chatId = await createChat({
-    prompt: inputValue,
-  });
+e.preventDefault();
+const chatId = await createChat({
+prompt: inputValue,
+});
 };
 
 // chat-message.tsx, maybe?
@@ -167,10 +167,10 @@ import { useStream } from "@convex-dev/persistent-text-streaming/react";
 
 // In our component:
 const { text, status } = useStream(
-  api.chat.getChatBody, // The query to call for the full stream body
-  new URL(`${convexSiteUrl}/chat-stream`), // The HTTP endpoint for streaming
-  driven, // True if this browser session created this chat and should generate the stream
-  chat.streamId as StreamId // The streamId from the chat database record
+api.chat.getChatBody, // The query to call for the full stream body
+new URL(`${convexSiteUrl}/chat-stream`), // The HTTP endpoint for streaming
+driven, // True if this browser session created this chat and should generate the stream
+chat.streamId as StreamId // The streamId from the chat database record
 );
 
 Design Philosophy#

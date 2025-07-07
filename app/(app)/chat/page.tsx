@@ -159,14 +159,14 @@ const ConfirmationBubble = memo(
     isStreaming,
   }: any) => {
     // Performance monitoring in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.log(`[ConfirmationBubble] Rendering ${confirmId}`, {
         isConfirmed,
         isRejected,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
-    
+
     if (isConfirmed) {
       return (
         <div className="max-w-[80%] px-4 py-2 rounded-2xl bg-green-50/50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 shadow-sm">
@@ -268,7 +268,7 @@ const ConfirmationBubble = memo(
       prevProps.isStreaming === nextProps.isStreaming &&
       JSON.stringify(prevProps.args) === JSON.stringify(nextProps.args)
     );
-  }
+  },
 );
 
 ConfirmationBubble.displayName = "ConfirmationBubble";
@@ -591,22 +591,35 @@ export default function Chat() {
         }
       }
 
-      // If no timestamp from toolCallId, use content hash with message index as fallback
+      // If no timestamp from toolCallId, try to create a deterministic ID from the content
+      // This ensures the same ID is generated even after refresh
       if (!timestamp) {
-        const contentHash =
-          `${args.mealType}-${args.totalCalories}-${foodNames}`
-            .split("")
-            .reduce((a, b) => {
-              a = (a << 5) - a + b.charCodeAt(0);
-              return a & a;
-            }, 0);
-        const fallbackId = `confirm-${Math.abs(contentHash)}-${messageIndex}`;
-        logger.info("[Chat] Generating confirmation ID:", {
+        // Create a deterministic hash from the food data that will be consistent across refreshes
+        const dataString = JSON.stringify({
+          mealType: args.mealType,
+          totalCalories: args.totalCalories,
+          totalProtein: args.totalProtein,
+          totalCarbs: args.totalCarbs,
+          totalFat: args.totalFat,
+          items: args.items?.map((item: any) => ({
+            name: item.name,
+            quantity: item.quantity,
+            calories: item.calories,
+          })),
+        });
+
+        const hash = dataString.split("").reduce((a, b) => {
+          a = (a << 5) - a + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+
+        const fallbackId = `confirm-fallback-${Math.abs(hash)}`;
+        logger.info("[Chat] Generating fallback confirmation ID:", {
           toolCallId: toolCallId || "none",
           fallbackId,
           mealType: args.mealType,
           totalCalories: args.totalCalories,
-          foodItems: args.items,
+          foodItems: args.items?.map((item: any) => item.name),
         });
         return fallbackId;
       }
@@ -617,7 +630,7 @@ export default function Chat() {
         toolCallId,
         timestamp,
         confirmId,
-        foodItems: args.items,
+        foodItems: args.items?.map((item: any) => item.name),
       });
       return confirmId;
     },
@@ -636,9 +649,7 @@ export default function Chat() {
 
     // If threadMessages is empty, this is a new thread
     if (threadMessages.length === 0) {
-      logger.info(
-        `[Chat] New thread with no messages in database`,
-      );
+      logger.info(`[Chat] New thread with no messages in database`);
       setSyncedThreadId(threadId);
       setHasLoadedHistory(true);
       // Don't overwrite existing messages (like greeting) with empty array
@@ -658,6 +669,8 @@ export default function Chat() {
           messageContent: msg.content.substring(0, 50),
           toolCallCount: msg.toolCalls.length,
           toolNames: msg.toolCalls.map((tc: any) => tc.toolName),
+          toolCallIds: msg.toolCalls.map((tc: any) => tc.toolCallId),
+          firstToolCall: msg.toolCalls[0],
         });
       }
 
@@ -690,7 +703,11 @@ export default function Chat() {
 
     logger.info("[Chat] Syncing confirmed bubbles from database:", {
       count: confirmedBubblesFromDB.length,
-      bubbles: confirmedBubblesFromDB,
+      bubbles: confirmedBubblesFromDB.map((b) => ({
+        confirmationId: b.confirmationId,
+        status: b.status,
+        foodDescription: b.foodDescription,
+      })),
     });
 
     // Add confirmed/rejected bubbles from database
@@ -706,7 +723,10 @@ export default function Chat() {
     });
 
     if (confirmed.size > 0) {
-      console.log("[Chat] Adding confirmed IDs from DB:", Array.from(confirmed));
+      console.log(
+        "[Chat] Adding confirmed IDs from DB:",
+        Array.from(confirmed),
+      );
       setConfirmedFoodLogs((prev) => new Set([...prev, ...confirmed]));
     }
     if (rejected.size > 0) {
@@ -731,32 +751,35 @@ export default function Chat() {
       const now = new Date();
       const next330AM = new Date();
       next330AM.setHours(3, 30, 0, 0);
-      
+
       // If it's already past 3:30 AM today, set for tomorrow
       if (now > next330AM) {
         next330AM.setDate(next330AM.getDate() + 1);
       }
-      
+
       return next330AM.getTime() - now.getTime();
     };
 
     // Set timer for 3:30 AM refresh
     const timeUntilRefresh = getTimeUntilRefresh();
-    logger.info('[Chat] Setting auto-refresh timer', {
+    logger.info("[Chat] Setting auto-refresh timer", {
       timeUntilRefresh: `${Math.floor(timeUntilRefresh / 1000 / 60 / 60)} hours ${Math.floor((timeUntilRefresh / 1000 / 60) % 60)} minutes`,
-      refreshAt: new Date(Date.now() + timeUntilRefresh).toLocaleString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZoneName: 'short'
-      })
+      refreshAt: new Date(Date.now() + timeUntilRefresh).toLocaleString(
+        "en-US",
+        {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+          timeZoneName: "short",
+        },
+      ),
     });
 
     const refreshTimer = setTimeout(() => {
-      logger.info('[Chat] Auto-refreshing at 3:30 AM...');
+      logger.info("[Chat] Auto-refreshing at 3:30 AM...");
       window.location.reload();
     }, timeUntilRefresh);
 
@@ -770,25 +793,28 @@ export default function Chat() {
   // Warning system - separate effect with ref to track if warning was shown
   const warningShownRef = useRef(false);
   const lastMessageTimeRef = useRef<number | null>(null);
-  
+
   useEffect(() => {
     const checkWarningTime = () => {
       const now = new Date();
       const hours = now.getHours();
       const minutes = now.getMinutes();
-      
+
       if (hours === 3 && minutes >= 25 && minutes < 30) {
         // Check if user was active in last 5 minutes
-        if (lastMessageTimeRef.current && Date.now() - lastMessageTimeRef.current < 5 * 60 * 1000) {
+        if (
+          lastMessageTimeRef.current &&
+          Date.now() - lastMessageTimeRef.current < 5 * 60 * 1000
+        ) {
           const minutesLeft = 30 - minutes;
           // Show warning only once
           if (!warningShownRef.current) {
             const warningMessage: Message = {
               role: "assistant",
-              content: `🌙 Heads up! Chat will refresh in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} to start the new day fresh.`,
+              content: `🌙 Heads up! Chat will refresh in ${minutesLeft} minute${minutesLeft > 1 ? "s" : ""} to start the new day fresh.`,
               isStreaming: false,
             };
-            setMessages(prev => [...prev, warningMessage]);
+            setMessages((prev) => [...prev, warningMessage]);
             warningShownRef.current = true;
           }
         }
@@ -800,7 +826,7 @@ export default function Chat() {
 
     // Check once on mount
     checkWarningTime();
-    
+
     // Then check every minute during potential warning window
     const interval = setInterval(checkWarningTime, 60000);
     return () => clearInterval(interval);
@@ -1222,17 +1248,19 @@ export default function Chat() {
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [input]);
 
   // Detect if mobile device
-  const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMobile =
+    typeof navigator !== "undefined" &&
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   // Handle keyboard events in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       if (isMobile) {
         // Mobile: Enter creates newline (default behavior)
         return;
@@ -1405,7 +1433,7 @@ export default function Chat() {
     // Don't add message here - the streaming hook will add it
     setInput("");
     lastSentMessageRef.current = { content: messageContent, timestamp: now };
-    
+
     // Auto-scroll to bottom immediately when user sends message
     requestAnimationFrame(() => {
       scrollToBottom();
@@ -1749,383 +1777,392 @@ export default function Chat() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 bottom-16 bg-background flex flex-col" style={{ overscrollBehavior: "contain" }}>
-      {/* Fixed Header Container */}
-      <div className="flex-shrink-0">
-        {/* Header */}
-        <div className="border-b border-border">
-          <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-            <div>
-              <h1 className="text-foreground flex items-center gap-3 ml-4">
-                <img src="/logo.svg" alt="Bob" className="h-[60px] w-[60px]" />
-                <span
-                  className="text-3xl"
-                  style={{
-                    fontFamily: '"Fugaz One", Inter, sans-serif',
-                    fontWeight: 400,
-                    fontStyle: "normal",
-                  }}
-                >
-                  BOB
-                </span>
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* DEV ONLY: Emergency Complete Button */}
-              {process.env.NODE_ENV === "development" && isOnboarding && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    setIsLoading(true);
-                    try {
-                      const result = await forceCompleteOnboarding();
-                      if (result.error) {
-                        alert(`Error: ${result.error}`);
-                      } else {
-                        window.location.reload();
-                      }
-                    } catch (error) {
-                      logger.error("Error forcing completion:", error);
-                      alert("Failed to force complete");
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                  disabled={isStreaming}
-                  className="text-xs text-red-500"
-                >
-                  🚨 Force Complete
-                </Button>
-              )}
-              {/* DEV ONLY: Reset Onboarding Button */}
-              {process.env.NODE_ENV === "development" && !isOnboarding && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    if (
-                      confirm(
-                        "Reset onboarding? This will restart the setup process but keep your data.",
-                      )
-                    ) {
+      <div
+        className="fixed inset-x-0 top-0 bottom-16 bg-background flex flex-col"
+        style={{ overscrollBehavior: "contain" }}
+      >
+        {/* Fixed Header Container */}
+        <div className="flex-shrink-0">
+          {/* Header */}
+          <div className="border-b border-border">
+            <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
+              <div>
+                <h1 className="text-foreground flex items-center gap-3 ml-4">
+                  <img
+                    src="/logo.svg"
+                    alt="Bob"
+                    className="h-[60px] w-[60px]"
+                  />
+                  <span
+                    className="text-3xl"
+                    style={{
+                      fontFamily: '"Fugaz One", Inter, sans-serif',
+                      fontWeight: 400,
+                      fontStyle: "normal",
+                    }}
+                  >
+                    BOB
+                  </span>
+                </h1>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* DEV ONLY: Emergency Complete Button */}
+                {process.env.NODE_ENV === "development" && isOnboarding && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
                       setIsLoading(true);
                       try {
-                        await resetOnboarding();
-                        // Refresh the page to restart
-                        window.location.reload();
+                        const result = await forceCompleteOnboarding();
+                        if (result.error) {
+                          alert(`Error: ${result.error}`);
+                        } else {
+                          window.location.reload();
+                        }
                       } catch (error) {
-                        logger.error("Error resetting onboarding:", error);
-                        alert("Failed to reset onboarding");
+                        logger.error("Error forcing completion:", error);
+                        alert("Failed to force complete");
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={isStreaming}
+                    className="text-xs text-red-500"
+                  >
+                    🚨 Force Complete
+                  </Button>
+                )}
+                {/* DEV ONLY: Reset Onboarding Button */}
+                {process.env.NODE_ENV === "development" && !isOnboarding && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (
+                        confirm(
+                          "Reset onboarding? This will restart the setup process but keep your data.",
+                        )
+                      ) {
+                        setIsLoading(true);
+                        try {
+                          await resetOnboarding();
+                          // Refresh the page to restart
+                          window.location.reload();
+                        } catch (error) {
+                          logger.error("Error resetting onboarding:", error);
+                          alert("Failed to reset onboarding");
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }
+                    }}
+                    disabled={isStreaming}
+                    className="text-xs text-muted-foreground"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Reset Onboarding
+                  </Button>
+                )}
+                <ThemeToggle
+                  onThemeChange={async (theme) => {
+                    await updateTheme({ darkMode: theme === "dark" });
+                  }}
+                />
+                <Button
+                  onClick={async () => {
+                    // Check if there are any unconfirmed food logs across ALL messages
+                    const hasUnconfirmedFoodLogs = messages.some((msg, idx) => {
+                      const confirmCall = msg.toolCalls?.find(
+                        (tc) =>
+                          tc.toolName === "confirmFood" ||
+                          tc.toolName === "analyzeAndConfirmPhoto",
+                      );
+                      if (
+                        confirmCall &&
+                        confirmCall.args &&
+                        !confirmCall.args.error
+                      ) {
+                        const argsWithToolCallId = {
+                          ...confirmCall.args,
+                          _toolCallId: confirmCall.toolCallId,
+                        };
+                        const confirmId = getConfirmationId(
+                          argsWithToolCallId,
+                          idx,
+                        );
+                        return (
+                          !confirmedFoodLogs.has(confirmId) &&
+                          !rejectedFoodLogs.has(confirmId)
+                        );
+                      }
+                      return false;
+                    });
+
+                    let confirmMessage =
+                      "Start a new chat? Your food logs will be saved.";
+                    if (hasUnconfirmedFoodLogs) {
+                      confirmMessage =
+                        "You have unconfirmed food items. Starting a new chat will close these pending confirmations. Continue?";
+                    }
+
+                    if (confirm(confirmMessage)) {
+                      setIsLoading(true);
+                      try {
+                        // Start new session
+                        await startNewChatSession();
+
+                        // Create a new thread, passing the current thread ID for summarization
+                        const newThreadResult = await createNewThread({
+                          previousThreadId: threadId || undefined,
+                        });
+
+                        // Clear messages with context-aware greeting
+                        let greeting = `Hey ${profile?.name || "there"}! Fresh chat started! `;
+                        if (newThreadResult.foodLogsCount > 0) {
+                          greeting += `I can see you've logged ${newThreadResult.foodLogsCount} items today. `;
+                        }
+                        greeting += `What can I help you with?`;
+
+                        setMessages([
+                          {
+                            role: "assistant",
+                            content: greeting,
+                          },
+                        ]);
+
+                        // Set the new thread ID
+                        setThreadId(newThreadResult.threadId);
+
+                        // Save the new thread ID to preferences so it persists across refreshes
+                        logger.info(
+                          `[Chat] Saving new thread to preferences: ${newThreadResult.threadId}`,
+                        );
+                        await saveAgentThreadId({
+                          threadId: newThreadResult.threadId,
+                        });
+                        logger.info(`[Chat] Thread saved successfully`);
+
+                        // Save the greeting to Convex so it persists
+                        logger.info(
+                          "[Chat] Saving New Chat greeting to thread",
+                        );
+                        try {
+                          await saveMessage({
+                            threadId: newThreadResult.threadId,
+                            role: "assistant",
+                            content: greeting,
+                          });
+                        } catch (err) {
+                          logger.error(
+                            "[Chat] Failed to save New Chat greeting:",
+                            err,
+                          );
+                        }
+
+                        // Clear confirmations for new thread (they're thread-specific)
+                        setConfirmedFoodLogs(new Set());
+                        setRejectedFoodLogs(new Set());
+                        // Don't clear localStorage - let the save effect handle it with new thread context
+                        // Enable loading thread messages for the new thread
+                        setShouldLoadThreadMessages(true);
+                      } catch (error) {
+                        logger.error("Error starting new chat:", error);
                       } finally {
                         setIsLoading(false);
                       }
                     }
                   }}
                   disabled={isStreaming}
-                  className="text-xs text-muted-foreground"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-muted-foreground transition-opacity hover:opacity-70"
                 >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Reset Onboarding
+                  <PenSquare className="h-5 w-5" />
+                  <span className="sr-only">New Chat</span>
                 </Button>
-              )}
-              <ThemeToggle
-                onThemeChange={async (theme) => {
-                  await updateTheme({ darkMode: theme === "dark" });
-                }}
-              />
-              <Button
-                onClick={async () => {
-                  // Check if there are any unconfirmed food logs across ALL messages
-                  const hasUnconfirmedFoodLogs = messages.some((msg, idx) => {
-                    const confirmCall = msg.toolCalls?.find(
-                      (tc) =>
-                        tc.toolName === "confirmFood" ||
-                        tc.toolName === "analyzeAndConfirmPhoto",
-                    );
-                    if (
-                      confirmCall &&
-                      confirmCall.args &&
-                      !confirmCall.args.error
-                    ) {
-                      const argsWithToolCallId = {
-                        ...confirmCall.args,
-                        _toolCallId: confirmCall.toolCallId,
-                      };
-                      const confirmId = getConfirmationId(
-                        argsWithToolCallId,
-                        idx,
-                      );
-                      return (
-                        !confirmedFoodLogs.has(confirmId) &&
-                        !rejectedFoodLogs.has(confirmId)
-                      );
-                    }
-                    return false;
-                  });
-
-                  let confirmMessage =
-                    "Start a new chat? Your food logs will be saved.";
-                  if (hasUnconfirmedFoodLogs) {
-                    confirmMessage =
-                      "You have unconfirmed food items. Starting a new chat will close these pending confirmations. Continue?";
-                  }
-
-                  if (confirm(confirmMessage)) {
-                    setIsLoading(true);
-                    try {
-                      // Start new session
-                      await startNewChatSession();
-
-                      // Create a new thread, passing the current thread ID for summarization
-                      const newThreadResult = await createNewThread({
-                        previousThreadId: threadId || undefined,
-                      });
-
-                      // Clear messages with context-aware greeting
-                      let greeting = `Hey ${profile?.name || "there"}! Fresh chat started! `;
-                      if (newThreadResult.foodLogsCount > 0) {
-                        greeting += `I can see you've logged ${newThreadResult.foodLogsCount} items today. `;
-                      }
-                      greeting += `What can I help you with?`;
-
-                      setMessages([
-                        {
-                          role: "assistant",
-                          content: greeting,
-                        },
-                      ]);
-
-                      // Set the new thread ID
-                      setThreadId(newThreadResult.threadId);
-
-                      // Save the new thread ID to preferences so it persists across refreshes
-                      logger.info(
-                        `[Chat] Saving new thread to preferences: ${newThreadResult.threadId}`,
-                      );
-                      await saveAgentThreadId({
-                        threadId: newThreadResult.threadId,
-                      });
-                      logger.info(`[Chat] Thread saved successfully`);
-
-                      // Save the greeting to Convex so it persists
-                      logger.info("[Chat] Saving New Chat greeting to thread");
-                      try {
-                        await saveMessage({
-                          threadId: newThreadResult.threadId,
-                          role: "assistant",
-                          content: greeting,
-                        });
-                      } catch (err) {
-                        logger.error(
-                          "[Chat] Failed to save New Chat greeting:",
-                          err,
-                        );
-                      }
-
-                      // Clear confirmations for new thread (they're thread-specific)
-                      setConfirmedFoodLogs(new Set());
-                      setRejectedFoodLogs(new Set());
-                      // Don't clear localStorage - let the save effect handle it with new thread context
-                      // Enable loading thread messages for the new thread
-                      setShouldLoadThreadMessages(true);
-                    } catch (error) {
-                      logger.error("Error starting new chat:", error);
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }
-                }}
-                disabled={isStreaming}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-muted-foreground transition-opacity hover:opacity-70"
-              >
-                <PenSquare className="h-5 w-5" />
-                <span className="sr-only">New Chat</span>
-              </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Status Cards - Always visible */}
-        <div className="border-b border-border">
-          <div className="max-w-lg mx-auto px-4 py-2 space-y-1.5">
-            {/* Weight Cards Row */}
-            <div className="grid grid-cols-2 gap-1.5">
-              {/* Goal Card */}
-              <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
-                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <Target className="h-3 w-3" />
-                  Goal
+          {/* Status Cards - Always visible */}
+          <div className="border-b border-border">
+            <div className="max-w-lg mx-auto px-4 py-2 space-y-1.5">
+              {/* Weight Cards Row */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {/* Goal Card */}
+                <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
+                  <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                    <Target className="h-3 w-3" />
+                    Goal
+                  </div>
+                  <div className="text-lg font-bold text-card-foreground">
+                    {profile?.goal
+                      ? profile.goal === "cut"
+                        ? "Cut"
+                        : profile.goal === "gain"
+                          ? "Gain"
+                          : "Maintain"
+                      : "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {profile?.targetWeight
+                      ? `${profile.targetWeight} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
+                      : "Set goal"}
+                  </div>
                 </div>
-                <div className="text-lg font-bold text-card-foreground">
-                  {profile?.goal
-                    ? profile.goal === "cut"
-                      ? "Cut"
-                      : profile.goal === "gain"
-                        ? "Gain"
-                        : "Maintain"
-                    : "—"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {profile?.targetWeight
-                    ? `${profile.targetWeight} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
-                    : "Set goal"}
+
+                {/* Current Weight Card */}
+                <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
+                  <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                    <Scale className="h-3 w-3" />
+                    Current
+                  </div>
+                  <div className="text-lg font-bold text-card-foreground">
+                    {latestWeight?.weight || profile?.currentWeight || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {latestWeight?.weight || profile?.currentWeight
+                      ? latestWeight?.unit ||
+                        (profile?.preferredUnits === "imperial" ? "lbs" : "kg")
+                      : ""}
+                  </div>
                 </div>
               </div>
 
-              {/* Current Weight Card */}
-              <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
-                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <Scale className="h-3 w-3" />
-                  Current
+              {/* Nutrition Card - Full Width */}
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs text-muted-foreground text-center mb-2 flex items-center justify-center gap-1">
+                  <Flame className="h-3 w-3" />
+                  Nutrition
                 </div>
-                <div className="text-lg font-bold text-card-foreground">
-                  {latestWeight?.weight || profile?.currentWeight || "—"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {latestWeight?.weight || profile?.currentWeight
-                    ? latestWeight?.unit ||
-                      (profile?.preferredUnits === "imperial" ? "lbs" : "kg")
-                    : ""}
-                </div>
-              </div>
-            </div>
-
-            {/* Nutrition Card - Full Width */}
-            <div className="border border-border rounded-lg p-3">
-              <div className="text-xs text-muted-foreground text-center mb-2 flex items-center justify-center gap-1">
-                <Flame className="h-3 w-3" />
-                Nutrition
-              </div>
-              <div className="space-y-0.5">
-                {/* Calories - Always show */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Flame className="h-3 w-3" />
-                    Cals
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs font-semibold",
-                      todayStats && profile
-                        ? getProgressColor(
-                            todayStats.calories,
-                            profile.dailyCalorieTarget,
-                          )
-                        : "",
-                    )}
-                  >
-                    {isStealthMode
-                      ? todayStats &&
-                        profile &&
-                        todayStats.calories > profile.dailyCalorieTarget
-                        ? "Over"
-                        : "OK"
-                      : profile?.dailyCalorieTarget
-                        ? `${Math.round(todayStats?.calories || 0)}/${profile.dailyCalorieTarget}`
-                        : "—"}
-                  </span>
-                </div>
-
-                {/* Protein - Show based on preference */}
-                {preferences?.showProtein !== false && (
+                <div className="space-y-0.5">
+                  {/* Calories - Always show */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Dumbbell className="h-3 w-3" />
-                      Protein
+                      <Flame className="h-3 w-3" />
+                      Cals
                     </span>
                     <span
                       className={cn(
                         "text-xs font-semibold",
-                        todayStats && profile?.proteinTarget
+                        todayStats && profile
                           ? getProgressColor(
-                              todayStats.protein,
-                              profile.proteinTarget,
+                              todayStats.calories,
+                              profile.dailyCalorieTarget,
                             )
-                          : "text-muted-foreground",
+                          : "",
                       )}
                     >
                       {isStealthMode
                         ? todayStats &&
                           profile &&
-                          todayStats.protein < profile.proteinTarget * 0.8
-                          ? "Low"
+                          todayStats.calories > profile.dailyCalorieTarget
+                          ? "Over"
                           : "OK"
-                        : profile?.proteinTarget
-                          ? `${Math.round(todayStats?.protein || 0)}g/${profile.proteinTarget}g`
+                        : profile?.dailyCalorieTarget
+                          ? `${Math.round(todayStats?.calories || 0)}/${profile.dailyCalorieTarget}`
                           : "—"}
                     </span>
                   </div>
-                )}
 
-                {/* Carbs - Show based on preference */}
-                {!isStealthMode && preferences?.showCarbs !== false && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Wheat className="h-3 w-3" />
-                      Carbs
-                    </span>
-                    <span
-                      className={cn(
-                        "text-xs font-semibold",
-                        todayStats && profile?.carbsTarget
-                          ? getProgressColor(
-                              todayStats.carbs,
-                              profile.carbsTarget,
-                            )
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {profile?.carbsTarget
-                        ? `${Math.round(todayStats?.carbs || 0)}g/${profile.carbsTarget}g`
-                        : "—"}
-                    </span>
-                  </div>
-                )}
+                  {/* Protein - Show based on preference */}
+                  {preferences?.showProtein !== false && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Dumbbell className="h-3 w-3" />
+                        Protein
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-semibold",
+                          todayStats && profile?.proteinTarget
+                            ? getProgressColor(
+                                todayStats.protein,
+                                profile.proteinTarget,
+                              )
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {isStealthMode
+                          ? todayStats &&
+                            profile &&
+                            todayStats.protein < profile.proteinTarget * 0.8
+                            ? "Low"
+                            : "OK"
+                          : profile?.proteinTarget
+                            ? `${Math.round(todayStats?.protein || 0)}g/${profile.proteinTarget}g`
+                            : "—"}
+                      </span>
+                    </div>
+                  )}
 
-                {/* Fats - Show based on preference */}
-                {!isStealthMode && preferences?.showFats !== false && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Droplet className="h-3 w-3" />
-                      Fats
-                    </span>
-                    <span
-                      className={cn(
-                        "text-xs font-semibold",
-                        todayStats &&
-                          (profile?.fatTarget || profile?.fatTarget === 0)
-                          ? getProgressColor(
-                              todayStats.fat,
-                              profile.fatTarget || 65,
-                            )
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {profile?.fatTarget !== undefined
-                        ? `${Math.round(todayStats?.fat || 0)}g/${profile.fatTarget}g`
-                        : "—"}
-                    </span>
-                  </div>
-                )}
+                  {/* Carbs - Show based on preference */}
+                  {!isStealthMode && preferences?.showCarbs !== false && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Wheat className="h-3 w-3" />
+                        Carbs
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-semibold",
+                          todayStats && profile?.carbsTarget
+                            ? getProgressColor(
+                                todayStats.carbs,
+                                profile.carbsTarget,
+                              )
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {profile?.carbsTarget
+                          ? `${Math.round(todayStats?.carbs || 0)}g/${profile.carbsTarget}g`
+                          : "—"}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Fats - Show based on preference */}
+                  {!isStealthMode && preferences?.showFats !== false && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Droplet className="h-3 w-3" />
+                        Fats
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-semibold",
+                          todayStats &&
+                            (profile?.fatTarget || profile?.fatTarget === 0)
+                            ? getProgressColor(
+                                todayStats.fat,
+                                profile.fatTarget || 65,
+                              )
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {profile?.fatTarget !== undefined
+                          ? `${Math.round(todayStats?.fat || 0)}g/${profile.fatTarget}g`
+                          : "—"}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Chat Messages - Scrollable area */}
-      <div className="flex-1 relative overflow-hidden">
+        {/* Chat Messages - Scrollable area */}
+        <div className="flex-1 relative overflow-hidden">
           <div
             ref={scrollAreaRef}
             className="h-full overflow-y-auto overflow-x-hidden"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             style={{
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehavior: 'none'
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "none",
             }}
           >
             <div className="max-w-lg mx-auto px-4 pt-4 space-y-4 relative">
@@ -2174,9 +2211,12 @@ export default function Chat() {
                           return null;
                         }
                         // Pass toolCallId to getConfirmationId for consistent IDs across devices
+                        // For messages loaded from DB, toolCallId might be a property of the toolCall object
+                        const toolCallId =
+                          confirmFoodCall.toolCallId || confirmFoodCall.id;
                         const argsWithToolCallId = {
                           ...args,
-                          _toolCallId: confirmFoodCall.toolCallId,
+                          _toolCallId: toolCallId,
                         };
                         const confirmId = getConfirmationId(
                           argsWithToolCallId,
@@ -2186,31 +2226,39 @@ export default function Chat() {
                         // Debug log to understand the ID generation
                         logger.info("[Chat] Generating confirmation ID:", {
                           toolCallId: confirmFoodCall.toolCallId,
+                          hasToolCallId: !!confirmFoodCall.toolCallId,
+                          toolCallIdParts:
+                            confirmFoodCall.toolCallId?.split("_"),
                           index,
                           confirmId,
                           foodItems: args.items?.map((item: any) => item.name),
+                          mealType: args.mealType,
+                          totalCalories: args.totalCalories,
                         });
-                        
+
                         // Check if we're still loading confirmed bubbles from database
                         // If so, check if this bubble exists in the DB to prevent flash of pending state
-                        const isLoadingBubbles = confirmedBubblesFromDB === undefined && threadId;
+                        const isLoadingBubbles =
+                          confirmedBubblesFromDB === undefined && threadId;
                         let isConfirmedInDB = false;
                         let isRejectedInDB = false;
-                        
+
                         if (confirmedBubblesFromDB) {
                           const bubbleInDB = confirmedBubblesFromDB.find(
-                            (b) => b.confirmationId === confirmId
+                            (b) => b.confirmationId === confirmId,
                           );
                           if (bubbleInDB) {
                             isConfirmedInDB = bubbleInDB.status === "confirmed";
                             isRejectedInDB = bubbleInDB.status === "rejected";
                           }
                         }
-                        
+
                         // Use local state if available, otherwise use DB state
-                        const isConfirmed = confirmedFoodLogs.has(confirmId) || isConfirmedInDB;
-                        const isRejected = rejectedFoodLogs.has(confirmId) || isRejectedInDB;
-                        
+                        const isConfirmed =
+                          confirmedFoodLogs.has(confirmId) || isConfirmedInDB;
+                        const isRejected =
+                          rejectedFoodLogs.has(confirmId) || isRejectedInDB;
+
                         // Enhanced logging for debugging persistence
                         console.log("[Chat] Bubble state check:", {
                           confirmId,
@@ -2222,8 +2270,12 @@ export default function Chat() {
                           messageIndex: index,
                           threadId,
                           dbLoaded: confirmedBubblesFromDB !== undefined,
+                          bubbleIdsInDB:
+                            confirmedBubblesFromDB?.map(
+                              (b) => b.confirmationId,
+                            ) || [],
+                          foodDescription: args.description,
                         });
-                        
 
                         // Always show confirmations - persistence handles old ones
                         // Don't filter based on date here since we already handle that in loading
@@ -2485,9 +2537,10 @@ export default function Chat() {
                         : message.imageUrl || null;
 
                     // Generate stable key based on content hash or toolCallId
-                    const messageKey = message.toolCalls?.[0]?.toolCallId || 
+                    const messageKey =
+                      message.toolCalls?.[0]?.toolCallId ||
                       `msg-${message.role}-${message.content.substring(0, 50)}-${index}`;
-                    
+
                     return (
                       <div
                         key={messageKey}
@@ -2531,13 +2584,16 @@ export default function Chat() {
           </div>
         </div>
 
-      {/* Input Area - Fixed at bottom */}
-      <div
-        ref={inputAreaRef}
-        className="absolute bottom-0 left-0 right-0 bg-background overflow-hidden"
-        style={{ maxHeight: "200px", zIndex: 10 }}
-      >
-          <div className="max-w-lg mx-auto px-4 pt-2" style={{ paddingBottom: "10px" }}>
+        {/* Input Area - Fixed at bottom */}
+        <div
+          ref={inputAreaRef}
+          className="absolute bottom-0 left-0 right-0 bg-background overflow-hidden"
+          style={{ maxHeight: "200px", zIndex: 10 }}
+        >
+          <div
+            className="max-w-lg mx-auto px-4 pt-2"
+            style={{ paddingBottom: "10px" }}
+          >
             <form
               onSubmit={handleSubmit}
               className="relative focus:outline-none"
@@ -2613,10 +2669,10 @@ export default function Chat() {
                     rows={1}
                     className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none focus:outline-none focus:ring-0 text-base min-w-0 resize-none leading-relaxed"
                     disabled={isStreaming}
-                    style={{ 
-                      WebkitAppearance: "none", 
+                    style={{
+                      WebkitAppearance: "none",
                       overflow: "hidden",
-                      maxHeight: "120px"
+                      maxHeight: "120px",
                     }}
                   />
 
@@ -2658,10 +2714,12 @@ export default function Chat() {
           </div>
         </div>
       </div>
-      
+
       {/* Scroll to bottom button - Fixed positioning with dynamic bottom */}
-      <div className="fixed bottom-0 left-0 right-0 pointer-events-none" 
-           style={{ bottom: `${(inputAreaHeight || 120) + 64 + 60}px` }}>
+      <div
+        className="fixed bottom-0 left-0 right-0 pointer-events-none"
+        style={{ bottom: `${(inputAreaHeight || 120) + 64 + 60}px` }}
+      >
         <div className="max-w-lg mx-auto px-4 relative">
           <AnimatePresence>
             {!isAtBottom && (
@@ -2683,7 +2741,7 @@ export default function Chat() {
           </AnimatePresence>
         </div>
       </div>
-      
+
       {/* Bottom Navigation - Outside the main container */}
       <BottomNav />
     </>

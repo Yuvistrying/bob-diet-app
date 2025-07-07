@@ -28,11 +28,11 @@ export async function ensureHasAccess(
 ) {
   const user = await Users.getCurrentUser(ctx);
   const conversation = await ctx.db.get(conversationId);
-  
+
   if (conversation === null || !conversation.members.includes(user._id)) {
     throw new Error("Unauthorized");
   }
-  
+
   return conversation;
 }
 
@@ -61,6 +61,7 @@ While these queries and mutations run in the same transaction, and will give con
 Audit your calls to `ctx.runQuery` and `ctx.runMutation` in queries and mutations. Unless one of the exceptions below applies, replace them with a plain TypeScript function.
 
 Exceptions:
+
 - If you're using components, these require `ctx.runQuery` or `ctx.runMutation`.
 - If you want partial rollback on an error, you will want `ctx.runMutation` instead of a plain TypeScript function.
 
@@ -102,7 +103,7 @@ Alternatively, make sure that `api` from `_generated/api.ts` is never used in yo
 
 ```typescript
 // ✅ Using `internal`
-import { MutationCtx } from './_generated/server';
+import { MutationCtx } from "./_generated/server";
 
 async function sendMessageHelper(
   ctx: MutationCtx,
@@ -134,7 +135,7 @@ crons.daily(
   "send daily reminder",
   { hourUTC: 17, minuteUTC: 30 },
   internal.messages.sendInternalMessage,
-  { author: "System", body: "Share your daily update!" }
+  { author: "System", body: "Share your daily update!" },
 );
 ```
 
