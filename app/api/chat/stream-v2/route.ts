@@ -551,7 +551,7 @@ export async function POST(req: Request) {
                   }
                 }
 
-                // Generate confirmation IDs for confirmation tool calls
+                // Extract confirmation IDs from tool results
                 const confirmationIds: Record<string, string> = {};
                 if (finalToolCalls && finalToolCalls.length > 0) {
                   finalToolCalls.forEach((tc, index) => {
@@ -559,23 +559,17 @@ export async function POST(req: Request) {
                       tc.toolName === "confirmFood" ||
                       tc.toolName === "analyzeAndConfirmPhoto"
                     ) {
-                      // Generate confirmation ID using the same logic as the client
-                      let timestamp = "";
-                      if (tc.toolCallId && tc.toolCallId.includes("_")) {
-                        const parts = tc.toolCallId.split("_");
-                        if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
-                          timestamp = parts[1];
-                        }
-                      }
-
-                      if (timestamp) {
-                        const confirmId = `confirm-${timestamp}`;
-                        confirmationIds[tc.toolCallId] = confirmId;
-                        console.log("[stream-v2] Generated confirmation ID:", {
-                          toolCallId: tc.toolCallId,
-                          confirmId,
-                          toolName: tc.toolName,
-                        });
+                      // Use the confirmationId directly from the tool's response
+                      if (tc.args?.confirmationId) {
+                        confirmationIds[tc.toolCallId] = tc.args.confirmationId;
+                        console.log(
+                          "[stream-v2] Using tool-generated confirmation ID:",
+                          {
+                            toolCallId: tc.toolCallId,
+                            confirmId: tc.args.confirmationId,
+                            toolName: tc.toolName,
+                          },
+                        );
                       }
                     }
                   });

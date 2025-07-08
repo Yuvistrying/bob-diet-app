@@ -576,68 +576,32 @@ export default function Chat() {
   }, []);
 
   // Generate a unique ID for each confirmation
-  const getConfirmationId = useCallback(
-    (args: any, messageIndex: number, messageContent?: string) => {
-      // Create a unique ID based on food content and timestamp from toolCallId if available
-      const foodNames =
-        args.items?.map((item: any) => item.name).join("-") || "";
+  const getConfirmationId = useCallback((args: any, messageIndex: number) => {
+    // Simplified fallback ID generation for backward compatibility
+    // This should rarely be used now that tools generate UUIDs
+    const dataString = JSON.stringify({
+      mealType: args.mealType,
+      totalCalories: args.totalCalories,
+      items: args.items?.map((item: any) => ({
+        name: item.name,
+        quantity: item.quantity,
+        calories: item.calories,
+      })),
+    });
 
-      // Try to extract timestamp from toolCallId first (e.g., "confirm_1751139824820_ybcyb")
-      // This ensures consistency across devices since the toolCallId is generated on the server
-      const toolCallId = args._toolCallId || args.toolCallId;
-      let timestamp = "";
-      if (toolCallId && toolCallId.includes("_")) {
-        const parts = toolCallId.split("_");
-        if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
-          timestamp = parts[1];
-        }
-      }
+    const hash = dataString.split("").reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
+      return a & a;
+    }, 0);
 
-      // If no timestamp from toolCallId, try to create a deterministic ID from the content
-      // This ensures the same ID is generated even after refresh
-      if (!timestamp) {
-        // Create a deterministic hash from the food data that will be consistent across refreshes
-        const dataString = JSON.stringify({
-          mealType: args.mealType,
-          totalCalories: args.totalCalories,
-          totalProtein: args.totalProtein,
-          totalCarbs: args.totalCarbs,
-          totalFat: args.totalFat,
-          items: args.items?.map((item: any) => ({
-            name: item.name,
-            quantity: item.quantity,
-            calories: item.calories,
-          })),
-        });
-
-        const hash = dataString.split("").reduce((a, b) => {
-          a = (a << 5) - a + b.charCodeAt(0);
-          return a & a;
-        }, 0);
-
-        const fallbackId = `confirm-fallback-${Math.abs(hash)}`;
-        logger.info("[Chat] Generating fallback confirmation ID:", {
-          toolCallId: toolCallId || "none",
-          fallbackId,
-          mealType: args.mealType,
-          totalCalories: args.totalCalories,
-          foodItems: args.items?.map((item: any) => item.name),
-        });
-        return fallbackId;
-      }
-
-      // Use timestamp-based ID for consistency across devices
-      const confirmId = `confirm-${timestamp}`;
-      logger.info("[Chat] Generating confirmation ID:", {
-        toolCallId,
-        timestamp,
-        confirmId,
-        foodItems: args.items?.map((item: any) => item.name),
-      });
-      return confirmId;
-    },
-    [],
-  );
+    const fallbackId = `confirm-fallback-${Math.abs(hash)}-${messageIndex}`;
+    logger.info("[Chat] Generating legacy fallback confirmation ID:", {
+      fallbackId,
+      reason: "No confirmationId provided by tool",
+      messageIndex,
+    });
+    return fallbackId;
+  }, []);
 
   // Load thread messages from Convex when available or thread changes
   useEffect(() => {
@@ -2214,41 +2178,58 @@ export default function Chat() {
                           );
                           return null;
                         }
-                        // First check if we have a saved confirmation ID for this tool call
-                        const toolCallId =
-                          confirmFoodCall.toolCallId || confirmFoodCall.id;
+                        // Use the confirmationId directly from args
                         let confirmId: string;
 
-                        // Check if this message has saved confirmation IDs
-                        if (
-                          message.confirmationIds &&
-                          toolCallId &&
-                          message.confirmationIds[toolCallId]
-                        ) {
-                          confirmId = message.confirmationIds[toolCallId];
-                          logger.info("[Chat] Using saved confirmation ID:", {
-                            toolCallId,
-                            confirmId,
-                            savedIds: Object.keys(message.confirmationIds),
-                            metadata:
-                              message.confirmationMetadata?.[toolCallId],
-                          });
-                        } else {
-                          // Generate confirmation ID if not saved
-                          const argsWithToolCallId = {
-                            ...args,
-                            _toolCallId: toolCallId,
-                          };
-                          confirmId = getConfirmationId(
-                            argsWithToolCallId,
-                            index,
+                        // Check if args has a confirmationId from the tool response
+                        if (args.confirmationId) {
+                          confirmId = args.confirmationId;
+                          logger.info(
+                            "[Chat] Using tool-generated confirmation ID:",
+                            {
+                              confirmId,
+                              toolCallId:
+                                confirmFoodCall.toolCallId ||
+                                confirmFoodCall.id,
+                            },
                           );
-                          logger.info("[Chat] Generated new confirmation ID:", {
-                            toolCallId,
-                            confirmId,
-                            reason: "No saved ID found",
-                            hasMetadata: !!message.confirmationMetadata,
-                          });
+                        } else {
+                          // Fallback: check saved IDs from metadata (for backward compatibility)
+                          const toolCallId =
+                            confirmFoodCall.toolCallId || confirmFoodCall.id;
+                          if (
+                            message.confirmationIds &&
+                            toolCallId &&
+                            message.confirmationIds[toolCallId]
+                          ) {
+                            confirmId = message.confirmationIds[toolCallId];
+                            logger.info(
+                              "[Chat] Using saved confirmation ID from metadata:",
+                              {
+                                toolCallId,
+                                confirmId,
+                                savedIds: Object.keys(message.confirmationIds),
+                              },
+                            );
+                          } else {
+                            // Last resort: generate ID (should rarely happen now)
+                            const argsWithToolCallId = {
+                              ...args,
+                              _toolCallId: toolCallId,
+                            };
+                            confirmId = getConfirmationId(
+                              argsWithToolCallId,
+                              index,
+                            );
+                            logger.info(
+                              "[Chat] Generated fallback confirmation ID:",
+                              {
+                                toolCallId,
+                                confirmId,
+                                reason: "No confirmationId in args or metadata",
+                              },
+                            );
+                          }
                         }
 
                         // Check if we're still loading confirmed bubbles from database

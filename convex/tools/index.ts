@@ -62,7 +62,10 @@ export function createTools(
         confidence: confidenceSchema.describe("Confidence in the estimation"),
       }),
       execute: async (args) => {
+        // Generate a proper UUID for this confirmation
+        const confirmationId = `confirm-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
         const toolCallId = `confirm_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
         await convexClient.mutation(
           api.pendingConfirmations.savePendingConfirmation,
           {
@@ -71,7 +74,12 @@ export function createTools(
             confirmationData: args,
           },
         );
-        return args;
+
+        // Return args with the confirmationId included
+        return {
+          ...args,
+          confirmationId,
+        };
       },
     });
 
@@ -224,8 +232,11 @@ export function createTools(
             confidence: analysisResult.confidence || "medium",
           };
 
-          // Save pending confirmation
+          // Generate a proper UUID for this confirmation
+          const confirmationId = `confirm-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
           const toolCallId = `confirm_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+          // Save pending confirmation
           await convexClient.mutation(
             api.pendingConfirmations.savePendingConfirmation,
             {
@@ -235,10 +246,11 @@ export function createTools(
             },
           );
 
-          // Return combined result
+          // Return combined result with confirmationId
           return {
             analysisComplete: true,
             ...confirmationData,
+            confirmationId,
           };
         } catch (error: any) {
           console.error("[analyzeAndConfirmPhoto tool] Error:", error);
