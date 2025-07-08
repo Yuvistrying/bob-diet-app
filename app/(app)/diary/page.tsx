@@ -405,7 +405,16 @@ export default function Logs() {
                             <div className="p-3">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="font-medium text-foreground">
-                                  {log.time}
+                                  {/* Display time in user's local timezone */}
+                                  {log.createdAt
+                                    ? new Date(
+                                        log.createdAt,
+                                      ).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                      })
+                                    : log.time}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   {!isStealthMode && (
