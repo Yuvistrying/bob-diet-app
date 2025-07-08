@@ -1,12 +1,15 @@
 # Confirmation Metadata Enhancement
 
 ## Overview
+
 Enhanced the confirmation bubble persistence system by adding comprehensive metadata alongside confirmation IDs. This provides multiple fallback options for matching bubbles and better debugging capabilities.
 
 ## Changes Made
 
 ### 1. Server-Side Enhancement (`/app/api/chat/stream-v2/route.ts`)
+
 Added `confirmationMetadata` that stores:
+
 - `confirmId`: The generated confirmation ID
 - `toolName`: Whether it's confirmFood or analyzeAndConfirmPhoto
 - `createdAt`: Timestamp when the confirmation was created
@@ -18,12 +21,16 @@ confirmationMetadata[tc.toolCallId] = {
   confirmId,
   toolName: tc.toolName,
   createdAt: now,
-  foodDescription: tc.args?.description || tc.args?.items?.map((item: any) => item.name).join(", "),
+  foodDescription:
+    tc.args?.description ||
+    tc.args?.items?.map((item: any) => item.name).join(", "),
 };
 ```
 
 ### 2. Fallback Timestamp Generation
+
 If no timestamp can be extracted from toolCallId, we now use the current timestamp:
+
 ```typescript
 // Use current timestamp as fallback if no timestamp in toolCallId
 if (!timestamp) {
@@ -32,9 +39,11 @@ if (!timestamp) {
 ```
 
 ### 3. Type Updates
+
 Updated all relevant interfaces to include `confirmationMetadata`:
+
 - `Message` in `/app/(app)/chat/page.tsx`
-- `ChatMessage` in `/app/providers/ChatProvider.tsx`  
+- `ChatMessage` in `/app/providers/ChatProvider.tsx`
 - `StreamingMessage` in `/app/hooks/useStreamingChat.tsx`
 
 ## Benefits
@@ -55,6 +64,7 @@ Updated all relevant interfaces to include `confirmationMetadata`:
 4. The metadata provides additional context for debugging and potential future matching strategies
 
 ## Testing
+
 - Create new confirmation bubbles
 - Check browser console for metadata logging
 - Verify bubbles maintain state after refresh
