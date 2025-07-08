@@ -92,6 +92,7 @@ const getConfirmationId = (args: any, messageIndex: number) => {
 - `/app/(app)/chat/page.tsx` - Main implementation
 - `/convex/confirmedBubbles.ts` - Database operations
 - `/convex/schema.ts` - confirmedBubbles table definition
+- `/docs/CONFIRMATION_ID_ELEGANT_SOLUTION.md` - Simplified ID generation approach
 
 ## Critical Notes
 
@@ -99,3 +100,13 @@ const getConfirmationId = (args: any, messageIndex: number) => {
 - **ALWAYS** check DB state before rendering bubble state
 - **REMEMBER** bubbles expire after 7 days (defined in confirmedBubbles.ts)
 - **Enhanced Logging**: Use browser console to debug confirmation ID mismatches
+
+## Update: Elegant Solution (January 2025)
+
+The confirmation ID generation has been further simplified with an elegant solution:
+- Tools (confirmFood, analyzeAndConfirmPhoto) generate UUIDs directly
+- Client uses `args.confirmationId` without complex extraction logic
+- Legacy fallback only for backward compatibility
+- See `/docs/CONFIRMATION_ID_ELEGANT_SOLUTION.md` for full details
+
+This builds on top of the persistence fix, making the entire system more maintainable.
