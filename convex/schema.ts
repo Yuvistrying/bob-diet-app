@@ -203,8 +203,6 @@ export default defineSchema({
         toolCalls: v.optional(v.any()), // Store tool calls for persistence
         threadId: v.optional(v.string()), // Thread ID for conversation continuity
         storageId: v.optional(v.id("_storage")), // Image storage ID if photo was uploaded
-        confirmationIds: v.optional(v.any()), // Map of toolCallId -> confirmationId
-        confirmationMetadata: v.optional(v.any()), // Additional metadata for confirmations
         usage: v.optional(
           v.object({
             // Token usage tracking
