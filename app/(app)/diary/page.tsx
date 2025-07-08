@@ -219,9 +219,15 @@ export default function Logs() {
   const handleDeleteFood = async () => {
     if (!deletingLogId) return;
 
-    await deleteFoodLog({ logId: deletingLogId });
+    // Store the ID before clearing state
+    const logIdToDelete = deletingLogId;
+
+    // Clear state first to close dialog
     setDeleteConfirmOpen(false);
     setDeletingLogId(null);
+
+    // Then delete the log
+    await deleteFoodLog({ logId: logIdToDelete });
   };
 
   const openEditDialog = (log: any) => {

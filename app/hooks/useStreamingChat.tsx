@@ -198,13 +198,22 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
                 if (toolCallIndex !== -1) {
                   const toolCall = toolCalls[toolCallIndex];
 
-                  // For analyzeAndConfirmPhoto, merge the result into args
+                  // For confirmFood and analyzeAndConfirmPhoto, merge the result into args
                   if (
-                    toolCall.toolName === "analyzeAndConfirmPhoto" &&
+                    (toolCall.toolName === "confirmFood" ||
+                      toolCall.toolName === "analyzeAndConfirmPhoto") &&
                     toolResult.result
                   ) {
                     logger.info(
-                      "[useStreamingChat] Merging analyzeAndConfirmPhoto result into args",
+                      `[useStreamingChat] Merging ${toolCall.toolName} result into args`,
+                      {
+                        originalArgs: toolCall.args
+                          ? Object.keys(toolCall.args)
+                          : [],
+                        resultKeys: Object.keys(toolResult.result),
+                        hasConfirmationId: !!toolResult.result.confirmationId,
+                        confirmationId: toolResult.result.confirmationId,
+                      },
                     );
                     toolCalls[toolCallIndex] = {
                       ...toolCall,
@@ -314,13 +323,22 @@ export function useStreamingChat(options: UseStreamingChatOptions = {}) {
                 if (toolCallIndex !== -1) {
                   const toolCall = toolCalls[toolCallIndex];
 
-                  // For analyzeAndConfirmPhoto, merge the result into args
+                  // For confirmFood and analyzeAndConfirmPhoto, merge the result into args
                   if (
-                    toolCall.toolName === "analyzeAndConfirmPhoto" &&
+                    (toolCall.toolName === "confirmFood" ||
+                      toolCall.toolName === "analyzeAndConfirmPhoto") &&
                     toolResult.result
                   ) {
                     logger.info(
-                      "[useStreamingChat] Merging analyzeAndConfirmPhoto result into args",
+                      `[useStreamingChat] Merging ${toolCall.toolName} result into args`,
+                      {
+                        originalArgs: toolCall.args
+                          ? Object.keys(toolCall.args)
+                          : [],
+                        resultKeys: Object.keys(toolResult.result),
+                        hasConfirmationId: !!toolResult.result.confirmationId,
+                        confirmationId: toolResult.result.confirmationId,
+                      },
                     );
                     toolCalls[toolCallIndex] = {
                       ...toolCall,

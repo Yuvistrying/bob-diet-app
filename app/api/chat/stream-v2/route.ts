@@ -457,9 +457,16 @@ export async function POST(req: Request) {
               (chunk as any).toolCallId &&
               (chunk as any).result
             ) {
-              // Handle tool results for analyzeAndConfirmPhoto
+              // Handle tool results for confirmFood and analyzeAndConfirmPhoto
               const toolCallId = (chunk as any).toolCallId;
               const result = (chunk as any).result;
+
+              console.log("[stream-v2] Tool result chunk received:", {
+                toolCallId,
+                resultKeys: result ? Object.keys(result) : [],
+                hasConfirmationId: !!result?.confirmationId,
+                confirmationId: result?.confirmationId,
+              });
 
               // Find the matching tool call and update it with the result
               const toolCallIndex = collectedToolCalls.findIndex(
@@ -475,7 +482,15 @@ export async function POST(req: Request) {
                   result
                 ) {
                   console.log(
-                    `[stream-v2] Merging ${toolCall.toolName} result into args`,
+                    `[stream-v2] Merging ${toolCall.toolName} result into args:`,
+                    {
+                      toolName: toolCall.toolName,
+                      originalArgs: toolCall.args
+                        ? Object.keys(toolCall.args)
+                        : [],
+                      resultKeys: Object.keys(result),
+                      confirmationIdInResult: result.confirmationId,
+                    },
                   );
                   collectedToolCalls[toolCallIndex] = {
                     ...toolCall,
@@ -484,6 +499,15 @@ export async function POST(req: Request) {
                       ...result,
                     },
                   };
+                  console.log(`[stream-v2] After merge, args now contains:`, {
+                    argsKeys: Object.keys(
+                      collectedToolCalls[toolCallIndex].args,
+                    ),
+                    hasConfirmationId:
+                      !!collectedToolCalls[toolCallIndex].args.confirmationId,
+                    confirmationId:
+                      collectedToolCalls[toolCallIndex].args.confirmationId,
+                  });
                 }
               }
             }
@@ -524,6 +548,20 @@ export async function POST(req: Request) {
                   ? toolCalls
                   : collectedToolCalls;
 
+              // Log what we have before merging
+              console.log("[stream-v2] Tool calls before merge:", {
+                count: finalToolCalls.length,
+                tools: finalToolCalls.map((tc) => ({
+                  toolName: tc.toolName,
+                  hasArgs: !!tc.args,
+                  hasResult: !!tc.result,
+                  argsKeys: tc.args ? Object.keys(tc.args) : [],
+                  resultKeys: tc.result ? Object.keys(tc.result) : [],
+                  confirmationIdInArgs: tc.args?.confirmationId,
+                  confirmationIdInResult: tc.result?.confirmationId,
+                })),
+              });
+
               // Merge tool results into args for confirmFood and analyzeAndConfirmPhoto
               finalToolCalls = finalToolCalls.map((tc) => {
                 if (
@@ -538,6 +576,7 @@ export async function POST(req: Request) {
                       toolCallId: tc.toolCallId,
                       hasResult: !!tc.result,
                       resultKeys: tc.result ? Object.keys(tc.result) : [],
+                      confirmationIdFromResult: tc.result.confirmationId,
                     },
                   );
                   return {
@@ -586,37 +625,43 @@ export async function POST(req: Request) {
                   }
                 }
 
-                // Extract confirmation IDs from tool results
-                const confirmationIds: Record<string, string> = {};
+                // Log confirmation IDs that are now in tool args
                 if (finalToolCalls && finalToolCalls.length > 0) {
+                  console.log("[stream-v2] Final tool calls being saved:", {
+                    count: finalToolCalls.length,
+                    details: finalToolCalls.map((tc) => ({
+                      toolName: tc.toolName,
+                      toolCallId: tc.toolCallId,
+                      hasArgs: !!tc.args,
+                      argsKeys: tc.args ? Object.keys(tc.args) : [],
+                      confirmationId: tc.args?.confirmationId,
+                    })),
+                  });
+
                   finalToolCalls.forEach((tc, index) => {
                     if (
                       tc.toolName === "confirmFood" ||
                       tc.toolName === "analyzeAndConfirmPhoto"
                     ) {
-                      // Use the confirmationId from args (already merged from result)
-                      const confirmationId =
-                        tc.args?.confirmationId || tc.result?.confirmationId;
+                      const confirmationId = tc.args?.confirmationId;
                       if (confirmationId) {
-                        confirmationIds[tc.toolCallId] = confirmationId;
                         console.log(
-                          "[stream-v2] Using tool-generated confirmation ID:",
+                          "[stream-v2] Tool has confirmation ID in args:",
                           {
                             toolCallId: tc.toolCallId,
                             confirmId: confirmationId,
                             toolName: tc.toolName,
-                            fromArgs: !!tc.args?.confirmationId,
-                            fromResult: !!tc.result?.confirmationId,
                           },
                         );
                       } else {
                         console.warn(
-                          "[stream-v2] No confirmationId found for tool:",
+                          "[stream-v2] No confirmationId in tool args:",
                           {
                             toolCallId: tc.toolCallId,
                             toolName: tc.toolName,
                             hasArgs: !!tc.args,
-                            hasResult: !!tc.result,
+                            argsKeys: tc.args ? Object.keys(tc.args) : [],
+                            fullArgs: tc.args,
                           },
                         );
                       }
@@ -635,10 +680,6 @@ export async function POST(req: Request) {
                     usingCollected:
                       collectedToolCalls.length > 0 &&
                       (!toolCalls || toolCalls.length === 0),
-                    confirmationIds:
-                      Object.keys(confirmationIds).length > 0
-                        ? confirmationIds
-                        : undefined,
                   },
                 );
 
@@ -649,10 +690,7 @@ export async function POST(req: Request) {
                   toolCalls: finalToolCalls || [],
                   metadata: {
                     foodLogId,
-                    confirmationIds:
-                      Object.keys(confirmationIds).length > 0
-                        ? confirmationIds
-                        : undefined,
+                    // Remove confirmationIds - they're now in tool args
                     usage: usage
                       ? {
                           promptTokens: usage.promptTokens || 0,

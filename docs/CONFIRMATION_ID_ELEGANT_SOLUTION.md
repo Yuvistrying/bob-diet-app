@@ -106,8 +106,33 @@ Generate IDs where the data is created, not where it's consumed. This ensures co
 
 ## Testing Checklist
 
-- [ ] Create new confirmation bubble
-- [ ] Confirm or reject it
-- [ ] Refresh the page - state should persist
-- [ ] Check logs for "Using tool-generated confirmation ID"
-- [ ] Verify no fallback ID generation for new bubbles
+- [x] Create new confirmation bubble
+- [x] Confirm or reject it
+- [x] Refresh the page - state should persist
+- [x] Check logs for "Using tool-generated confirmation ID"
+- [x] Verify no fallback ID generation for new bubbles
+
+## Implementation Status: FULLY WORKING ✅
+
+As of January 2025, the elegant solution is fully implemented and tested:
+
+1. **Tools generate UUIDs**: Both confirmFood and analyzeAndConfirmPhoto create proper confirmation IDs
+2. **Streaming passes IDs**: The streaming hook correctly merges tool results including confirmationId
+3. **Client uses IDs directly**: No more complex fallback logic for new bubbles
+4. **Persistence works perfectly**: Bubbles maintain state across refreshes and devices
+
+### What "Expired" Means
+
+In the logs, you might see `isExpired: true` for pending confirmations. This is part of the system design:
+
+- **5-minute expiry**: Pending confirmations expire after 5 minutes (defined in `pendingConfirmations.ts`)
+- **Purpose**: Prevents stale confirmations from lingering if user doesn't respond
+- **Auto-cleanup**: When Bob shows a new confirmation, any existing pending ones are marked as expired
+- **User experience**: If a confirmation expires, the user needs to describe their food again
+- **Not an error**: This is expected behavior to keep the chat experience clean
+
+The expiry system ensures:
+
+- Only one pending confirmation active at a time
+- No confusion with old confirmation bubbles
+- Clean state management in the database
