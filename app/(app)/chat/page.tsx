@@ -54,6 +54,7 @@ interface Message {
     status: "calling" | "complete";
   };
   confirmationIds?: Record<string, string>;
+  confirmationMetadata?: Record<string, any>;
 }
 
 // Memoized message component to prevent unnecessary re-renders
@@ -681,6 +682,7 @@ export default function Chat() {
         toolCalls: msg.toolCalls || undefined,
         storageId: msg.metadata?.storageId,
         confirmationIds: msg.metadata?.confirmationIds,
+        confirmationMetadata: msg.metadata?.confirmationMetadata,
       };
     });
 
@@ -2228,6 +2230,8 @@ export default function Chat() {
                             toolCallId,
                             confirmId,
                             savedIds: Object.keys(message.confirmationIds),
+                            metadata:
+                              message.confirmationMetadata?.[toolCallId],
                           });
                         } else {
                           // Generate confirmation ID if not saved
@@ -2243,6 +2247,7 @@ export default function Chat() {
                             toolCallId,
                             confirmId,
                             reason: "No saved ID found",
+                            hasMetadata: !!message.confirmationMetadata,
                           });
                         }
 
