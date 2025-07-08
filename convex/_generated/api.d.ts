@@ -30,6 +30,7 @@ import type * as http from "../http.js";
 import type * as instructionTemplates from "../instructionTemplates.js";
 import type * as lib_bobPrompts from "../lib/bobPrompts.js";
 import type * as lib_cacheStrategy from "../lib/cacheStrategy.js";
+import type * as migrations_fixConfirmationBubbleIds from "../migrations/fixConfirmationBubbleIds.js";
 import type * as migrations_removeAgentThreadId from "../migrations/removeAgentThreadId.js";
 import type * as onboarding from "../onboarding.js";
 import type * as onboardingFix from "../onboardingFix.js";
@@ -91,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   instructionTemplates: typeof instructionTemplates;
   "lib/bobPrompts": typeof lib_bobPrompts;
   "lib/cacheStrategy": typeof lib_cacheStrategy;
+  "migrations/fixConfirmationBubbleIds": typeof migrations_fixConfirmationBubbleIds;
   "migrations/removeAgentThreadId": typeof migrations_removeAgentThreadId;
   onboarding: typeof onboarding;
   onboardingFix: typeof onboardingFix;

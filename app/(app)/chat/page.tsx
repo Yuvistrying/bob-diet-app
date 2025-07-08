@@ -53,6 +53,7 @@ interface Message {
     name: string;
     status: "calling" | "complete";
   };
+  confirmationIds?: Record<string, string>;
 }
 
 // Memoized message component to prevent unnecessary re-renders
@@ -679,6 +680,7 @@ export default function Chat() {
         content: msg.content,
         toolCalls: msg.toolCalls || undefined,
         storageId: msg.metadata?.storageId,
+        confirmationIds: msg.metadata?.confirmationIds,
       };
     });
 
@@ -2210,31 +2212,39 @@ export default function Chat() {
                           );
                           return null;
                         }
-                        // Pass toolCallId to getConfirmationId for consistent IDs across devices
-                        // For messages loaded from DB, toolCallId might be a property of the toolCall object
+                        // First check if we have a saved confirmation ID for this tool call
                         const toolCallId =
                           confirmFoodCall.toolCallId || confirmFoodCall.id;
-                        const argsWithToolCallId = {
-                          ...args,
-                          _toolCallId: toolCallId,
-                        };
-                        const confirmId = getConfirmationId(
-                          argsWithToolCallId,
-                          index,
-                        );
+                        let confirmId: string;
 
-                        // Debug log to understand the ID generation
-                        logger.info("[Chat] Generating confirmation ID:", {
-                          toolCallId: confirmFoodCall.toolCallId,
-                          hasToolCallId: !!confirmFoodCall.toolCallId,
-                          toolCallIdParts:
-                            confirmFoodCall.toolCallId?.split("_"),
-                          index,
-                          confirmId,
-                          foodItems: args.items?.map((item: any) => item.name),
-                          mealType: args.mealType,
-                          totalCalories: args.totalCalories,
-                        });
+                        // Check if this message has saved confirmation IDs
+                        if (
+                          message.confirmationIds &&
+                          toolCallId &&
+                          message.confirmationIds[toolCallId]
+                        ) {
+                          confirmId = message.confirmationIds[toolCallId];
+                          logger.info("[Chat] Using saved confirmation ID:", {
+                            toolCallId,
+                            confirmId,
+                            savedIds: Object.keys(message.confirmationIds),
+                          });
+                        } else {
+                          // Generate confirmation ID if not saved
+                          const argsWithToolCallId = {
+                            ...args,
+                            _toolCallId: toolCallId,
+                          };
+                          confirmId = getConfirmationId(
+                            argsWithToolCallId,
+                            index,
+                          );
+                          logger.info("[Chat] Generated new confirmation ID:", {
+                            toolCallId,
+                            confirmId,
+                            reason: "No saved ID found",
+                          });
+                        }
 
                         // Check if we're still loading confirmed bubbles from database
                         // If so, check if this bubble exists in the DB to prevent flash of pending state
@@ -2244,9 +2254,40 @@ export default function Chat() {
                         let isRejectedInDB = false;
 
                         if (confirmedBubblesFromDB) {
-                          const bubbleInDB = confirmedBubblesFromDB.find(
+                          // Try to find bubble with exact ID match first
+                          let bubbleInDB = confirmedBubblesFromDB.find(
                             (b) => b.confirmationId === confirmId,
                           );
+
+                          // If not found and we have food items, try to match by content
+                          // This handles legacy bubbles that have different IDs
+                          if (!bubbleInDB && args.items) {
+                            const foodDescription =
+                              args.description ||
+                              args.items
+                                .map((item: any) => item.name)
+                                .join(", ");
+                            bubbleInDB = confirmedBubblesFromDB.find(
+                              (b) =>
+                                b.foodDescription === foodDescription &&
+                                b.messageIndex === index,
+                            );
+
+                            if (bubbleInDB) {
+                              logger.info(
+                                "[Chat] Found bubble by content match:",
+                                {
+                                  dbId: bubbleInDB.confirmationId,
+                                  generatedId: confirmId,
+                                  foodDescription: foodDescription.substring(
+                                    0,
+                                    50,
+                                  ),
+                                },
+                              );
+                            }
+                          }
+
                           if (bubbleInDB) {
                             isConfirmedInDB = bubbleInDB.status === "confirmed";
                             isRejectedInDB = bubbleInDB.status === "rejected";

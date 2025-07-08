@@ -13,6 +13,7 @@ interface StreamingMessage {
     name: string;
     status: "calling" | "complete";
   };
+  confirmationIds?: Record<string, string>;
 }
 
 interface UseStreamingChatOptions {

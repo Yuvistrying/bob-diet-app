@@ -21,6 +21,7 @@ interface ChatMessage {
     name: string;
     status: "calling" | "complete";
   };
+  confirmationIds?: Record<string, string>;
 }
 
 interface ChatContextType {

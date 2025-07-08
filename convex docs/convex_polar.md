@@ -248,6 +248,7 @@ const products = useQuery(api.example.getConfiguredProducts);
 if (!products) return null;
 
 return (
+
 <div>
 {products.premiumMonthly && (
 <div>
@@ -286,6 +287,7 @@ const proYearly = products.find(
 (p) => p.prices[0].recurringInterval === "year"
 );
 return (
+
 <div>
 {proMonthly && (
 <div>

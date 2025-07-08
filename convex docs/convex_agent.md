@@ -264,6 +264,7 @@ api.chatBasic.listThreadMessages,
 { initialNumItems: 10 },
 );
 return (
+
 <div>
 {toUIMessages(messages.results ?? []).map((message) => (
 <div key={message.key}>{message.content}</div>

@@ -168,6 +168,7 @@ const sendMessage = useMutation(api.chat.sendMessage);
 //...
 
 return (
+
 <main className="chat">
 {/_ ... _/}
 <form
