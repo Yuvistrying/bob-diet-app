@@ -104,6 +104,7 @@ const getConfirmationId = (args: any, messageIndex: number) => {
 ## Update: Elegant Solution (January 2025)
 
 The confirmation ID generation has been further simplified with an elegant solution:
+
 - Tools (confirmFood, analyzeAndConfirmPhoto) generate UUIDs directly
 - Client uses `args.confirmationId` without complex extraction logic
 - Legacy fallback only for backward compatibility

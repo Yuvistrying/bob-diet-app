@@ -3,20 +3,25 @@
 ## Date: January 2025
 
 ## Problem
+
 The confirmation bubble persistence system was overly complex with multiple ID generation strategies:
+
 - Extracting timestamps from toolCallId strings
 - Content-based hashing as fallback
 - Saving IDs in message metadata
 - Complex client-side ID regeneration logic
 
 This complexity led to:
+
 - IDs not matching after page refresh
 - Bubbles reverting to pending state
 - Hard-to-debug persistence issues
 - Code that was difficult to maintain
 
 ## Solution
+
 Implemented a simple, elegant solution where:
+
 1. **Server generates UUID**: The confirmFood and analyzeAndConfirmPhoto tools generate a unique confirmationId
 2. **ID in tool response**: The confirmationId is included directly in the tool's response args
 3. **Client uses ID directly**: The client uses args.confirmationId without any complex generation logic
@@ -25,29 +30,34 @@ Implemented a simple, elegant solution where:
 ## Implementation Details
 
 ### 1. Tool-Side Changes (`/convex/tools/index.ts`)
+
 ```typescript
 // In confirmFood tool
 execute: async (args) => {
   // Generate a proper UUID for this confirmation
   const confirmationId = `confirm-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-  
+
   // ... save pending confirmation ...
-  
+
   // Return args with the confirmationId included
   return {
     ...args,
     confirmationId,
   };
-}
+};
 ```
 
 ### 2. Server-Side Changes (`/app/api/chat/stream-v2/route.ts`)
+
 ```typescript
 // Extract confirmation IDs from tool results
 const confirmationIds: Record<string, string> = {};
 if (finalToolCalls && finalToolCalls.length > 0) {
   finalToolCalls.forEach((tc, index) => {
-    if (tc.toolName === "confirmFood" || tc.toolName === "analyzeAndConfirmPhoto") {
+    if (
+      tc.toolName === "confirmFood" ||
+      tc.toolName === "analyzeAndConfirmPhoto"
+    ) {
       // Use the confirmationId directly from the tool's response
       if (tc.args?.confirmationId) {
         confirmationIds[tc.toolCallId] = tc.args.confirmationId;
@@ -58,6 +68,7 @@ if (finalToolCalls && finalToolCalls.length > 0) {
 ```
 
 ### 3. Client-Side Changes (`/app/(app)/chat/page.tsx`)
+
 ```typescript
 // Use the confirmationId directly from args
 let confirmId: string;
