@@ -551,8 +551,11 @@ export async function POST(req: Request) {
                   }
                 }
 
-                // Generate confirmation IDs for confirmation tool calls
+                // Generate confirmation IDs and metadata for confirmation tool calls
                 const confirmationIds: Record<string, string> = {};
+                const confirmationMetadata: Record<string, any> = {};
+                const now = Date.now();
+
                 if (finalToolCalls && finalToolCalls.length > 0) {
                   finalToolCalls.forEach((tc, index) => {
                     if (
@@ -568,15 +571,35 @@ export async function POST(req: Request) {
                         }
                       }
 
-                      if (timestamp) {
-                        const confirmId = `confirm-${timestamp}`;
-                        confirmationIds[tc.toolCallId] = confirmId;
-                        console.log("[stream-v2] Generated confirmation ID:", {
+                      // Use current timestamp as fallback if no timestamp in toolCallId
+                      if (!timestamp) {
+                        timestamp = now.toString();
+                      }
+
+                      const confirmId = `confirm-${timestamp}`;
+                      confirmationIds[tc.toolCallId] = confirmId;
+
+                      // Store additional metadata for robustness
+                      confirmationMetadata[tc.toolCallId] = {
+                        confirmId,
+                        toolName: tc.toolName,
+                        createdAt: now,
+                        foodDescription:
+                          tc.args?.description ||
+                          tc.args?.items
+                            ?.map((item: any) => item.name)
+                            .join(", "),
+                      };
+
+                      console.log(
+                        "[stream-v2] Generated confirmation ID with metadata:",
+                        {
                           toolCallId: tc.toolCallId,
                           confirmId,
                           toolName: tc.toolName,
-                        });
-                      }
+                          createdAt: now,
+                        },
+                      );
                     }
                   });
                 }
@@ -596,6 +619,10 @@ export async function POST(req: Request) {
                       Object.keys(confirmationIds).length > 0
                         ? confirmationIds
                         : undefined,
+                    confirmationMetadata:
+                      Object.keys(confirmationMetadata).length > 0
+                        ? confirmationMetadata
+                        : undefined,
                   },
                 );
 
@@ -609,6 +636,10 @@ export async function POST(req: Request) {
                     confirmationIds:
                       Object.keys(confirmationIds).length > 0
                         ? confirmationIds
+                        : undefined,
+                    confirmationMetadata:
+                      Object.keys(confirmationMetadata).length > 0
+                        ? confirmationMetadata
                         : undefined,
                     usage: usage
                       ? {

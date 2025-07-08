@@ -14,6 +14,7 @@ interface StreamingMessage {
     status: "calling" | "complete";
   };
   confirmationIds?: Record<string, string>;
+  confirmationMetadata?: Record<string, any>;
 }
 
 interface UseStreamingChatOptions {
