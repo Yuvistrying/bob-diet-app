@@ -468,10 +468,14 @@ export async function POST(req: Request) {
               if (toolCallIndex !== -1) {
                 const toolCall = collectedToolCalls[toolCallIndex];
 
-                // For analyzeAndConfirmPhoto, merge the result into args
-                if (toolCall.toolName === "analyzeAndConfirmPhoto" && result) {
+                // For confirmFood and analyzeAndConfirmPhoto, merge the result into args
+                if (
+                  (toolCall.toolName === "confirmFood" ||
+                    toolCall.toolName === "analyzeAndConfirmPhoto") &&
+                  result
+                ) {
                   console.log(
-                    "[stream-v2] Merging analyzeAndConfirmPhoto result into args",
+                    `[stream-v2] Merging ${toolCall.toolName} result into args`,
                   );
                   collectedToolCalls[toolCallIndex] = {
                     ...toolCall,
@@ -515,10 +519,37 @@ export async function POST(req: Request) {
 
             try {
               // Use collected toolCalls if onFinish doesn't provide them
-              const finalToolCalls =
+              let finalToolCalls =
                 toolCalls && toolCalls.length > 0
                   ? toolCalls
                   : collectedToolCalls;
+
+              // Merge tool results into args for confirmFood and analyzeAndConfirmPhoto
+              finalToolCalls = finalToolCalls.map((tc) => {
+                if (
+                  (tc.toolName === "confirmFood" ||
+                    tc.toolName === "analyzeAndConfirmPhoto") &&
+                  tc.result &&
+                  !tc.args?.confirmationId
+                ) {
+                  console.log(
+                    `[stream-v2] Merging ${tc.toolName} result into args in onFinish`,
+                    {
+                      toolCallId: tc.toolCallId,
+                      hasResult: !!tc.result,
+                      resultKeys: tc.result ? Object.keys(tc.result) : [],
+                    },
+                  );
+                  return {
+                    ...tc,
+                    args: {
+                      ...tc.args,
+                      ...tc.result,
+                    },
+                  };
+                }
+                return tc;
+              });
 
               console.log("[stream-v2] Stream finished:", {
                 hasText: !!text,
@@ -528,6 +559,10 @@ export async function POST(req: Request) {
                   toolName: tc.toolName,
                   hasArgs: !!tc.args,
                   argsKeys: tc.args ? Object.keys(tc.args) : [],
+                  hasResult: !!tc.result,
+                  hasConfirmationId: !!(
+                    tc.args?.confirmationId || tc.result?.confirmationId
+                  ),
                 })),
                 finishReason,
                 collectedDuringStream: collectedToolCalls.length,
@@ -559,15 +594,29 @@ export async function POST(req: Request) {
                       tc.toolName === "confirmFood" ||
                       tc.toolName === "analyzeAndConfirmPhoto"
                     ) {
-                      // Use the confirmationId directly from the tool's response
-                      if (tc.args?.confirmationId) {
-                        confirmationIds[tc.toolCallId] = tc.args.confirmationId;
+                      // Use the confirmationId from args (already merged from result)
+                      const confirmationId =
+                        tc.args?.confirmationId || tc.result?.confirmationId;
+                      if (confirmationId) {
+                        confirmationIds[tc.toolCallId] = confirmationId;
                         console.log(
                           "[stream-v2] Using tool-generated confirmation ID:",
                           {
                             toolCallId: tc.toolCallId,
-                            confirmId: tc.args.confirmationId,
+                            confirmId: confirmationId,
                             toolName: tc.toolName,
+                            fromArgs: !!tc.args?.confirmationId,
+                            fromResult: !!tc.result?.confirmationId,
+                          },
+                        );
+                      } else {
+                        console.warn(
+                          "[stream-v2] No confirmationId found for tool:",
+                          {
+                            toolCallId: tc.toolCallId,
+                            toolName: tc.toolName,
+                            hasArgs: !!tc.args,
+                            hasResult: !!tc.result,
                           },
                         );
                       }
