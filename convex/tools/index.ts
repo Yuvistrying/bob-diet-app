@@ -501,7 +501,7 @@ export function detectIntent(userMessage: string) {
 
   const intents: Record<string, RegExp> = {
     food: /\b(ate|had|eat|eating|food|meal|breakfast|lunch|dinner|snack|log|for me)\b/i,
-    weight: /\b(weight|weigh|scale|kg|lbs|pounds|kilos)\b/i,
+    weight: /\b(weight|weigh|weighed|weighing|scale|kg|lbs|pounds|kilos)\b/i,
     progress: /\b(progress|today|left|remaining|how|calories|status)\b/i,
     photo: /\b(photo|image|picture|upload)\b/i,
     greeting: /^(hi|hello|hey|good morning|morning)\b/i,

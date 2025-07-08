@@ -1732,8 +1732,20 @@ export default function Chat() {
   // Show loading state while checking auth
   if (isSignedIn === undefined) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">Loading...</div>
+      <div
+        className="fixed inset-x-0 top-0 bottom-16 bg-background flex flex-col"
+        style={{ overscrollBehavior: "contain" }}
+      >
+        <div className="flex-shrink-0">
+          <div className="border-b border-border">
+            <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
+              <div className="h-14" />
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -2194,42 +2206,25 @@ export default function Chat() {
                             },
                           );
                         } else {
-                          // Fallback: check saved IDs from metadata (for backward compatibility)
+                          // Last resort: generate ID (should rarely happen now)
                           const toolCallId =
                             confirmFoodCall.toolCallId || confirmFoodCall.id;
-                          if (
-                            message.confirmationIds &&
-                            toolCallId &&
-                            message.confirmationIds[toolCallId]
-                          ) {
-                            confirmId = message.confirmationIds[toolCallId];
-                            logger.info(
-                              "[Chat] Using saved confirmation ID from metadata:",
-                              {
-                                toolCallId,
-                                confirmId,
-                                savedIds: Object.keys(message.confirmationIds),
-                              },
-                            );
-                          } else {
-                            // Last resort: generate ID (should rarely happen now)
-                            const argsWithToolCallId = {
-                              ...args,
-                              _toolCallId: toolCallId,
-                            };
-                            confirmId = getConfirmationId(
-                              argsWithToolCallId,
-                              index,
-                            );
-                            logger.info(
-                              "[Chat] Generated fallback confirmation ID:",
-                              {
-                                toolCallId,
-                                confirmId,
-                                reason: "No confirmationId in args or metadata",
-                              },
-                            );
-                          }
+                          const argsWithToolCallId = {
+                            ...args,
+                            _toolCallId: toolCallId,
+                          };
+                          confirmId = getConfirmationId(
+                            argsWithToolCallId,
+                            index,
+                          );
+                          logger.info(
+                            "[Chat] Generated fallback confirmation ID:",
+                            {
+                              toolCallId,
+                              confirmId,
+                              reason: "No confirmationId in args",
+                            },
+                          );
                         }
 
                         // Check if we're still loading confirmed bubbles from database
