@@ -529,14 +529,8 @@ export default function Chat() {
 
   // Track if we're at bottom for auto-scroll
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const [justScrolledUser, setJustScrolledUser] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const touchStartYRef = useRef<number | null>(null);
-
-  // Transform to push container up
-  const [containerTransform, setContainerTransform] = useState(0);
-  const containerTransformRef = useRef(0);
-  const justScrolledUserRef = useRef(false);
 
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
@@ -1485,121 +1479,12 @@ export default function Chat() {
     }
   };
 
-  // Handle assistant messages - reduce transform if content is cut off
-  useEffect(() => {
-    if (messages.length > 0 && scrollAreaRef.current) {
-      const lastMessage = messages[messages.length - 1];
-
-      // Only handle assistant messages
-      if (lastMessage.role === "assistant" || lastMessage.isStreaming) {
-        // Don't do anything if we just pushed for a user message
-        if (!justScrolledUserRef.current && containerTransformRef.current > 0) {
-          // Check if content is being cut off at the bottom
-          const container = scrollAreaRef.current;
-          const { scrollHeight, clientHeight } = container;
-
-          // If there's content below the viewport, gradually reduce transform
-          if (scrollHeight > clientHeight) {
-            // Calculate how much content is cut off
-            const contentBelowViewport = scrollHeight - clientHeight;
-
-            // Reduce transform by a portion of the cut-off content
-            const reduction = Math.min(
-              containerTransformRef.current,
-              contentBelowViewport * 0.5,
-            );
-            const newTransform = Math.max(
-              0,
-              containerTransformRef.current - reduction,
-            );
-
-            console.log("📉 Reducing transform for assistant:", {
-              contentBelowViewport,
-              reduction,
-              newTransform,
-            });
-
-            if (reduction > 0) {
-              setContainerTransform(newTransform);
-              containerTransformRef.current = newTransform;
-            }
-          }
-        }
-      }
-    }
-  }, [messages]);
-
   // Scroll to bottom on initial load
   useEffect(() => {
     if (messages.length > 0 && scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, []); // Only on mount
-
-  // Watch for new user messages and push them to top with transform
-  const previousMessageCount = useRef(0);
-  useEffect(() => {
-    if (messages.length > previousMessageCount.current && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-
-      // Check if the new message is from the user
-      if (lastMessage.role === "user") {
-        // Use requestAnimationFrame to ensure DOM has painted
-        requestAnimationFrame(() => {
-          // Double RAF to ensure layout is complete
-          requestAnimationFrame(() => {
-            if (scrollAreaRef.current) {
-              const userMessages =
-                scrollAreaRef.current.querySelectorAll(".items-end");
-              if (userMessages.length > 0) {
-                const lastUserMessage = userMessages[
-                  userMessages.length - 1
-                ] as HTMLElement;
-                if (lastUserMessage) {
-                  // Get positions
-                  const messageRect = lastUserMessage.getBoundingClientRect();
-                  const containerRect =
-                    scrollAreaRef.current.getBoundingClientRect();
-
-                  // Calculate how far the message is from the top of the container
-                  const distanceFromTop = messageRect.top - containerRect.top;
-
-                  // Only apply transform if the message is actually visible
-                  if (distanceFromTop > 0) {
-                    // Add this distance to our transform to push everything up
-                    const newTransform =
-                      containerTransformRef.current + distanceFromTop;
-
-                    console.log("🎯 [useEffect] Push to top with transform:", {
-                      distanceFromTop,
-                      currentTransform: containerTransformRef.current,
-                      newTransform,
-                    });
-
-                    // Apply the transform
-                    setContainerTransform(newTransform);
-                    containerTransformRef.current = newTransform;
-
-                    setIsAtBottom(false);
-                    setJustScrolledUser(true);
-                    justScrolledUserRef.current = true;
-
-                    // Reset the flag after animation completes
-                    setTimeout(() => {
-                      setJustScrolledUser(false);
-                      justScrolledUserRef.current = false;
-                    }, 1000);
-                  }
-                }
-              }
-            }
-          });
-        });
-      }
-    }
-
-    previousMessageCount.current = messages.length;
-  }, [messages]);
 
   // Scroll to bottom when input area changes (if at bottom) - Disabled for mobile UX
   // useEffect(() => {
