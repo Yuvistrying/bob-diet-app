@@ -541,6 +541,19 @@ export async function POST(req: Request) {
               finishReason,
             });
 
+            // Log error details if stream finished with error
+            if (finishReason === "error") {
+              console.error("[stream-v2] Stream finished with error status", {
+                finishReason,
+                hasText: !!text,
+                hasToolCalls: !!toolCalls && toolCalls.length > 0,
+                usage,
+                prompt: prompt?.substring(0, 100),
+                intents,
+                loadedTools: Object.keys(tools),
+              });
+            }
+
             try {
               // Use collected toolCalls if onFinish doesn't provide them
               let finalToolCalls =
@@ -736,6 +749,20 @@ export async function POST(req: Request) {
           stack: streamTextError.stack,
           name: streamTextError.name,
           code: streamTextError.code,
+          response: streamTextError.response?.data,
+          status: streamTextError.response?.status,
+        });
+
+        // Log the request context for debugging
+        console.error("[stream-v2] Request context when error occurred:", {
+          model: "claude-sonnet-4-20250514",
+          systemPromptLength: systemPrompt.length,
+          messageCount: messages.length,
+          toolCount: Object.keys(tools).length,
+          toolNames: Object.keys(tools),
+          intents,
+          hasStorageId: !!storageId,
+          userPrompt: prompt?.substring(0, 100),
         });
 
         // Don't throw - create a proper error response
