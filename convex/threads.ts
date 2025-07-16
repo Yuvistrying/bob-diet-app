@@ -3,6 +3,68 @@ import { mutation, query, internalMutation, action } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { shouldSummarizeMessages, extractProtectedContext } from "./summarizer";
 
+// Build morning greeting content
+const buildMorningGreeting = async (
+  ctx: any,
+  profile: any,
+  dailySummary: any,
+  hasLoggedWeightToday: boolean,
+): Promise<string> => {
+  let greeting = `Good morning ${profile?.name || "there"}! 🌅`;
+
+  // Add yesterday's summary if available
+  if (dailySummary?.yesterday?.stats?.calories > 0 && profile) {
+    const yesterday = dailySummary.yesterday.stats;
+    const calorieDiff = yesterday.calories - profile.dailyCalorieTarget;
+    const proteinDiff = yesterday.protein - profile.proteinTarget;
+
+    greeting += ` Yesterday: ${Math.round(yesterday.calories)}cal (${Math.round(yesterday.protein)}p/${Math.round(yesterday.carbs)}c/${Math.round(yesterday.fat)}f). `;
+
+    // Add insight based on goals
+    if (profile.goal === "cut") {
+      if (calorieDiff > 200) {
+        greeting += `You were ${Math.round(calorieDiff)} calories over target - let's tighten up today! 💪`;
+      } else if (calorieDiff >= -200 && calorieDiff <= 0) {
+        greeting += `Great job staying in your deficit! 🎯`;
+      }
+    } else if (profile.goal === "gain") {
+      if (calorieDiff < -200) {
+        greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - need to eat more to gain! 🍽️`;
+      } else if (calorieDiff >= 0 && calorieDiff <= 300) {
+        greeting += `Perfect surplus for lean gains! 💪`;
+      }
+    } else {
+      // maintain
+      if (Math.abs(calorieDiff) <= 200) {
+        greeting += `Excellent maintenance! Right on target! ✨`;
+      }
+    }
+  } else {
+    greeting += ` Starting fresh for today.`;
+  }
+
+  if (hasLoggedWeightToday === false) {
+    greeting += `\n\nDon't forget to log your weight! ⚖️`;
+  }
+
+  greeting += `\n\nWhat can I help you with?`;
+
+  return greeting;
+};
+
+// Build new thread greeting content
+const buildNewThreadGreeting = (
+  profile: any,
+  foodLogsCount: number,
+): string => {
+  let greeting = `Hey ${profile?.name || "there"}! Fresh chat started! `;
+  if (foodLogsCount > 0) {
+    greeting += `I can see you've logged ${foodLogsCount} items today. `;
+  }
+  greeting += `What can I help you with?`;
+  return greeting;
+};
+
 // Simple thread management without Convex Agent
 
 // Create or get daily thread
@@ -30,18 +92,57 @@ export const getOrCreateDailyThread = mutation({
       };
     }
 
+    // Get user profile first to determine message count
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first();
+
     // Create new thread
     const threadId = `thread_${identity.subject}_${Date.now()}`;
     await ctx.db.insert("dailyThreads", {
       userId: identity.subject,
       date: today,
       threadId,
-      messageCount: 0,
+      messageCount: profile ? 1 : 0,
       firstMessageAt: Date.now(),
       lastMessageAt: Date.now(),
     });
 
-    return { threadId, isNew: true, messageCount: 0 };
+    // Get daily summary info
+    const dailySummary = await ctx.runQuery(api.dailySummary.getDailySummary);
+
+    // Check if user has logged weight today
+    const todayWeightLog = await ctx.db
+      .query("weightLogs")
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", identity.subject).eq("date", today),
+      )
+      .first();
+    const hasLoggedWeightToday = !!todayWeightLog;
+
+    // Build and save morning greeting as a chat message
+    if (profile) {
+      const greetingContent = await buildMorningGreeting(
+        ctx,
+        profile,
+        dailySummary,
+        hasLoggedWeightToday,
+      );
+
+      // Save greeting as a chat message
+      await ctx.db.insert("chatHistory", {
+        userId: identity.subject,
+        role: "assistant" as const,
+        content: greetingContent,
+        timestamp: Date.now(),
+        metadata: {
+          threadId,
+        },
+      });
+    }
+
+    return { threadId, isNew: true, messageCount: profile ? 1 : 0 };
   },
 });
 
@@ -68,12 +169,18 @@ export const createNewThread = mutation({
       });
     }
 
+    // Get user profile first
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first();
+
     // Create new daily thread entry
     await ctx.db.insert("dailyThreads", {
       userId: identity.subject,
       date: today,
       threadId: newThreadId,
-      messageCount: 0,
+      messageCount: profile ? 1 : 0,
       firstMessageAt: now,
       lastMessageAt: now,
     });
@@ -86,10 +193,29 @@ export const createNewThread = mutation({
       )
       .collect();
 
+    // Build and save new thread greeting as a chat message
+    if (profile) {
+      const greetingContent = buildNewThreadGreeting(
+        profile,
+        todayFoodLogs.length,
+      );
+
+      // Save greeting as a chat message
+      await ctx.db.insert("chatHistory", {
+        userId: identity.subject,
+        role: "assistant" as const,
+        content: greetingContent,
+        timestamp: Date.now(),
+        metadata: {
+          threadId: newThreadId,
+        },
+      });
+    }
+
     return {
       threadId: newThreadId,
       isNew: true,
-      messageCount: 0,
+      messageCount: profile ? 1 : 0,
       foodLogsCount: todayFoodLogs.length,
       previousThreadSummarized: !!args.previousThreadId,
     };

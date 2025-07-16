@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 // Removed Card imports - using divs instead
@@ -50,6 +50,106 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { BottomNav } from "~/app/components/BottomNav";
+import { Skeleton } from "~/app/components/ui/skeleton";
+
+// Chart loading skeleton
+function ChartSkeleton() {
+  return <Skeleton className="h-32 w-full" />;
+}
+
+// Weekly trends chart component
+function WeeklyTrendsChart({
+  data,
+  preferredUnits,
+}: {
+  data: any[];
+  preferredUnits?: string;
+}) {
+  return (
+    <div className="h-32 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+        >
+          <XAxis
+            dataKey="week"
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis hide={true} domain={["dataMin - 0.5", "dataMax + 0.5"]} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "rgb(255, 255, 255)",
+              border: "1px solid rgb(229, 231, 235)",
+              borderRadius: "6px",
+              fontSize: "12px",
+            }}
+            formatter={(value: any) =>
+              `${value} ${preferredUnits === "imperial" ? "lbs" : "kg"}`
+            }
+          />
+          <Line
+            type="monotone"
+            dataKey="average"
+            stroke="#6b7280"
+            strokeWidth={2}
+            dot={{ fill: "#6b7280", r: 3 }}
+            activeDot={{ r: 4 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Monthly progress chart component
+function MonthlyProgressChart({
+  data,
+  preferredUnits,
+}: {
+  data: any[];
+  preferredUnits?: string;
+}) {
+  return (
+    <div className="h-32 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+        >
+          <XAxis
+            dataKey="week"
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis hide={true} domain={["dataMin - 0.5", "dataMax + 0.5"]} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "rgb(255, 255, 255)",
+              border: "1px solid rgb(229, 231, 235)",
+              borderRadius: "6px",
+              fontSize: "12px",
+            }}
+            formatter={(value: any) =>
+              `${value} ${preferredUnits === "imperial" ? "lbs" : "kg"}`
+            }
+          />
+          <Line
+            type="monotone"
+            dataKey="average"
+            stroke="#6b7280"
+            strokeWidth={2}
+            dot={{ fill: "#6b7280", r: 3 }}
+            activeDot={{ r: 4 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export default function Logs() {
   const [selectedDate, setSelectedDate] = useState(
@@ -674,44 +774,12 @@ export default function Logs() {
 
                       {/* Minimal line chart */}
                       {weeklyTrends.length > 1 && (
-                        <div className="h-32 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={weeklyTrends}
-                              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                            >
-                              <XAxis
-                                dataKey="week"
-                                tick={{ fontSize: 12 }}
-                                tickLine={false}
-                                axisLine={false}
-                              />
-                              <YAxis
-                                hide={true}
-                                domain={["dataMin - 0.5", "dataMax + 0.5"]}
-                              />
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: "rgb(255, 255, 255)",
-                                  border: "1px solid rgb(229, 231, 235)",
-                                  borderRadius: "6px",
-                                  fontSize: "12px",
-                                }}
-                                formatter={(value: any) =>
-                                  `${value} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
-                                }
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="average"
-                                stroke="#6b7280"
-                                strokeWidth={2}
-                                dot={{ fill: "#6b7280", r: 3 }}
-                                activeDot={{ r: 4 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
+                        <Suspense fallback={<ChartSkeleton />}>
+                          <WeeklyTrendsChart
+                            data={weeklyTrends}
+                            preferredUnits={profile?.preferredUnits}
+                          />
+                        </Suspense>
                       )}
                     </div>
                   </div>
@@ -781,44 +849,12 @@ export default function Logs() {
 
                       {/* Monthly chart */}
                       {monthlyProgress.weeklyData.length > 1 && (
-                        <div className="h-32 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={monthlyProgress.weeklyData}
-                              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                            >
-                              <XAxis
-                                dataKey="week"
-                                tick={{ fontSize: 12 }}
-                                tickLine={false}
-                                axisLine={false}
-                              />
-                              <YAxis
-                                hide={true}
-                                domain={["dataMin - 0.5", "dataMax + 0.5"]}
-                              />
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: "rgb(255, 255, 255)",
-                                  border: "1px solid rgb(229, 231, 235)",
-                                  borderRadius: "6px",
-                                  fontSize: "12px",
-                                }}
-                                formatter={(value: any) =>
-                                  `${value} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
-                                }
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="average"
-                                stroke="#6b7280"
-                                strokeWidth={2}
-                                dot={{ fill: "#6b7280", r: 3 }}
-                                activeDot={{ r: 4 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
+                        <Suspense fallback={<ChartSkeleton />}>
+                          <MonthlyProgressChart
+                            data={monthlyProgress.weeklyData}
+                            preferredUnits={profile?.preferredUnits}
+                          />
+                        </Suspense>
                       )}
                     </div>
                   </div>

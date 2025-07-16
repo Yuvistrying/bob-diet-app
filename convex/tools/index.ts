@@ -452,10 +452,32 @@ export function createTools(
           ? Math.round((foodStats.mealsLogged / 21) * 100)
           : 0;
 
+        // Format dates for display
+        const formatDate = (dateStr: string) => {
+          const date = new Date(dateStr);
+          const months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ];
+          return `${months[date.getMonth()]} ${date.getDate()}`;
+        };
+
         // Build summary data
         const summaryData = {
           weekStartDate: weekStartStr,
           weekEndDate: weekEndStr,
+          weekStartDateFormatted: formatDate(weekStartStr),
+          weekEndDateFormatted: formatDate(weekEndStr),
           startWeight,
           endWeight,
           weightChange,
@@ -470,10 +492,28 @@ export function createTools(
           calibrationAdjustment: calibrationData?.adjustment || undefined,
         };
 
+        // Remove formatted dates before saving to database
+        const dataForDb = {
+          weekStartDate: summaryData.weekStartDate,
+          weekEndDate: summaryData.weekEndDate,
+          startWeight: summaryData.startWeight,
+          endWeight: summaryData.endWeight,
+          weightChange: summaryData.weightChange,
+          averageDailyCalories: summaryData.averageDailyCalories,
+          targetDailyCalories: summaryData.targetDailyCalories,
+          mealsLogged: summaryData.mealsLogged,
+          totalMealsPossible: summaryData.totalMealsPossible,
+          loggingConsistency: summaryData.loggingConsistency,
+          weightTrackingDays: summaryData.weightTrackingDays,
+          expectedWeightChange: summaryData.expectedWeightChange,
+          actualWeightChange: summaryData.actualWeightChange,
+          calibrationAdjustment: summaryData.calibrationAdjustment,
+        };
+
         // Save summary to database
         await convexClient.mutation(
           api.weeklySummaries.saveWeeklySummary,
-          summaryData,
+          dataForDb,
         );
 
         return summaryData;

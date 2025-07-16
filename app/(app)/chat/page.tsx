@@ -34,6 +34,11 @@ import {
   LogOut,
   Square,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/app/components/ui/collapsible";
 import { ClientOnly } from "~/app/components/ClientOnly";
 import { ProfileEditModal } from "~/app/components/ProfileEditModal";
 import { MarkdownMessage } from "~/app/components/MarkdownMessage";
@@ -291,6 +296,12 @@ export default function Chat() {
   const [inputAreaHeight, setInputAreaHeight] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isNutritionCollapsed, setIsNutritionCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nutritionCollapsed") === "true";
+    }
+    return false;
+  });
 
   // Duplicate prevention tracking
   const [activeLogRequests, setActiveLogRequests] = useState<Set<string>>(
@@ -444,6 +455,15 @@ export default function Chat() {
   // Define isOnboarding early to use in useEffects
   const isOnboarding = !onboardingStatus?.completed;
   const isStealthMode = preferences?.displayMode === "stealth";
+
+  // Toggle function for nutrition card
+  const toggleNutritionCollapsed = () => {
+    const newState = !isNutritionCollapsed;
+    setIsNutritionCollapsed(newState);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("nutritionCollapsed", newState.toString());
+    }
+  };
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -607,12 +627,11 @@ export default function Chat() {
 
     logger.info(`[Chat] Thread changed from ${syncedThreadId} to ${threadId}`);
 
-    // If threadMessages is empty, this is a new thread
+    // If threadMessages is empty, we're done (greeting will be in messages if it exists)
     if (threadMessages.length === 0) {
       logger.info(`[Chat] New thread with no messages in database`);
       setSyncedThreadId(threadId);
       setHasLoadedHistory(true);
-      // Don't overwrite existing messages (like greeting) with empty array
       return;
     }
 
@@ -917,71 +936,10 @@ export default function Chat() {
             messages.length === 0 &&
             threadMessages?.length === 0 // Check database messages too
           ) {
-            // New session with no history - show greeting
-            let greeting = `Good morning ${profile?.name || "there"}! 🌅`;
-
-            // Add yesterday's summary if available
-            if (dailySummary?.yesterday?.stats?.calories > 0 && profile) {
-              const yesterday = dailySummary.yesterday.stats;
-              const calorieDiff =
-                yesterday.calories - profile.dailyCalorieTarget;
-              const proteinDiff = yesterday.protein - profile.proteinTarget;
-
-              greeting += ` Yesterday: ${Math.round(yesterday.calories)}cal (${Math.round(yesterday.protein)}p/${Math.round(yesterday.carbs)}c/${Math.round(yesterday.fat)}f). `;
-
-              // Add insight based on goals
-              if (profile.goal === "cut") {
-                if (calorieDiff > 200) {
-                  greeting += `You were ${Math.round(calorieDiff)} calories over target - let's tighten up today! 💪`;
-                } else if (calorieDiff >= -200 && calorieDiff <= 0) {
-                  greeting += `Great job staying in your deficit! 🎯`;
-                }
-              } else if (profile.goal === "gain") {
-                if (calorieDiff < -200) {
-                  greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - need to eat more to gain! 🍽️`;
-                } else if (calorieDiff >= 0 && calorieDiff <= 300) {
-                  greeting += `Perfect surplus for lean gains! 💪`;
-                }
-              } else {
-                // maintain
-                if (Math.abs(calorieDiff) <= 200) {
-                  greeting += `Excellent maintenance! Right on target! ✨`;
-                }
-              }
-            } else {
-              greeting += ` Starting fresh for today.`;
-            }
-
-            if (hasLoggedWeightToday === false) {
-              greeting += `\n\nDon't forget to log your weight! ⚖️`;
-            }
-
-            greeting += `\n\nWhat can I help you with?`;
-
-            // Set greeting message only if we truly have no messages
-            setMessages([
-              {
-                role: "assistant",
-                content: greeting,
-              },
-            ]);
-
-            // Save greeting to Convex so it persists
-            if (threadId) {
-              logger.info(
-                "[Chat] Saving greeting message to thread:",
-                threadId,
-              );
-              try {
-                await saveMessage({
-                  threadId,
-                  role: "assistant",
-                  content: greeting,
-                });
-              } catch (err) {
-                logger.error("[Chat] Failed to save greeting message:", err);
-              }
-            }
+            // New session with no history - wait for server-side greeting
+            logger.info(
+              "[Chat] New session detected, waiting for server greeting",
+            );
 
             // Clear any persisted confirmations from previous day to prevent auto-confirm bug
             setConfirmedFoodLogs(new Set());
@@ -1028,85 +986,14 @@ export default function Chat() {
         return;
       }
 
-      // Only show greeting if no messages exist
-      let greeting = "";
+      // Don't generate greeting client-side - wait for server greeting
       if (messages.length === 0) {
-        logger.info("[Chat] No messages found, showing greeting");
-
-        // Build initial greeting with context
-        greeting = `Good morning ${dailySummary.profile?.name || "there"}! `;
-
-        if (dailySummary.yesterday.stats.calories > 0 && dailySummary.profile) {
-          const yesterday = dailySummary.yesterday.stats;
-          const target = dailySummary.profile.dailyCalorieTarget;
-          const proteinTarget = dailySummary.profile.proteinTarget;
-
-          greeting += `Yesterday: ${dailySummary.yesterday.total}. `;
-
-          // Add insight based on goals
-          const calorieDiff = yesterday.calories - target;
-          const proteinDiff = yesterday.protein - proteinTarget;
-
-          if (dailySummary.profile.goal === "cut") {
-            if (calorieDiff > 200) {
-              greeting += `You were ${Math.round(calorieDiff)} calories over target - let's tighten up today! 💪 `;
-            } else if (calorieDiff < -500) {
-              greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - make sure you're eating enough! `;
-            } else if (calorieDiff >= -200 && calorieDiff <= 0) {
-              greeting += `Great job staying in your deficit! 🎯 `;
-            }
-          } else if (dailySummary.profile.goal === "gain") {
-            if (calorieDiff < -200) {
-              greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under - need to eat more to gain! 🍽️ `;
-            } else if (calorieDiff >= 0 && calorieDiff <= 300) {
-              greeting += `Perfect surplus for lean gains! 💪 `;
-            } else if (calorieDiff > 500) {
-              greeting += `You were ${Math.round(calorieDiff)} calories over - careful not to gain too fast! `;
-            }
-          } else {
-            // maintain
-            if (Math.abs(calorieDiff) <= 200) {
-              greeting += `Excellent maintenance! Right on target! ✨ `;
-            } else if (calorieDiff > 200) {
-              greeting += `You were ${Math.round(calorieDiff)} calories over maintenance. `;
-            } else {
-              greeting += `You were ${Math.abs(Math.round(calorieDiff))} calories under maintenance. `;
-            }
-          }
-
-          // Protein insight
-          if (proteinDiff < -20) {
-            greeting += `Try to hit your protein target today (${proteinTarget}g). `;
-          } else if (proteinDiff >= -10) {
-            greeting += `Great protein intake! 🥩 `;
-          }
-        }
-
-        if (!dailySummary.today.hasWeighedIn) {
-          greeting += `\n\nDon't forget to log your weight today! ⚖️`;
-        }
-
-        if (dailySummary.today.foodLogs.length > 0) {
-          greeting += `Today so far:\n${dailySummary.today.summary}\n\n`;
-          greeting += `Total: ${dailySummary.today.stats.calories}cal `;
-          greeting += `(${dailySummary.today.stats.protein}p/${dailySummary.today.stats.carbs}c/${dailySummary.today.stats.fat}f)`;
-          if (dailySummary.today.remaining) {
-            greeting += `\n${dailySummary.today.remaining.calories} calories remaining.`;
-          }
-        } else {
-          greeting += `Ready to start tracking for today? What's on your plate?`;
-        }
+        logger.info("[Chat] No messages found, waiting for server greeting");
       }
 
       const initialMessages: Message[] = [];
 
-      if (!isOnboarding && greeting) {
-        // Add the greeting message first
-        initialMessages.push({
-          role: "assistant",
-          content: greeting,
-        });
-      } else {
+      if (isOnboarding) {
         // Onboarding welcome message - ONLY if we don't already have messages
         if (messages.length === 0) {
           initialMessages.push({
@@ -1650,16 +1537,16 @@ export default function Chat() {
         <div className="flex-shrink-0">
           {/* Header */}
           <div className="border-b border-border">
-            <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
+            <div className="max-w-lg mx-auto px-4 py-2 flex justify-between items-center">
               <div>
                 <h1 className="text-foreground flex items-center gap-3 ml-4">
                   <img
                     src="/logo.svg"
                     alt="Bob"
-                    className="h-[60px] w-[60px]"
+                    className="h-[45px] w-[45px]"
                   />
                   <span
-                    className="text-3xl"
+                    className="text-2xl"
                     style={{
                       fontFamily: '"Fugaz One", Inter, sans-serif',
                       fontWeight: 400,
@@ -1782,19 +1669,11 @@ export default function Chat() {
                           previousThreadId: threadId || undefined,
                         });
 
-                        // Clear messages with context-aware greeting
-                        let greeting = `Hey ${profile?.name || "there"}! Fresh chat started! `;
-                        if (newThreadResult.foodLogsCount > 0) {
-                          greeting += `I can see you've logged ${newThreadResult.foodLogsCount} items today. `;
-                        }
-                        greeting += `What can I help you with?`;
-
-                        setMessages([
-                          {
-                            role: "assistant",
-                            content: greeting,
-                          },
-                        ]);
+                        // Clear messages - server will provide greeting
+                        setMessages([]);
+                        logger.info(
+                          "[Chat] New thread created, waiting for server greeting",
+                        );
 
                         // Set the new thread ID
                         setThreadId(newThreadResult.threadId);
@@ -1807,23 +1686,6 @@ export default function Chat() {
                           threadId: newThreadResult.threadId,
                         });
                         logger.info(`[Chat] Thread saved successfully`);
-
-                        // Save the greeting to Convex so it persists
-                        logger.info(
-                          "[Chat] Saving New Chat greeting to thread",
-                        );
-                        try {
-                          await saveMessage({
-                            threadId: newThreadResult.threadId,
-                            role: "assistant",
-                            content: greeting,
-                          });
-                        } catch (err) {
-                          logger.error(
-                            "[Chat] Failed to save New Chat greeting:",
-                            err,
-                          );
-                        }
 
                         // Clear confirmations for new thread (they're thread-specific)
                         setConfirmedFoodLogs(new Set());
@@ -1852,16 +1714,16 @@ export default function Chat() {
 
           {/* Status Cards - Always visible */}
           <div className="border-b border-border">
-            <div className="max-w-lg mx-auto px-4 py-2 space-y-1.5">
-              {/* Weight Cards Row */}
-              <div className="grid grid-cols-2 gap-1.5">
+            <div className="max-w-lg mx-auto px-4 py-1.5">
+              {/* Three Cards Row */}
+              <div className="grid grid-cols-3 gap-1.5">
                 {/* Goal Card */}
-                <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
-                  <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <div className="border border-border rounded-lg p-2 text-center flex flex-col justify-center">
+                  <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                     <Target className="h-3 w-3" />
                     Goal
                   </div>
-                  <div className="text-lg font-bold text-card-foreground">
+                  <div className="text-sm font-bold text-card-foreground">
                     {profile?.goal
                       ? profile.goal === "cut"
                         ? "Cut"
@@ -1870,7 +1732,7 @@ export default function Chat() {
                           : "Maintain"
                       : "—"}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground">
                     {profile?.targetWeight
                       ? `${profile.targetWeight} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
                       : "Set goal"}
@@ -1878,140 +1740,137 @@ export default function Chat() {
                 </div>
 
                 {/* Current Weight Card */}
-                <div className="border border-border rounded-lg p-3 text-center flex flex-col justify-center">
-                  <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <div className="border border-border rounded-lg p-2 text-center flex flex-col justify-center">
+                  <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                     <Scale className="h-3 w-3" />
                     Current
                   </div>
-                  <div className="text-lg font-bold text-card-foreground">
+                  <div className="text-sm font-bold text-card-foreground">
                     {latestWeight?.weight || profile?.currentWeight || "—"}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground">
                     {latestWeight?.weight || profile?.currentWeight
                       ? latestWeight?.unit ||
                         (profile?.preferredUnits === "imperial" ? "lbs" : "kg")
                       : ""}
                   </div>
                 </div>
-              </div>
 
-              {/* Nutrition Card - Full Width */}
-              <div className="border border-border rounded-lg p-3">
-                <div className="text-xs text-muted-foreground text-center mb-2 flex items-center justify-center gap-1">
-                  <Flame className="h-3 w-3" />
-                  Nutrition
-                </div>
-                <div className="space-y-0.5">
-                  {/* Calories - Always show */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Flame className="h-3 w-3" />
-                      Cals
-                    </span>
-                    <span
-                      className={cn(
-                        "text-xs font-semibold",
-                        todayStats && profile
-                          ? getProgressColor(
-                              todayStats.calories,
-                              profile.dailyCalorieTarget,
-                            )
-                          : "",
-                      )}
-                    >
-                      {isStealthMode
-                        ? todayStats &&
-                          profile &&
-                          todayStats.calories > profile.dailyCalorieTarget
-                          ? "Over"
-                          : "OK"
-                        : profile?.dailyCalorieTarget
-                          ? `${Math.round(todayStats?.calories || 0)}/${profile.dailyCalorieTarget}`
-                          : "—"}
-                    </span>
-                  </div>
-
-                  {/* Protein - Show based on preference */}
-                  {preferences?.showProtein !== false && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Dumbbell className="h-3 w-3" />
-                        Protein
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs font-semibold",
-                          todayStats && profile?.proteinTarget
-                            ? getProgressColor(
-                                todayStats.protein,
-                                profile.proteinTarget,
-                              )
-                            : "text-muted-foreground",
-                        )}
-                      >
+                {/* Nutrition Card - Collapsible */}
+                <div className="border border-border rounded-lg p-2">
+                  <Collapsible
+                    open={!isNutritionCollapsed}
+                    onOpenChange={() => toggleNutritionCollapsed()}
+                  >
+                    {/* Calories - Always visible with trigger */}
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Flame className="h-3 w-3" />
+                          Calories
+                        </div>
+                        <ChevronDown
+                          className={cn(
+                            "h-3 w-3 text-muted-foreground transition-transform",
+                            isNutritionCollapsed && "rotate-180",
+                          )}
+                        />
+                      </div>
+                      <div className="text-sm font-bold text-card-foreground mt-0.5">
                         {isStealthMode
                           ? todayStats &&
                             profile &&
-                            todayStats.protein < profile.proteinTarget * 0.8
-                            ? "Low"
+                            todayStats.calories > profile.dailyCalorieTarget
+                            ? "Over"
                             : "OK"
-                          : profile?.proteinTarget
-                            ? `${Math.round(todayStats?.protein || 0)}g/${profile.proteinTarget}g`
+                          : profile?.dailyCalorieTarget
+                            ? `${Math.round(todayStats?.calories || 0)}/${profile.dailyCalorieTarget}`
                             : "—"}
-                      </span>
-                    </div>
-                  )}
+                      </div>
+                    </CollapsibleTrigger>
 
-                  {/* Carbs - Show based on preference */}
-                  {!isStealthMode && preferences?.showCarbs !== false && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Wheat className="h-3 w-3" />
-                        Carbs
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs font-semibold",
-                          todayStats && profile?.carbsTarget
-                            ? getProgressColor(
-                                todayStats.carbs,
-                                profile.carbsTarget,
-                              )
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {profile?.carbsTarget
-                          ? `${Math.round(todayStats?.carbs || 0)}g/${profile.carbsTarget}g`
-                          : "—"}
-                      </span>
-                    </div>
-                  )}
+                    {/* Macros - Collapsible */}
+                    <CollapsibleContent className="mt-1.5 space-y-0.5">
+                      {/* Protein - Show based on preference */}
+                      {preferences?.showProtein !== false && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Dumbbell className="h-2.5 w-2.5" />P
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold",
+                              todayStats && profile?.proteinTarget
+                                ? getProgressColor(
+                                    todayStats.protein,
+                                    profile.proteinTarget,
+                                  )
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {isStealthMode
+                              ? todayStats &&
+                                profile &&
+                                todayStats.protein < profile.proteinTarget * 0.8
+                                ? "Low"
+                                : "OK"
+                              : profile?.proteinTarget
+                                ? `${Math.round(todayStats?.protein || 0)}g`
+                                : "—"}
+                          </span>
+                        </div>
+                      )}
 
-                  {/* Fats - Show based on preference */}
-                  {!isStealthMode && preferences?.showFats !== false && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Droplet className="h-3 w-3" />
-                        Fats
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs font-semibold",
-                          todayStats &&
-                            (profile?.fatTarget || profile?.fatTarget === 0)
-                            ? getProgressColor(
-                                todayStats.fat,
-                                profile.fatTarget || 65,
-                              )
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {profile?.fatTarget !== undefined
-                          ? `${Math.round(todayStats?.fat || 0)}g/${profile.fatTarget}g`
-                          : "—"}
-                      </span>
-                    </div>
-                  )}
+                      {/* Carbs - Show based on preference */}
+                      {!isStealthMode && preferences?.showCarbs !== false && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Wheat className="h-2.5 w-2.5" />C
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold",
+                              todayStats && profile?.carbsTarget
+                                ? getProgressColor(
+                                    todayStats.carbs,
+                                    profile.carbsTarget,
+                                  )
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {profile?.carbsTarget
+                              ? `${Math.round(todayStats?.carbs || 0)}g`
+                              : "—"}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Fats - Show based on preference */}
+                      {!isStealthMode && preferences?.showFats !== false && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Droplet className="h-2.5 w-2.5" />F
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold",
+                              todayStats &&
+                                (profile?.fatTarget || profile?.fatTarget === 0)
+                                ? getProgressColor(
+                                    todayStats.fat,
+                                    profile.fatTarget || 65,
+                                  )
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {profile?.fatTarget !== undefined
+                              ? `${Math.round(todayStats?.fat || 0)}g`
+                              : "—"}
+                          </span>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
               </div>
             </div>
