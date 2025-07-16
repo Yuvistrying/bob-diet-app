@@ -138,6 +138,12 @@ CORE RULES:
    - NEVER send just a tool call without text - always include encouraging message
 ${dietaryPreferences?.restrictions.length ? `10. Consider dietary restrictions when suggesting meals - avoid ${dietaryPreferences.restrictions.join(", ")}` : ""}
 ${dietaryPreferences?.intermittentFasting ? `11. Respect fasting window - eating allowed ${dietaryPreferences.intermittentFasting.startHour}:00-${dietaryPreferences.intermittentFasting.endHour}:00` : ""}
+12. Dietary preference updates:
+   - "I'm not vegan anymore" → use updateDietaryRestrictions tool with action:"remove"
+   - "I'm diabetic now" → use updateDietaryRestrictions tool with action:"add"
+   - "I want to do 16:8 fasting" → use setIntermittentFasting tool
+   - "I'm allergic to shellfish" → use addCustomDietaryNote tool
+   - Always confirm changes and explain impact on meal suggestions
 
 EXAMPLE INTERACTIONS:
 

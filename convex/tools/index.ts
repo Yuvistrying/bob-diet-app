@@ -521,6 +521,166 @@ export function createTools(
     });
   }
 
+  // Dietary preferences tools (always available)
+  tools.updateDietaryRestrictions = tool({
+    description: "Update user's dietary restrictions based on conversation",
+    parameters: z.object({
+      action: z
+        .enum(["add", "remove"])
+        .describe("Whether to add or remove restrictions"),
+      restrictions: z
+        .array(z.string())
+        .describe("Dietary restrictions to add or remove"),
+      reason: z
+        .string()
+        .optional()
+        .describe("Why the user is making this change"),
+    }),
+    execute: async (args) => {
+      try {
+        // Get current preferences
+        const currentPrefs = await convexClient.query(
+          api.dietaryPreferences.getUserDietaryPreferences,
+          {},
+        );
+
+        let newRestrictions = currentPrefs?.restrictions || [];
+
+        if (args.action === "add") {
+          // Add new restrictions
+          const toAdd = args.restrictions.filter(
+            (r) => !newRestrictions.includes(r),
+          );
+          newRestrictions = [...newRestrictions, ...toAdd];
+        } else {
+          // Remove restrictions
+          newRestrictions = newRestrictions.filter(
+            (r) => !args.restrictions.includes(r),
+          );
+        }
+
+        // Update preferences
+        await convexClient.mutation(
+          api.dietaryPreferences.setDietaryPreferences,
+          {
+            restrictions: newRestrictions,
+            customNotes: currentPrefs?.customNotes,
+            intermittentFasting: currentPrefs?.intermittentFasting,
+          },
+        );
+
+        return {
+          success: true,
+          action: args.action,
+          restrictions: args.restrictions,
+          currentRestrictions: newRestrictions,
+        };
+      } catch (error) {
+        console.error("Error updating dietary restrictions:", error);
+        return { error: "Failed to update dietary restrictions" };
+      }
+    },
+  });
+
+  tools.setIntermittentFasting = tool({
+    description: "Set or update intermittent fasting schedule",
+    parameters: z.object({
+      enabled: z.boolean().describe("Whether intermittent fasting is enabled"),
+      startHour: z
+        .number()
+        .min(0)
+        .max(23)
+        .describe("Hour when eating window starts (0-23)"),
+      endHour: z
+        .number()
+        .min(0)
+        .max(23)
+        .describe("Hour when eating window ends (0-23)"),
+    }),
+    execute: async (args) => {
+      try {
+        // Get current preferences
+        const currentPrefs = await convexClient.query(
+          api.dietaryPreferences.getUserDietaryPreferences,
+          {},
+        );
+
+        // Update preferences
+        await convexClient.mutation(
+          api.dietaryPreferences.setDietaryPreferences,
+          {
+            restrictions: currentPrefs?.restrictions || [],
+            customNotes: currentPrefs?.customNotes,
+            intermittentFasting: args.enabled
+              ? {
+                  enabled: true,
+                  startHour: args.startHour,
+                  endHour: args.endHour,
+                }
+              : undefined,
+          },
+        );
+
+        return {
+          success: true,
+          enabled: args.enabled,
+          schedule: args.enabled
+            ? `${args.startHour}:00 - ${args.endHour}:00`
+            : "Disabled",
+        };
+      } catch (error) {
+        console.error("Error updating intermittent fasting:", error);
+        return { error: "Failed to update intermittent fasting settings" };
+      }
+    },
+  });
+
+  tools.addCustomDietaryNote = tool({
+    description:
+      "Add or update custom dietary notes (allergies, medical conditions, preferences)",
+    parameters: z.object({
+      note: z
+        .string()
+        .describe("Custom dietary note or medical condition to add"),
+      append: z
+        .boolean()
+        .default(true)
+        .describe("Whether to append to existing notes or replace"),
+    }),
+    execute: async (args) => {
+      try {
+        // Get current preferences
+        const currentPrefs = await convexClient.query(
+          api.dietaryPreferences.getUserDietaryPreferences,
+          {},
+        );
+
+        let newNotes = args.note;
+        if (args.append && currentPrefs?.customNotes) {
+          newNotes = currentPrefs.customNotes + ". " + args.note;
+        }
+
+        // Update preferences
+        await convexClient.mutation(
+          api.dietaryPreferences.setDietaryPreferences,
+          {
+            restrictions: currentPrefs?.restrictions || [],
+            customNotes: newNotes,
+            intermittentFasting: currentPrefs?.intermittentFasting,
+          },
+        );
+
+        return {
+          success: true,
+          customNotes: newNotes,
+        };
+      } catch (error) {
+        console.error("Error updating custom dietary notes:", error);
+        return { error: "Failed to update custom dietary notes" };
+      }
+    },
+  });
+
   return tools;
 }
 

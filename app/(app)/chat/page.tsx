@@ -298,9 +298,11 @@ export default function Chat() {
   const [isUploading, setIsUploading] = useState(false);
   const [isNutritionCollapsed, setIsNutritionCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("nutritionCollapsed") === "true";
+      const stored = localStorage.getItem("nutritionCollapsed");
+      // If no stored preference, default to collapsed (true)
+      return stored === null ? true : stored === "true";
     }
-    return false;
+    return true; // Default to collapsed
   });
 
   // Duplicate prevention tracking
@@ -1536,7 +1538,7 @@ export default function Chat() {
         {/* Fixed Header Container */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className="border-b border-border">
+          <div className="">
             <div className="max-w-lg mx-auto px-4 py-2 flex justify-between items-center">
               <div>
                 <h1 className="text-foreground flex items-center gap-3 ml-4">
@@ -1713,12 +1715,12 @@ export default function Chat() {
           </div>
 
           {/* Status Cards - Always visible */}
-          <div className="border-b border-border">
+          <div className="">
             <div className="max-w-lg mx-auto px-4 py-1.5">
               {/* Three Cards Row */}
               <div className="grid grid-cols-3 gap-1.5">
                 {/* Goal Card */}
-                <div className="border border-border rounded-lg p-2 text-center flex flex-col justify-center">
+                <div className="bg-muted rounded-lg p-2 text-center flex flex-col justify-center">
                   <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                     <Target className="h-3 w-3" />
                     Goal
@@ -1740,7 +1742,7 @@ export default function Chat() {
                 </div>
 
                 {/* Current Weight Card */}
-                <div className="border border-border rounded-lg p-2 text-center flex flex-col justify-center">
+                <div className="bg-muted rounded-lg p-2 text-center flex flex-col justify-center">
                   <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
                     <Scale className="h-3 w-3" />
                     Current
@@ -1757,26 +1759,17 @@ export default function Chat() {
                 </div>
 
                 {/* Nutrition Card - Collapsible */}
-                <div className="border border-border rounded-lg p-2">
+                <div className="bg-muted rounded-lg p-2 text-center flex flex-col justify-center relative">
                   <Collapsible
                     open={!isNutritionCollapsed}
                     onOpenChange={() => toggleNutritionCollapsed()}
                   >
-                    {/* Calories - Always visible with trigger */}
                     <CollapsibleTrigger className="w-full">
-                      <div className="flex items-center justify-between">
-                        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Flame className="h-3 w-3" />
-                          Calories
-                        </div>
-                        <ChevronDown
-                          className={cn(
-                            "h-3 w-3 text-muted-foreground transition-transform",
-                            isNutritionCollapsed && "rotate-180",
-                          )}
-                        />
+                      <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                        <Flame className="h-3 w-3" />
+                        Calories
                       </div>
-                      <div className="text-sm font-bold text-card-foreground mt-0.5">
+                      <div className="text-sm font-bold text-card-foreground">
                         {isStealthMode
                           ? todayStats &&
                             profile &&
@@ -1787,10 +1780,18 @@ export default function Chat() {
                             ? `${Math.round(todayStats?.calories || 0)}/${profile.dailyCalorieTarget}`
                             : "—"}
                       </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        <ChevronDown
+                          className={cn(
+                            "h-3 w-3 inline-block transition-transform",
+                            isNutritionCollapsed && "rotate-180",
+                          )}
+                        />
+                      </div>
                     </CollapsibleTrigger>
 
                     {/* Macros - Collapsible */}
-                    <CollapsibleContent className="mt-1.5 space-y-0.5">
+                    <CollapsibleContent className="absolute top-full left-0 right-0 mt-1 bg-background rounded-lg shadow-lg border border-border p-2 z-50 space-y-0.5">
                       {/* Protein - Show based on preference */}
                       {preferences?.showProtein !== false && (
                         <div className="flex items-center justify-between">

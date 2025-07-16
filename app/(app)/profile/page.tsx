@@ -34,6 +34,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { BottomNav } from "~/app/components/BottomNav";
+import { DietaryPreferencesCard } from "~/app/components/DietaryPreferencesCard";
 
 export default function Profile() {
   const { signOut } = useAuth();
@@ -666,6 +667,9 @@ export default function Profile() {
                   </div>
                 </CardContent>
               </div>
+
+              {/* Dietary Preferences */}
+              <DietaryPreferencesCard />
 
               {/* Account Actions */}
               <div className="space-y-3 mb-8 mt-4">

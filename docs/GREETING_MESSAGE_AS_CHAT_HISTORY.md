@@ -18,6 +18,7 @@ Save greeting messages as regular chat messages in the `chatHistory` table inste
 ### Implementation Details
 
 #### 1. Removed Greeting Infrastructure
+
 - Deleted `greetingMessages` table from schema
 - Deleted `convex/greetings.ts` file
 - Removed all greeting queries and mutations from chat page
@@ -52,6 +53,7 @@ if (profile) {
 #### 3. Greeting Building Functions
 
 The greeting building functions were moved directly into `threads.ts`:
+
 - `buildMorningGreeting()` - Creates personalized morning greetings with yesterday's summary
 - `buildNewThreadGreeting()` - Creates simple greeting for new chat threads
 

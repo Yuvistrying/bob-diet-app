@@ -22,7 +22,20 @@ In `convex/tools/index.ts`:
 // Format dates for display
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${months[date.getMonth()]} ${date.getDate()}`;
 };
 
@@ -30,8 +43,8 @@ const formatDate = (dateStr: string) => {
 const summaryData = {
   weekStartDate: weekStartStr,
   weekEndDate: weekEndStr,
-  weekStartDateFormatted: formatDate(weekStartStr),  // New field
-  weekEndDateFormatted: formatDate(weekEndStr),      // New field
+  weekStartDateFormatted: formatDate(weekStartStr), // New field
+  weekEndDateFormatted: formatDate(weekEndStr), // New field
   // ... other fields
 };
 ```
@@ -48,10 +61,7 @@ const dataForDb = {
   // ... other fields (excluding formatted dates)
 };
 
-await convexClient.mutation(
-  api.weeklySummaries.saveWeeklySummary,
-  dataForDb,
-);
+await convexClient.mutation(api.weeklySummaries.saveWeeklySummary, dataForDb);
 
 return summaryData; // Still includes formatted dates for display
 ```
