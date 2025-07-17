@@ -353,9 +353,10 @@ export const getThreadMessages = query({
     // Get messages for this specific thread only
     const messages = await ctx.db
       .query("chatHistory")
-      .withIndex("by_user_timestamp", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user_thread", (q) =>
+        q.eq("userId", identity.subject).eq("metadata.threadId", args.threadId),
+      )
       .order("desc")
-      .filter((q) => q.eq(q.field("metadata.threadId"), args.threadId))
       .take(limit);
 
     console.log(

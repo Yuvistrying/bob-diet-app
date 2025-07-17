@@ -217,6 +217,7 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_timestamp", ["userId", "timestamp"])
+    .index("by_user_thread", ["userId", "metadata.threadId"])
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
       dimensions: 1536,
