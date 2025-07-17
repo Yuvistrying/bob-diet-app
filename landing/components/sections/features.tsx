@@ -7,8 +7,8 @@ export function Features() {
   return (
     <Section
       id="features"
-      title="Features"
-      subtitle="Powerful features"
+      title="More Features"
+      subtitle="Everything You Need In One AI Coach"
       className="max-w-screen-lg mx-auto container px-10"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -25,10 +25,7 @@ export function Features() {
                 {name}
               </h2>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">{description}</p>
-            <Link href="#" className="text-sm text-primary hover:underline">
-              Learn more &gt;
-            </Link>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
         ))}
       </div>

@@ -69,7 +69,16 @@ export function Header() {
               <Icons.logo className="h-8 w-auto" />
               <span className="text-xl" style={{ fontFamily: '"Fugaz One", Inter, sans-serif', fontWeight: 400 }}>BOB</span>
             </Link>
-            <div className="hidden lg:block">
+            <div className="hidden lg:flex gap-4">
+              <Link
+                href="/sign-in"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "h-8 rounded-full"
+                )}
+              >
+                Log In
+              </Link>
               <Link
                 href="/sign-up"
                 className={cn(

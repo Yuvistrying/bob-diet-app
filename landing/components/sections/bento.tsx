@@ -49,8 +49,8 @@ export function BentoGrid() {
   return (
     <Section
       id="bento"
-      title="Benefits"
-      subtitle="It does a lot of things"
+      title="The Magic"
+      subtitle="Your Complete Nutrition Command Center"
       className="mx-auto max-w-screen-md px-10"
       ref={ref}
     >

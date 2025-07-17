@@ -2,7 +2,8 @@
 import Marquee from "@/components/ui/marquee";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ChevronRight, HeartHandshake } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { Icons } from "@/components/icons";
 
 const reviews = [
   {
@@ -135,28 +136,42 @@ export function CTA() {
               </Marquee>
             </div>
             <div className="z-10 mx-auto size-24 rounded-[2rem] border bg-white/10 p-3 shadow-2xl backdrop-blur-md dark:bg-black/10 lg:size-32">
-              <HeartHandshake className="mx-auto size-16 text-black dark:text-white lg:size-24" />
+              <Icons.logo className="mx-auto size-16 lg:size-24" />
             </div>
             <div className="z-10 mt-4 flex flex-col items-center text-center text-black dark:text-white">
               <h1 className="text-3xl font-bold lg:text-4xl">
-                Stop wasting time on design.
+                Ready to Transform Your Health?
               </h1>
               <p className="mt-2">
-                Start your 7-day free trial. No credit card required.
+                Join 47,000+ users already succeeding with Bob
               </p>
-              <a
-                href="/"
-                className={cn(
-                  buttonVariants({
-                    size: "lg",
-                    variant: "outline",
-                  }),
-                  "group mt-4 rounded-[2rem] px-6"
-                )}
-              >
-                Get Started
-                <ChevronRight className="ml-1 size-4 transition-all duration-300 ease-out group-hover:translate-x-1" />
-              </a>
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                <a
+                  href="/sign-up"
+                  className={cn(
+                    buttonVariants({
+                      size: "lg",
+                      variant: "default",
+                    }),
+                    "group rounded-[2rem] px-6 text-black"
+                  )}
+                >
+                  Start Free Week
+                  <ChevronRight className="ml-1 size-4 transition-all duration-300 ease-out group-hover:translate-x-1" />
+                </a>
+                <a
+                  href="/sign-in"
+                  className={cn(
+                    buttonVariants({
+                      size: "lg",
+                      variant: "outline",
+                    }),
+                    "rounded-[2rem] px-6"
+                  )}
+                >
+                  Log In
+                </a>
+              </div>
             </div>
             <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-b from-transparent to-white to-70% dark:to-black" />
           </div>

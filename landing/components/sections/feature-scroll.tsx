@@ -39,7 +39,7 @@ export function FeatureScroll() {
     <Section
       id="feature-scroll"
       title="Experience"
-      subtitle="An app unlike any other"
+      subtitle="The AI Coach That Learns From Your Scale, Not Formulas"
       className="container px-4 sm:px-10 mx-auto max-w-[var(--max-container-width)]"
     >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mx-auto select-none">

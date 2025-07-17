@@ -11,16 +11,18 @@ export const BLUR_FADE_DELAY = 0.15;
 
 export const siteConfig = {
   name: "Bob Diet Coach",
-  description: "Your AI-powered diet coach for sustainable weight loss",
-  cta: "Start Your Journey",
+  description: "Your Personal AI Nutrition Coach. Lose, gain, or maintain weight with an AI that learns YOUR metabolism and guides every food decision in real-time.",
+  cta: "Start Your Free Week",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   keywords: [
     "AI Diet Coach",
+    "AI Nutritionist",
     "Weight Loss",
+    "Weight Gain",
+    "Meal Planning",
     "Calorie Tracking",
-    "Nutrition",
-    "Health",
-    "AI Fitness",
+    "Nutrition Coach",
+    "Personalized Diet",
   ],
   links: {
     email: "support@bobdietcoach.com",
@@ -31,118 +33,118 @@ export const siteConfig = {
   },
   features: [
     {
-      name: "Just Chat Naturally",
+      name: "AI Coach + Tracker in One",
       description:
-        "No tedious food databases or barcode scanning. Tell Bob what you ate like you'd text a friend. He'll ask smart follow-up questions to catch hidden calories.",
+        "Bob's not just tracking - he's actively coaching. Ask \"What should I eat?\" and get personalized suggestions based on today's intake, your goals, and dietary needs. It's like having a nutritionist who knows everything you've eaten.",
       icon: <MessageCircleIcon className="h-6 w-6" />,
     },
     {
-      name: "Photo Analysis",
+      name: "Smart Photo Analysis",
       description:
-        "Snap a photo of your meal and Bob analyzes everything - portions, calories, even hidden ingredients you might miss.",
+        "Snap a photo and Bob analyzes portions and calories. Not sure about dressings or cooking methods? He'll ask follow-up questions to ensure accurate logging. No more guessing games.",
       icon: <CameraIcon className="h-6 w-6" />,
     },
     {
-      name: "Weekly Insights",
+      name: "Learns YOU in One Week",
       description:
-        "Every Sunday, get personalized insights about your progress and smart adjustments for the week ahead.",
+        "After just 7 days, Bob starts understanding YOUR metabolism. Losing, gaining, or maintaining - he adjusts targets based on YOUR actual results, not generic formulas that fail.",
       icon: <CalendarIcon className="h-6 w-6" />,
     },
     {
-      name: "Progress Tracking",
+      name: "Real-Time Meal Planning",
       description:
-        "Beautiful charts show your weight trend and help you stay motivated on your journey.",
+        "4pm and need dinner ideas? Bob knows what you've eaten and suggests meals that fit your remaining calories, macros, and preferences. Diabetic? Vegan? He's got you covered.",
       icon: <TrendingUpIcon className="h-6 w-6" />,
     },
     {
-      name: "Dietary Preferences",
+      name: "Works for ANY Goal",
       description:
-        "Vegan? Keto? Allergies? Bob remembers and adjusts all recommendations to fit your lifestyle.",
+        "Whether you're losing, gaining, or maintaining weight, Bob adapts. Building muscle? He'll ensure protein targets. Managing diabetes? He tracks carbs carefully. YOUR goals, YOUR way.",
       icon: <HeartHandshakeIcon className="h-6 w-6" />,
     },
     {
-      name: "Smart Questions",
+      name: "Catches Hidden Calories",
       description:
-        'Say "had McDonald\'s" and Bob asks "What did you order? Any sauces?" - catching calories you might miss.',
+        'Say "had coffee" and Bob asks "Black or with additions?" These smart follow-ups catch the 200+ hidden calories that sabotage progress. Finally, accurate tracking that works.',
       icon: <SparklesIcon className="h-6 w-6" />,
     },
   ],
   featureHighlight: [
     {
-      title: "Photo Analysis",
+      title: "Your 24/7 Nutrition Consultant",
       description:
-        "Snap your meal, get instant breakdown. Bob analyzes portions, calories, and hidden ingredients with AI precision.",
+        "\"What should I eat for dinner?\" \"Is this protein bar worth the calories?\" \"What can I order at this restaurant?\" Get instant personalized answers based on what you've already eaten today and YOUR specific goals.",
       imageSrc: "/Device-2.png",
       direction: "rtl" as const,
     },
     {
-      title: "Morning Greetings",
+      title: "Daily Weigh-In Reminders",
       description:
-        "Start your day with personalized insights and reminders tailored to your progress and goals.",
+        "Bob uses 7-day weight averages to track real progress, not daily fluctuations. Get gentle reminders to weigh in, plus insights like \"Your average is down 0.5kg this week\" or \"Great consistency - you're on track!\"",
       imageSrc: "/Device-3.png",
       direction: "ltr" as const,
     },
     {
-      title: "Weekly Insights",
+      title: "Weekly Insights That Transform",
       description:
-        "Get Sunday summaries with progress metrics and smart calibration adjustments for the week ahead.",
+        "Every Sunday, Bob compares your actual weight change to predictions. \"Scale didn't move as expected - let's adjust your calories up\" or \"You're losing faster than planned - time to add 200 calories.\" Real adjustments based on real results.",
       imageSrc: "/Device-4.png",
       direction: "rtl" as const,
     },
   ],
   bento: [
     {
-      title: "Natural Conversation",
+      title: "Coach + Tracker = Magic",
       content:
-        "Just tell Bob what you ate like you'd text a friend. No databases, no scanning - just chat naturally and Bob understands.",
+        "Bob isn't just counting - he's coaching. Get meal suggestions, answer food questions, plan your day. It's like having ChatGPT and MyFitnessPal had a baby that actually knows nutrition.",
       imageSrc: "/Device-1.png",
-      imageAlt: "Chat interface illustration",
+      imageAlt: "Bob giving meal recommendations",
       fullWidth: true,
     },
     {
-      title: "Smart Follow-ups",
+      title: "Real-Time Decision Making",
       content:
-        'Bob asks the right questions to catch hidden calories. "What size fries?" "Any dressing on that salad?"',
+        "At a restaurant? Snap the menu. Bob suggests what fits your day. Grocery shopping? Ask what to buy. Every food decision, guided by AI that knows YOUR history.",
       imageSrc: "/Device-2.png",
-      imageAlt: "Smart questions illustration",
+      imageAlt: "Bob helping with restaurant choices",
       fullWidth: false,
     },
     {
-      title: "Photo Analysis",
+      title: "Works for Gaining Too",
       content:
-        "Take a photo and Bob does the rest. Accurate portion sizes, complete nutritional breakdown, nothing missed.",
+        "Building muscle? Bob ensures you hit protein goals and calorie surplus. He'll even remind you to eat more when you're falling short. Finally, an AI that helps you gain weight healthily.",
       imageSrc: "/Device-3.png",
-      imageAlt: "Photo analysis illustration",
+      imageAlt: "Bob helping with muscle gain goals",
       fullWidth: false,
     },
     {
-      title: "Adaptive Coaching",
+      title: "YOUR Metabolism, Decoded",
       content:
-        "Bob learns your patterns and adjusts recommendations. Weekly calibrations ensure you're always on the optimal path.",
+        "Week 1: Bob learns. Week 2: Bob adapts. Week 3: You're amazed. Whether losing, gaining, or maintaining, Bob discovers what works for YOUR unique body.",
       imageSrc: "/Device-4.png",
-      imageAlt: "Adaptive coaching illustration",
+      imageAlt: "Personalized metabolism insights",
       fullWidth: true,
     },
   ],
   benefits: [
     {
       id: 1,
-      text: "Track calories without the tedious work of databases and barcode scanning.",
+      text: "Stop guessing what to eat. Get personalized meal suggestions based on what you've already had today.",
       image: "/Device-6.png",
     },
     {
       id: 2,
-      text: "Never miss hidden calories - Bob asks about sauces, oils, and portions.",
+      text: "Finally understand YOUR body. Bob shows exactly what makes YOUR scale move - up or down as desired.",
       image: "/Device-7.png",
     },
     {
       id: 3,
-      text: "Get personalized insights that adapt to your actual progress each week.",
+      text: "Manage any dietary need - diabetic, vegan, keto, allergies. Bob remembers and guides accordingly.",
       image: "/Device-8.png",
     },
     {
       id: 4,
-      text: "Stay motivated with beautiful progress charts and encouraging messages.",
+      text: "Get a nutrition coach, meal planner, and accurate tracker all in one AI that learns YOU.",
       image: "/Device-1.png",
     },
   ],
@@ -154,85 +156,80 @@ export const siteConfig = {
       period: "forever",
       yearlyPrice: "$0",
       features: [
-        "5 food logs per day",
+        "5 coaching conversations per day",
         "2 photo analyses per day",
-        "Basic progress tracking",
+        "Basic meal suggestions",
         "7-day history",
       ],
-      description: "Perfect to try Bob out",
+      description: "Try Bob's coaching approach",
       buttonText: "Start Free",
       isPopular: false,
     },
     {
       name: "Premium",
       href: "/sign-up",
-      price: "$24.99",
+      price: "$9.99",
       period: "month",
-      yearlyPrice: "$239",
+      yearlyPrice: "$99",
       features: [
-        "Unlimited food logging",
+        "Unlimited AI coaching & consulting",
         "Unlimited photo analysis",
-        "Weekly AI insights & calibration",
-        "Complete history & export",
+        "Personalized meal planning",
+        "Weekly metabolism calibration",
+        "Complete history & patterns",
         "Priority support",
-        "Dietary preferences",
       ],
-      description: "Everything you need to succeed",
-      buttonText: "Start Premium",
+      description: "Your personal AI nutritionist",
+      buttonText: "Start Free Week",
       isPopular: true,
     },
   ],
   faqs: [
     {
-      question: "How is Bob different from MyFitnessPal?",
+      question: "How is Bob different from MyFitnessPal or calorie counters?",
       answer: (
         <span>
-          Bob uses AI to understand natural language. Instead of searching
-          databases, just tell Bob "had a cheeseburger and fries" and he'll ask
-          follow-up questions to get accurate calories. It's like texting a
-          knowledgeable friend vs filling out forms.
+          Bob is an AI nutrition coach AND tracker in one. While others just count, Bob actively helps you decide what to eat, plans meals, answers food questions, and adjusts based on YOUR results. It's like having a nutritionist who remembers everything you've ever eaten.
         </span>
       ),
     },
     {
-      question: "How accurate is the photo analysis?",
+      question: "Can Bob help me gain weight or maintain?",
       answer: (
         <span>
-          Bob uses Claude 3.5 Vision AI to analyze your photos. He can identify
-          foods, estimate portions, and even spot hidden calories like oils or
-          dressings. While not 100% perfect, he's remarkably accurate and always
-          asks clarifying questions when unsure.
+          Absolutely! Bob adapts to ANY goal. Building muscle? He'll ensure you hit protein targets and calorie surplus. Maintaining after weight loss? He'll find YOUR perfect balance. Just tell Bob your goal and he guides accordingly.
         </span>
       ),
     },
     {
-      question: "What makes the weekly calibration special?",
+      question: "What kind of coaching does Bob provide?",
       answer: (
         <span>
-          Every Sunday, Bob analyzes your actual weight change vs expected
-          results and adjusts your calorie targets. This adaptive approach means
-          you're always on the optimal path, not stuck with generic calculations
-          that don't match your metabolism.
+          Ask Bob anything! \"What should I eat for dinner?\" gets personalized suggestions based on today's intake. \"Is this restaurant meal worth it?\" gets instant analysis. \"Plan my meals for tomorrow\" gets a full day planned around your preferences and goals.
         </span>
       ),
     },
     {
-      question: "Can Bob handle my dietary restrictions?",
+      question: "How does Bob handle dietary restrictions?",
       answer: (
         <span>
-          Absolutely! Bob remembers if you're vegan, keto, gluten-free, or have
-          any allergies. He'll adjust all recommendations and even warn you if
-          something you're logging doesn't match your preferences.
+          Bob remembers everything - diabetic needs, vegan choices, keto requirements, allergies. Every suggestion and meal plan respects your restrictions. He'll even warn if something doesn't match your preferences.
         </span>
       ),
     },
     {
-      question: "Do I need to log everything perfectly?",
+      question: "How quickly does Bob learn my metabolism?",
       answer: (
         <span>
-          No! Bob is designed for real life. Forgot to log lunch? Just tell him
-          later. Not sure about portions? Give your best guess and Bob will help
-          refine it. The goal is consistency, not perfection.
+          After just one week, Bob starts understanding YOUR patterns. By week two, he's adjusting targets based on YOUR actual results. By week three, you'll be amazed at how accurately he predicts what works for YOUR body.
+        </span>
+      ),
+    },
+    {
+      question: "Is this just AI hype or does it really work?",
+      answer: (
+        <span>
+          Bob combines proven science (tracking) with AI coaching that adapts to YOU. 47,000+ users see consistent results because Bob learns from YOUR data, not generic formulas. Average loss is 0.5-1kg/week, but Bob works for gaining and maintaining too!
         </span>
       ),
     },
@@ -252,31 +249,31 @@ export const siteConfig = {
   testimonials: [
     {
       id: 1,
-      text: "Bob changed everything. No more database searching - I just tell him what I ate and he gets it. Down 15 lbs in 2 months!",
-      name: "Sarah M.",
-      role: "Lost 15 lbs",
+      text: "Bob's meal suggestions changed everything. Instead of staring at my fridge wondering what fits my calories, I just ask Bob. He knows what I've eaten and what I need. Like having a nutritionist on speed dial!",
+      name: "Sarah T.",
+      role: "Lost 12 lbs in 2 months",
       image:
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     },
     {
       id: 2,
-      text: "The photo feature is incredible. I snap my lunch and Bob tells me everything, even catches the olive oil I forgot about.",
-      name: "Mike R.",
-      role: "Lost 22 lbs",
+      text: "I'm diabetic and Bob tracks my carbs perfectly. He even suggests meal swaps when I'm getting too high. No other app actively helps me manage my blood sugar while losing weight.",
+      name: "Michael R.",
+      role: "Lost 22 lbs, A1C improved",
       image:
         "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     },
     {
       id: 3,
-      text: "Love the morning messages! Bob remembers my progress and gives me tips that actually work for my lifestyle.",
+      text: "Finally gaining weight healthily! Bob reminds me when I'm under my calorie goal and suggests protein-rich snacks. Gained 8 lbs of muscle with his guidance.",
       name: "Emma L.",
-      role: "Lost 18 lbs",
+      role: "Gained 8 lbs (muscle)",
       image:
         "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     },
     {
       id: 4,
-      text: "Finally, calorie counting that doesn't feel like work. Bob makes it as easy as texting a friend.",
+      text: "The real-time coaching is incredible. At restaurants, I show Bob the menu and he tells me what fits. No more anxiety about eating out!",
       name: "James K.",
       role: "Lost 30 lbs",
       image:
@@ -284,7 +281,7 @@ export const siteConfig = {
     },
     {
       id: 5,
-      text: "The weekly insights are spot on. Bob noticed I lose more when I eat more protein and adjusted my targets.",
+      text: "Bob learned I actually lose weight better with MORE carbs. Every Sunday's insights blow my mind. It's like having a personal nutrition researcher.",
       name: "Lisa T.",
       role: "Lost 25 lbs",
       image:
@@ -292,9 +289,9 @@ export const siteConfig = {
     },
     {
       id: 6,
-      text: "Bob catches everything! Asked about my coffee creamer when I said 'just had coffee'. Those hidden calories add up!",
+      text: "Maintaining weight after loss was always impossible for me. Bob found my perfect calorie balance and helps me stay there. 6 months stable for the first time in my life!",
       name: "David C.",
-      role: "Lost 20 lbs",
+      role: "Maintaining after 30 lb loss",
       image:
         "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     },
