@@ -10,11 +10,11 @@ export default function WelcomePage() {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
   const userProfile = useQuery(
-    api.users.getUserProfile,
+    api.userProfiles.getUserProfile,
     isSignedIn ? {} : "skip",
   );
   const subscriptionStatus = useQuery(
-    api.subscriptions.checkSubscriptionStatus,
+    api.subscriptions.checkUserSubscriptionStatus,
     isSignedIn ? {} : "skip",
   );
 

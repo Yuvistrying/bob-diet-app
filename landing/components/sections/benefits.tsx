@@ -25,7 +25,7 @@ export function Benefits() {
   return (
     <Section
       title="Benefits"
-      subtitle={`What you can do with ${siteConfig.name}`}
+      subtitle="Your Complete Nutrition Command Center"
       className="bg-muted relative max-w-screen"
     >
       <div

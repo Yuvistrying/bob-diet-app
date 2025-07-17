@@ -19,8 +19,9 @@ type Link = {
 };
 
 const links: Link[] = [
-  { text: "Pricing", url: "#" },
-  { text: "Contact", url: "#" },
+  { text: "Pricing", url: "#pricing" },
+  { text: "Contact", url: "mailto:support@bobdietcoach.com" },
+  { text: "Log In", url: "/sign-in" },
 ];
 
 export function Footer() {

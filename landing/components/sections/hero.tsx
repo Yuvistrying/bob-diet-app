@@ -49,17 +49,15 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.5, ease: easeInOutCubic }}
             className="text-5xl font-bold mb-4 tracking-tighter"
           >
-            {siteConfig.description}
+            Your Personal AI Nutrition Coach
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.7, ease: easeInOutCubic }}
-            className="max-w-2xl mx-auto text-xl mb-8 font-medium text-balance"
+            className="max-w-3xl mx-auto text-xl mb-8 font-medium text-balance"
           >
-            Just tell Bob what you ate like you'd text a friend. No tedious
-            databases, no barcode scanning - he understands natural language and
-            catches hidden calories you might miss.
+            Lose, gain, or maintain weight with an AI that learns YOUR metabolism and guides every food decision in real-time.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -73,9 +71,14 @@ export function Hero() {
             >
               {siteConfig.cta} →
             </a>
-            <p className="text-sm text-muted-foreground">
-              Free to start • No credit card required
-            </p>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-sm text-muted-foreground">
+                Free to start • No credit card required
+              </p>
+              <a href="/sign-in" className="text-sm text-muted-foreground hover:text-foreground underline">
+                Already a user? Log in
+              </a>
+            </div>
           </motion.div>
         </div>
         <div className="flex flex-nowrap items-center justify-center gap-4 sm:gap-8 h-auto sm:h-[500px] select-none">
