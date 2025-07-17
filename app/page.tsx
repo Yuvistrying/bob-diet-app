@@ -1,15 +1,17 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { Header } from "~/app/components/landing/header";
-import { HeroV2 } from "~/app/components/landing/hero-v2";
-import { Benefits } from "~/app/components/landing/benefits";
-import { Stats } from "~/app/components/landing/stats";
-import { IPhoneShowcaseAnimated } from "~/app/components/landing/iphone-showcase-animated";
-import { Testimonials } from "~/app/components/landing/testimonials";
-import { Pricing } from "~/app/components/landing/pricing";
-import { FAQ } from "~/app/components/landing/faq";
-import { CTA } from "~/app/components/landing/cta";
-import { Footer } from "~/app/components/landing/footer";
+import { Benefits } from "~/app/components/sections/benefits";
+import { BentoGrid } from "~/app/components/sections/bento";
+import { CTA } from "~/app/components/sections/cta";
+import { FAQ } from "~/app/components/sections/faq";
+import { FeatureHighlight } from "~/app/components/sections/feature-highlight";
+import { FeatureScroll } from "~/app/components/sections/feature-scroll";
+import { Features } from "~/app/components/sections/features";
+import { Footer } from "~/app/components/sections/footer";
+import { Header } from "~/app/components/sections/header";
+import { Hero } from "~/app/components/sections/hero";
+import { Pricing } from "~/app/components/sections/pricing";
+import { Testimonials } from "~/app/components/sections/testimonials";
 
 export default async function HomePage() {
   const { userId } = await auth();
@@ -23,10 +25,12 @@ export default async function HomePage() {
   return (
     <main className="relative">
       <Header />
-      <HeroV2 />
+      <Hero />
+      <FeatureScroll />
+      <FeatureHighlight />
+      <BentoGrid />
       <Benefits />
-      <Stats />
-      <IPhoneShowcaseAnimated />
+      <Features />
       <Testimonials />
       <Pricing />
       <FAQ />
