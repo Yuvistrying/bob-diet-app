@@ -98,7 +98,10 @@ export function IPhoneShowcaseAnimated() {
           {showcaseItems.map((item, index) => (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, x: index < 2 ? -200 : index > 2 ? 200 : 0 }}
+              initial={{
+                opacity: 0,
+                x: index < 2 ? -200 : index > 2 ? 200 : 0,
+              }}
               animate={{ opacity: 1, x: 0 }}
               style={{ y: transforms[index] }}
               transition={{ duration: 1, delay: 1, ease: easeInOutCubic }}
@@ -109,16 +112,18 @@ export function IPhoneShowcaseAnimated() {
                 <div className="relative aspect-[390/844] w-full">
                   {/* Phone Frame */}
                   <div className="absolute inset-0 rounded-[2.5rem] bg-gray-900 shadow-2xl" />
-                  
+
                   {/* Screen */}
                   <div className="absolute inset-[3%] overflow-hidden rounded-[2rem] bg-white dark:bg-gray-900">
                     {/* Status Bar */}
                     <div className="relative h-10 bg-black">
                       <div className="absolute left-1/2 top-1/2 h-4 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black" />
                     </div>
-                    
+
                     {/* Screen Content */}
-                    <div className={`h-full ${item.screen} flex items-center justify-center p-4`}>
+                    <div
+                      className={`h-full ${item.screen} flex items-center justify-center p-4`}
+                    >
                       <div className="rounded-lg bg-white/90 dark:bg-gray-800/90 p-4 text-center backdrop-blur">
                         <p className="text-xs sm:text-sm font-medium">
                           {item.placeholder}
@@ -146,10 +151,13 @@ export function IPhoneShowcaseAnimated() {
           viewport={{ once: true }}
           className="mt-16 text-center max-w-3xl mx-auto px-4"
         >
-          <h3 className="text-2xl font-bold mb-4">Smart Questions That Catch Hidden Calories</h3>
+          <h3 className="text-2xl font-bold mb-4">
+            Smart Questions That Catch Hidden Calories
+          </h3>
           <p className="text-lg text-muted-foreground">
-            Say "had McDonald's" and Bob doesn't just log it - he asks "What did you order? Any sauces? What size?" 
-            Because those details matter, and Bob knows you might miss them.
+            Say "had McDonald's" and Bob doesn't just log it - he asks "What did
+            you order? Any sauces? What size?" Because those details matter, and
+            Bob knows you might miss them.
           </p>
         </motion.div>
       </div>

@@ -50,7 +50,8 @@ export function HeroV2() {
               You're down 0.8 lbs this week! Let's keep the momentum going.
             </p>
             <div className="text-xs bg-primary/10 text-primary rounded p-2">
-              💡 Tip: Your body responds well to protein at breakfast. Try eggs or Greek yogurt today!
+              💡 Tip: Your body responds well to protein at breakfast. Try eggs
+              or Greek yogurt today!
             </div>
           </div>
         </div>
@@ -71,7 +72,8 @@ export function HeroV2() {
               B
             </div>
             <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-2">
-              Looks like grilled chicken with veggies! About 420 calories. Any sauce on that?
+              Looks like grilled chicken with veggies! About 420 calories. Any
+              sauce on that?
             </div>
           </div>
         </div>
@@ -159,10 +161,14 @@ export function HeroV2() {
                 key={index}
                 initial={{ opacity: 0, x: 100 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 + index * 0.1, ease: easeInOutCubic }}
-                style={{ 
+                transition={{
+                  duration: 0.8,
+                  delay: 0.4 + index * 0.1,
+                  ease: easeInOutCubic,
+                }}
+                style={{
                   y: phone.transform,
-                  position: 'absolute',
+                  position: "absolute",
                   left: `${index * 120}px`,
                   top: `${index * 40}px`,
                   zIndex: 3 - index,
@@ -172,18 +178,16 @@ export function HeroV2() {
                 <div className="relative aspect-[390/844] w-full">
                   {/* Phone Frame */}
                   <div className="absolute inset-0 rounded-[2.5rem] bg-gray-900 shadow-2xl" />
-                  
+
                   {/* Screen */}
                   <div className="absolute inset-[3%] overflow-hidden rounded-[2rem] bg-white dark:bg-gray-900">
                     {/* Status Bar */}
                     <div className="relative h-10 bg-black">
                       <div className="absolute left-1/2 top-1/2 h-4 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black" />
                     </div>
-                    
+
                     {/* Screen Content */}
-                    <div className="h-full bg-background">
-                      {phone.content}
-                    </div>
+                    <div className="h-full bg-background">{phone.content}</div>
                   </div>
 
                   {/* Home Indicator */}
@@ -205,18 +209,16 @@ export function HeroV2() {
             <div className="relative aspect-[390/844] w-full">
               {/* Phone Frame */}
               <div className="absolute inset-0 rounded-[2.5rem] bg-gray-900 shadow-2xl" />
-              
+
               {/* Screen */}
               <div className="absolute inset-[3%] overflow-hidden rounded-[2rem] bg-white dark:bg-gray-900">
                 {/* Status Bar */}
                 <div className="relative h-10 bg-black">
                   <div className="absolute left-1/2 top-1/2 h-4 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black" />
                 </div>
-                
+
                 {/* Screen Content */}
-                <div className="h-full bg-background">
-                  {phones[0].content}
-                </div>
+                <div className="h-full bg-background">{phones[0].content}</div>
               </div>
 
               {/* Home Indicator */}
