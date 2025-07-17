@@ -65,6 +65,7 @@ Bob now:
 ### DietaryPreferencesCard Component
 
 Created `/app/components/DietaryPreferencesCard.tsx` with:
+
 - Badge-based restriction selection
 - Custom notes textarea
 - Intermittent fasting controls with time pickers
@@ -73,6 +74,7 @@ Created `/app/components/DietaryPreferencesCard.tsx` with:
 ### Profile Page Integration
 
 Added to `/app/(app)/profile/page.tsx`:
+
 - Imported and rendered DietaryPreferencesCard
 - Placed between Service Preferences and Account Actions
 - Fully integrated with profile page styling
@@ -90,8 +92,9 @@ In `/convex/tools/index.ts`, added three new tools:
 ### Prompt Updates
 
 Updated `/convex/prompts.ts` to recognize dietary changes:
+
 - "I'm not vegan anymore" → Remove vegan restriction
-- "I'm diabetic now" → Add diabetic restriction  
+- "I'm diabetic now" → Add diabetic restriction
 - "I want to do 16:8 fasting" → Set fasting window
 - "I'm allergic to shellfish" → Add custom note
 
