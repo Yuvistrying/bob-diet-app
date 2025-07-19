@@ -170,12 +170,11 @@ export default function Profile() {
             </Button>
           </div>
 
-          {/* Check if profile exists */}
           {!profile ? (
-            <div className="mt-8 text-center">
-              <p className="text-muted-foreground">
-                Profile will show after onboarding is finished
-              </p>
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">Loading profile...</p>
+              </div>
             </div>
           ) : (
             <>
