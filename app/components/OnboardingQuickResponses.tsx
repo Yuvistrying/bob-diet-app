@@ -81,9 +81,13 @@ export function OnboardingQuickResponses({
           </label>
           <Input
             type="text"
-            placeholder="Enter your name"
             value={nameValue}
             onChange={(e) => setNameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && nameValue.trim() && !isLoading) {
+                onSelect(nameValue.trim());
+              }
+            }}
             className="w-full text-center text-lg font-medium"
             autoFocus
           />
@@ -117,9 +121,20 @@ export function OnboardingQuickResponses({
               {heightUnit === "cm" ? (
                 <Input
                   type="number"
-                  placeholder="170"
                   value={heightValue}
                   onChange={(e) => setHeightValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      heightValue &&
+                      ageValue &&
+                      !isLoading
+                    ) {
+                      onSelect(
+                        `I am ${heightValue}cm tall and ${ageValue} years old`,
+                      );
+                    }
+                  }}
                   className="flex-1 text-center text-lg font-medium"
                   min="100"
                   max="250"
@@ -128,7 +143,6 @@ export function OnboardingQuickResponses({
                 <div className="flex-1 flex gap-2">
                   <Input
                     type="number"
-                    placeholder="5"
                     value={feetValue}
                     onChange={(e) => setFeetValue(e.target.value)}
                     className="w-16 text-center text-lg font-medium"
@@ -138,7 +152,6 @@ export function OnboardingQuickResponses({
                   <span className="self-center text-muted-foreground">ft</span>
                   <Input
                     type="number"
-                    placeholder="10"
                     value={inchesValue}
                     onChange={(e) => setInchesValue(e.target.value)}
                     className="w-16 text-center text-lg font-medium"
@@ -182,9 +195,26 @@ export function OnboardingQuickResponses({
             </label>
             <Input
               type="number"
-              placeholder="25"
               value={ageValue}
               onChange={(e) => setAgeValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && ageValue && !isLoading) {
+                  let heightStr = "";
+                  if (heightUnit === "cm" && heightValue) {
+                    heightStr = `${heightValue}cm`;
+                  } else if (heightUnit === "ft" && feetValue) {
+                    const totalInches =
+                      parseInt(feetValue) * 12 + (parseInt(inchesValue) || 0);
+                    const cm = Math.round(totalInches * 2.54);
+                    heightStr = `${cm}cm`;
+                  }
+                  if (heightStr && ageValue) {
+                    onSelect(
+                      `I am ${heightStr} tall and ${ageValue} years old`,
+                    );
+                  }
+                }
+              }}
               className="w-full text-center text-lg font-medium"
               min="13"
               max="100"
@@ -261,9 +291,13 @@ export function OnboardingQuickResponses({
           <div className="flex gap-2">
             <Input
               type="number"
-              placeholder={weightUnit === "kg" ? "70" : "155"}
               value={weightValue}
               onChange={(e) => setWeightValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && weightValue && !isLoading) {
+                  onSelect(`${weightValue} ${weightUnit}`);
+                }
+              }}
               className="flex-1 text-center text-lg font-medium"
               min="20"
               max={weightUnit === "kg" ? "300" : "650"}
@@ -320,6 +354,26 @@ export function OnboardingQuickResponses({
         <p className="text-sm text-muted-foreground text-center mb-2">
           If you're not sure, describe your situation and I'll help you figure
           it out!
+        </p>
+      )}
+      {step === "goal_confirmation" && (
+        <p className="text-sm text-muted-foreground text-center mb-2">
+          Based on your weight goals, I think you want to:
+        </p>
+      )}
+      {step === "gender" && (
+        <p className="text-sm text-muted-foreground text-center mb-2">
+          This helps me calculate your nutritional needs more accurately
+        </p>
+      )}
+      {step === "activity_level" && (
+        <p className="text-sm text-muted-foreground text-center mb-2">
+          How active are you on a typical week?
+        </p>
+      )}
+      {step === "display_mode" && (
+        <p className="text-sm text-muted-foreground text-center mb-2">
+          Choose how you'd like to see your nutrition data
         </p>
       )}
       {currentOptions.map((option) => (
