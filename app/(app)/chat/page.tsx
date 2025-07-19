@@ -510,6 +510,7 @@ export default function Chat() {
         : null,
       subscriptionStatus,
       profile: profile ? "loaded" : profile === undefined ? "loading" : "null",
+      onboardingStatus,
       skipQueries,
     });
 
@@ -528,6 +529,19 @@ export default function Chat() {
       return;
     }
 
+    // Skip if onboarding status is still loading
+    if (onboardingStatus === undefined) {
+      console.log("[Chat] Onboarding status still loading...");
+      return;
+    }
+
+    // Check onboarding first - even with subscription, user needs to complete onboarding
+    if (!profile || !onboardingStatus?.completed) {
+      console.log("[Chat] Redirecting to onboarding - profile incomplete");
+      router.push("/onboarding");
+      return;
+    }
+
     // Only redirect if we're sure there's no active subscription
     if (!subscriptionStatus.hasActiveSubscription) {
       console.log("[Chat] Redirecting to pricing - no active subscription");
@@ -540,6 +554,7 @@ export default function Chat() {
     router,
     isSignedIn,
     profile,
+    onboardingStatus,
     skipQueries,
   ]);
 
@@ -993,23 +1008,7 @@ export default function Chat() {
         logger.info("[Chat] No messages found, waiting for server greeting");
       }
 
-      const initialMessages: Message[] = [];
-
-      if (isOnboarding) {
-        // Onboarding welcome message - ONLY if we don't already have messages
-        if (messages.length === 0) {
-          initialMessages.push({
-            role: "assistant",
-            content:
-              "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
-          });
-        }
-      }
-
-      // Set all messages at once - ONLY if we have new messages to set
-      if (initialMessages.length > 0 && messages.length === 0) {
-        setMessages(initialMessages);
-      }
+      // Removed onboarding message - users are redirected to /onboarding page instead
       setHasLoadedHistory(true);
 
       // Reset loading ref
