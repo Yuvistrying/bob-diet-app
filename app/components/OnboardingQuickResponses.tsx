@@ -29,6 +29,7 @@ export function OnboardingQuickResponses({
   const [inchesValue, setInchesValue] = useState("");
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">("kg");
+  const [nameValue, setNameValue] = useState("");
 
   const options: Record<string, QuickResponseOption[]> = {
     gender: [
@@ -69,6 +70,38 @@ export function OnboardingQuickResponses({
       { label: "lbs", value: "lbs" },
     ],
   };
+
+  // Special handling for name step
+  if (step === "name") {
+    return (
+      <div className="space-y-3 p-3 bg-muted rounded-lg">
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1 block">
+            What should I call you?
+          </label>
+          <Input
+            type="text"
+            placeholder="Enter your name"
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
+            className="w-full text-center text-lg font-medium"
+            autoFocus
+          />
+        </div>
+        <Button
+          onClick={() => {
+            if (nameValue.trim()) {
+              onSelect(nameValue.trim());
+            }
+          }}
+          disabled={isLoading || !nameValue.trim()}
+          className="w-full h-10 text-sm font-medium bg-primary text-primary-foreground"
+        >
+          Continue →
+        </Button>
+      </div>
+    );
+  }
 
   // Special handling for height_age step
   if (step === "height_age") {
@@ -195,7 +228,7 @@ export function OnboardingQuickResponses({
     // TODO: Integrate DietaryPreferencesCard properly
     const currentOptions = options[step];
     if (!currentOptions) return null;
-    
+
     return (
       <div className="space-y-2 p-3">
         <p className="text-sm text-muted-foreground text-center mb-2">

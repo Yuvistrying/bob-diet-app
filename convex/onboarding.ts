@@ -120,20 +120,28 @@ export const saveOnboardingProgress = mutation({
       let actualNextStep = nextStep;
 
       // Auto-determine goal when target weight is saved
-      if (args.step === "target_weight" && responses.current_weight && args.response) {
-        const currentWeight = parseFloat(responses.current_weight.weight || responses.current_weight);
+      if (
+        args.step === "target_weight" &&
+        responses.current_weight &&
+        args.response
+      ) {
+        const currentWeight = parseFloat(
+          responses.current_weight.weight || responses.current_weight,
+        );
         const targetWeight = parseFloat(args.response.weight || args.response);
-        
+
         // Determine goal based on weight difference
         let inferredGoal = "maintain";
         const weightDiff = targetWeight - currentWeight;
-        
-        if (weightDiff < -2) { // More than 2kg/lbs loss
+
+        if (weightDiff < -2) {
+          // More than 2kg/lbs loss
           inferredGoal = "cut";
-        } else if (weightDiff > 2) { // More than 2kg/lbs gain
+        } else if (weightDiff > 2) {
+          // More than 2kg/lbs gain
           inferredGoal = "gain";
         }
-        
+
         // Save the inferred goal
         responses.goal = inferredGoal;
         responses.goal_inferred = true;
@@ -154,16 +162,16 @@ export const saveOnboardingProgress = mutation({
         .query("onboardingProgress")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .first();
-      
+
       if (latestProgress) {
         const updatedResponses = { ...latestProgress.responses };
-        
+
         // If user disagrees with inferred goal, update it
         if (args.response !== "confirm") {
           updatedResponses.goal = args.response;
           updatedResponses.goal_inferred = false;
         }
-        
+
         await ctx.db.patch(latestProgress._id, {
           responses: updatedResponses,
         });
@@ -173,24 +181,27 @@ export const saveOnboardingProgress = mutation({
     // If dietary_preferences is saved, we're done with onboarding
     if (args.step === "dietary_preferences") {
       console.log("Dietary preferences saved, creating profile...");
-      
+
       // Save dietary preferences response
       const latestProgress = await ctx.db
         .query("onboardingProgress")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .first();
-      
+
       if (latestProgress) {
         const updatedResponses = { ...latestProgress.responses };
-        if (args.response !== "skip_preferences" && args.response.restrictions) {
+        if (
+          args.response !== "skip_preferences" &&
+          args.response.restrictions
+        ) {
           updatedResponses.dietary_preferences = args.response;
         }
-        
+
         await ctx.db.patch(latestProgress._id, {
           responses: updatedResponses,
         });
       }
-      
+
       await createProfileFromOnboarding(ctx, userId);
 
       // Mark onboarding as complete in progress
@@ -261,7 +272,10 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     moderate: 1.55,
     active: 1.725,
   };
-  const tdee = bmr * (activityMultipliers[activityLevel as keyof typeof activityMultipliers] || 1.55);
+  const tdee =
+    bmr *
+    (activityMultipliers[activityLevel as keyof typeof activityMultipliers] ||
+      1.55);
 
   // Calculate daily targets
   let dailyCalories = tdee;
@@ -373,8 +387,12 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
 
   // Handle dietary preferences if provided
   if (r.dietary_preferences && r.dietary_preferences !== "skip_preferences") {
-    const { restrictions = [], customNotes, intermittentFasting } = r.dietary_preferences;
-    
+    const {
+      restrictions = [],
+      customNotes,
+      intermittentFasting,
+    } = r.dietary_preferences;
+
     // Create dietary preferences directly
     const existingDietaryPrefs = await ctx.db
       .query("dietaryPreferences")
@@ -453,6 +471,43 @@ export const resetOnboarding = mutation({
       reset: true,
       message: "Onboarding reset - your data is preserved",
     };
+  },
+});
+
+// Update current onboarding step
+export const updateOnboardingStep = mutation({
+  args: {
+    step: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    // Get or create progress record
+    let progress = await ctx.db
+      .query("onboardingProgress")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!progress) {
+      // Create new progress record
+      await ctx.db.insert("onboardingProgress", {
+        userId,
+        currentStep: args.step,
+        responses: {},
+        completed: false,
+        startedAt: Date.now(),
+      });
+    } else {
+      // Update existing progress
+      await ctx.db.patch(progress._id, {
+        currentStep: args.step,
+      });
+    }
+
+    return { success: true };
   },
 });
 
