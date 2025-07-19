@@ -32,6 +32,7 @@ export default function IntegratedPricing() {
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
   const createPortalUrl = useAction(api.subscriptions.createCustomerPortalUrl);
   const upsertUser = useMutation(api.users.upsertUser);
+  const fixSubscriptionUserId = useMutation(api.subscriptions.fixSubscriptionUserIdByEmail);
 
   // Sync user when signed in
   React.useEffect(() => {
@@ -39,6 +40,15 @@ export default function IntegratedPricing() {
       upsertUser().catch(console.error);
     }
   }, [isSignedIn, upsertUser]);
+
+  // Fix subscription userId if needed
+  React.useEffect(() => {
+    if (userSubscription && !userSubscription.userId && userSubscription.metadata?.customerEmail) {
+      fixSubscriptionUserId({ email: userSubscription.metadata.customerEmail })
+        .then(() => console.log("Fixed subscription userId"))
+        .catch(console.error);
+    }
+  }, [userSubscription, fixSubscriptionUserId]);
 
   // Load plans on component mount
   React.useEffect(() => {
@@ -48,7 +58,46 @@ export default function IntegratedPricing() {
         setPlans(result);
       } catch (error) {
         console.error("Failed to load plans:", error);
-        setError("Failed to load pricing plans. Please try again.");
+        if (error instanceof Error && error.message.includes("401")) {
+          setError(
+            "Payment system configuration error. Please contact support.",
+          );
+        } else {
+          setError("Failed to load pricing plans. Please try again later.");
+        }
+        // Set dummy plans for development
+        setPlans({
+          items: [
+            {
+              id: "prod_1",
+              name: "Basic",
+              description: "Perfect for getting started",
+              isRecurring: true,
+              prices: [
+                {
+                  id: "price_1",
+                  amount: 900,
+                  currency: "USD",
+                  interval: "month",
+                },
+              ],
+            },
+            {
+              id: "prod_2",
+              name: "Pro",
+              description: "For serious fitness enthusiasts",
+              isRecurring: true,
+              prices: [
+                {
+                  id: "price_2",
+                  amount: 1900,
+                  currency: "USD",
+                  interval: "month",
+                },
+              ],
+            },
+          ],
+        });
       }
     };
     loadPlans();
@@ -83,6 +132,10 @@ export default function IntegratedPricing() {
 
       // Otherwise, create new checkout for first-time subscription
       const checkoutUrl = await createCheckout({ priceId });
+      
+      if (!checkoutUrl) {
+        throw new Error("Failed to create checkout session");
+      }
 
       window.location.href = checkoutUrl;
     } catch (error) {

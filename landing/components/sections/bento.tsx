@@ -61,7 +61,7 @@ export function BentoGrid() {
             style={{ opacity: opacities[index], y: yTransforms[index] }}
             className={cn(
               "bg-muted p-4 sm:p-6 !pb-0 rounded-3xl grid grid-rows-1",
-              bentoItem.fullWidth && "md:col-span-2"
+              bentoItem.fullWidth && "md:col-span-2",
             )}
           >
             <div className="flex flex-col">
@@ -75,7 +75,7 @@ export function BentoGrid() {
             <div
               className={cn(
                 "flex justify-center",
-                bentoItem.fullWidth && "sm:space-x-4"
+                bentoItem.fullWidth && "sm:space-x-4",
               )}
             >
               <img

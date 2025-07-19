@@ -29,7 +29,11 @@ export function Hero() {
             className="mb-16 relative z-20"
             style={{ transformOrigin: "top" }}
           >
-            <img src="/logo.svg" alt="Bob Diet Coach" className="h-20 w-20 mx-auto" />
+            <img
+              src="/logo.svg"
+              alt="Bob Diet Coach"
+              className="h-20 w-20 mx-auto"
+            />
           </motion.div>
           <motion.div
             initial={{ y: -20, opacity: 0 }}

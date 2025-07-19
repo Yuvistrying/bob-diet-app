@@ -65,7 +65,7 @@ const ReviewCard = ({
         // light styles
         "border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]",
         // dark styles
-        "dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]"
+        "dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]",
       )}
     >
       <div className="flex flex-row items-center gap-2">
@@ -153,7 +153,7 @@ export function CTA() {
                       size: "lg",
                       variant: "default",
                     }),
-                    "group rounded-[2rem] px-6 text-black"
+                    "group rounded-[2rem] px-6 text-black",
                   )}
                 >
                   Start Free Week
@@ -166,7 +166,7 @@ export function CTA() {
                       size: "lg",
                       variant: "outline",
                     }),
-                    "rounded-[2rem] px-6"
+                    "rounded-[2rem] px-6",
                   )}
                 >
                   Log In

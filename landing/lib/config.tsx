@@ -11,7 +11,8 @@ export const BLUR_FADE_DELAY = 0.15;
 
 export const siteConfig = {
   name: "Bob Diet Coach",
-  description: "Your Personal AI Nutrition Coach. Lose, gain, or maintain weight with an AI that learns YOUR metabolism and guides every food decision in real-time.",
+  description:
+    "Your Personal AI Nutrition Coach. Lose, gain, or maintain weight with an AI that learns YOUR metabolism and guides every food decision in real-time.",
   cta: "Start Your Free Week",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   keywords: [
@@ -73,21 +74,21 @@ export const siteConfig = {
     {
       title: "Your 24/7 Nutrition Consultant",
       description:
-        "\"What should I eat for dinner?\" \"Is this protein bar worth the calories?\" \"What can I order at this restaurant?\" Get instant personalized answers based on what you've already eaten today and YOUR specific goals.",
+        '"What should I eat for dinner?" "Is this protein bar worth the calories?" "What can I order at this restaurant?" Get instant personalized answers based on what you\'ve already eaten today and YOUR specific goals.',
       imageSrc: "/Device-2.png",
       direction: "rtl" as const,
     },
     {
       title: "Daily Weigh-In Reminders",
       description:
-        "Bob uses 7-day weight averages to track real progress, not daily fluctuations. Get gentle reminders to weigh in, plus insights like \"Your average is down 0.5kg this week\" or \"Great consistency - you're on track!\"",
+        'Bob uses 7-day weight averages to track real progress, not daily fluctuations. Get gentle reminders to weigh in, plus insights like "Your average is down 0.5kg this week" or "Great consistency - you\'re on track!"',
       imageSrc: "/Device-3.png",
       direction: "ltr" as const,
     },
     {
       title: "Weekly Insights That Transform",
       description:
-        "Every Sunday, Bob compares your actual weight change to predictions. \"Scale didn't move as expected - let's adjust your calories up\" or \"You're losing faster than planned - time to add 200 calories.\" Real adjustments based on real results.",
+        'Every Sunday, Bob compares your actual weight change to predictions. "Scale didn\'t move as expected - let\'s adjust your calories up" or "You\'re losing faster than planned - time to add 200 calories." Real adjustments based on real results.',
       imageSrc: "/Device-4.png",
       direction: "rtl" as const,
     },
@@ -189,7 +190,10 @@ export const siteConfig = {
       question: "How is Bob different from MyFitnessPal or calorie counters?",
       answer: (
         <span>
-          Bob is an AI nutrition coach AND tracker in one. While others just count, Bob actively helps you decide what to eat, plans meals, answers food questions, and adjusts based on YOUR results. It's like having a nutritionist who remembers everything you've ever eaten.
+          Bob is an AI nutrition coach AND tracker in one. While others just
+          count, Bob actively helps you decide what to eat, plans meals, answers
+          food questions, and adjusts based on YOUR results. It's like having a
+          nutritionist who remembers everything you've ever eaten.
         </span>
       ),
     },
@@ -197,7 +201,10 @@ export const siteConfig = {
       question: "Can Bob help me gain weight or maintain?",
       answer: (
         <span>
-          Absolutely! Bob adapts to ANY goal. Building muscle? He'll ensure you hit protein targets and calorie surplus. Maintaining after weight loss? He'll find YOUR perfect balance. Just tell Bob your goal and he guides accordingly.
+          Absolutely! Bob adapts to ANY goal. Building muscle? He'll ensure you
+          hit protein targets and calorie surplus. Maintaining after weight
+          loss? He'll find YOUR perfect balance. Just tell Bob your goal and he
+          guides accordingly.
         </span>
       ),
     },
@@ -205,7 +212,10 @@ export const siteConfig = {
       question: "What kind of coaching does Bob provide?",
       answer: (
         <span>
-          Ask Bob anything! \"What should I eat for dinner?\" gets personalized suggestions based on today's intake. \"Is this restaurant meal worth it?\" gets instant analysis. \"Plan my meals for tomorrow\" gets a full day planned around your preferences and goals.
+          Ask Bob anything! \"What should I eat for dinner?\" gets personalized
+          suggestions based on today's intake. \"Is this restaurant meal worth
+          it?\" gets instant analysis. \"Plan my meals for tomorrow\" gets a
+          full day planned around your preferences and goals.
         </span>
       ),
     },
@@ -213,7 +223,10 @@ export const siteConfig = {
       question: "How does Bob handle dietary restrictions?",
       answer: (
         <span>
-          Bob remembers everything - diabetic needs, vegan choices, keto requirements, allergies. Every suggestion and meal plan respects your restrictions. He'll even warn if something doesn't match your preferences.
+          Bob remembers everything - diabetic needs, vegan choices, keto
+          requirements, allergies. Every suggestion and meal plan respects your
+          restrictions. He'll even warn if something doesn't match your
+          preferences.
         </span>
       ),
     },
@@ -221,7 +234,10 @@ export const siteConfig = {
       question: "How quickly does Bob learn my metabolism?",
       answer: (
         <span>
-          After just one week, Bob starts understanding YOUR patterns. By week two, he's adjusting targets based on YOUR actual results. By week three, you'll be amazed at how accurately he predicts what works for YOUR body.
+          After just one week, Bob starts understanding YOUR patterns. By week
+          two, he's adjusting targets based on YOUR actual results. By week
+          three, you'll be amazed at how accurately he predicts what works for
+          YOUR body.
         </span>
       ),
     },
@@ -229,7 +245,10 @@ export const siteConfig = {
       question: "Is this just AI hype or does it really work?",
       answer: (
         <span>
-          Bob combines proven science (tracking) with AI coaching that adapts to YOU. 47,000+ users see consistent results because Bob learns from YOUR data, not generic formulas. Average loss is 0.5-1kg/week, but Bob works for gaining and maintaining too!
+          Bob combines proven science (tracking) with AI coaching that adapts to
+          YOU. 47,000+ users see consistent results because Bob learns from YOUR
+          data, not generic formulas. Average loss is 0.5-1kg/week, but Bob
+          works for gaining and maintaining too!
         </span>
       ),
     },

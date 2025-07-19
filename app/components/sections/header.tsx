@@ -65,7 +65,11 @@ export function Header() {
               title="brand-logo"
               className="relative mr-6 flex items-center space-x-2"
             >
-              <img src="/logo.svg" alt="Bob Diet Coach" className="h-8 w-auto" />
+              <img
+                src="/logo.svg"
+                alt="Bob Diet Coach"
+                className="h-8 w-auto"
+              />
               <span className="font-bold text-xl">{siteConfig.name}</span>
             </Link>
             <div className="hidden lg:block">

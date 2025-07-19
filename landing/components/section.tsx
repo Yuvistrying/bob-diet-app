@@ -18,7 +18,7 @@ interface SectionProps {
 const Section = forwardRef<HTMLElement, SectionProps>(
   (
     { id, title, subtitle, description, children, className, align },
-    forwardedRef
+    forwardedRef,
   ) => {
     const internalRef = useRef<HTMLElement>(null);
     const ref = forwardedRef || internalRef;
@@ -28,8 +28,8 @@ const Section = forwardRef<HTMLElement, SectionProps>(
       align === "left"
         ? "text-left"
         : align === "right"
-        ? "text-right"
-        : "text-center";
+          ? "text-right"
+          : "text-center";
 
     const { scrollYProgress } = useScroll({
       target: ref as React.RefObject<HTMLElement>,
@@ -64,8 +64,8 @@ const Section = forwardRef<HTMLElement, SectionProps>(
                     align === "center"
                       ? "mx-auto"
                       : align === "right"
-                      ? "ml-auto"
-                      : ""
+                        ? "ml-auto"
+                        : "",
                   )}
                   style={{ opacity, y }}
                 >
@@ -79,8 +79,8 @@ const Section = forwardRef<HTMLElement, SectionProps>(
                     align === "center"
                       ? "mx-auto"
                       : align === "right"
-                      ? "ml-auto"
-                      : ""
+                        ? "ml-auto"
+                        : "",
                   )}
                   style={{ opacity, y }}
                 >
@@ -93,7 +93,7 @@ const Section = forwardRef<HTMLElement, SectionProps>(
         </div>
       </section>
     );
-  }
+  },
 );
 
 Section.displayName = "Section";

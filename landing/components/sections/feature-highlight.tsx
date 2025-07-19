@@ -55,13 +55,13 @@ function Feature({
     <motion.div
       className={cn(
         "flex flex-col items-center justify-between pb-10 transition-all duration-500 ease-out",
-        isLTR ? "lg:flex-row" : "lg:flex-row-reverse"
+        isLTR ? "lg:flex-row" : "lg:flex-row-reverse",
       )}
     >
       <motion.div
         className={cn(
           "w-full lg:w-1/2 mb-10 lg:mb-0",
-          isLTR ? "lg:pr-8" : "lg:pl-8"
+          isLTR ? "lg:pr-8" : "lg:pl-8",
         )}
         initial="hidden"
         animate={isActive ? "visible" : "hidden"}
@@ -83,7 +83,7 @@ function Feature({
               className={cn(
                 buttonVariants({ variant: "default", size: "lg" }),
                 "text-black rounded-full group text-lg",
-                "mx-auto lg:mx-0"
+                "mx-auto lg:mx-0",
               )}
             >
               {siteConfig.cta}
@@ -118,7 +118,7 @@ export function FeatureHighlight() {
 
         const activeIndex = Math.floor((middleOfScreen - top) / featureHeight);
         setActiveFeature(
-          Math.max(-1, Math.min(features.length - 1, activeIndex))
+          Math.max(-1, Math.min(features.length - 1, activeIndex)),
         );
       }
     };
