@@ -46,6 +46,7 @@ import { ThemeToggle } from "~/app/components/ThemeToggle";
 import { useChat } from "~/app/providers/ChatProvider";
 import { logger } from "~/app/utils/logger";
 import { BottomNav } from "~/app/components/BottomNav";
+import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
 
 interface Message {
   role: "user" | "assistant";
@@ -401,6 +402,9 @@ export default function Chat() {
   const forceCompleteOnboarding = useMutation(
     api.onboardingFix.forceCompleteOnboarding,
   );
+  const saveOnboardingProgress = useMutation(
+    api.onboarding.saveOnboardingProgress,
+  );
   const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
   const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
   const getOrCreateDailySession = useMutation(
@@ -522,8 +526,9 @@ export default function Chat() {
       return;
     }
 
-    // Skip if profile is still loading (new users need profile first)
-    if (profile === undefined) {
+    // Skip if profile is still loading ONLY if we're checking for subscription redirect
+    // But allow onboarding to work without a profile
+    if (profile === undefined && !onboardingStatus) {
       console.log("[Chat] Profile still loading...");
       return;
     }
@@ -995,7 +1000,10 @@ export default function Chat() {
 
       const initialMessages: Message[] = [];
 
-      if (isOnboarding) {
+      // Always check onboarding status, even without profile
+      const needsOnboarding = !profile || !profile.onboardingCompleted;
+
+      if (needsOnboarding) {
         // Onboarding welcome message - ONLY if we don't already have messages
         if (messages.length === 0) {
           initialMessages.push({
@@ -2328,6 +2336,37 @@ export default function Chat() {
                   })}
                 </AnimatePresence>
               </ClientOnly>
+
+              {/* Onboarding Card - Show when onboarding not complete and there's at least one assistant message */}
+              {isOnboarding &&
+                messages.length > 0 &&
+                messages[messages.length - 1]?.role === "assistant" &&
+                !isStreaming && (
+                  <div className="mt-4">
+                    <OnboardingQuickResponses
+                      step={onboardingStatus?.currentStep || "name"}
+                      onSelect={async (value) => {
+                        // Save onboarding progress
+                        try {
+                          await saveOnboardingProgress({
+                            step: onboardingStatus?.currentStep || "name",
+                            response: value,
+                          });
+                        } catch (error) {
+                          logger.error(
+                            "[Chat] Failed to save onboarding progress:",
+                            error,
+                          );
+                        }
+
+                        // Send the response as a regular message
+                        handleSubmit(new Event("submit") as any, value);
+                      }}
+                      isLoading={isLoading}
+                      currentInput=""
+                    />
+                  </div>
+                )}
 
               {isStreaming && (
                 <div className="flex justify-start">

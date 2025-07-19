@@ -60,6 +60,7 @@ export const upsertUser = mutation({
       tokenIdentifier: identity.subject,
     });
 
+    // Don't create profile - let onboarding handle it
     return await ctx.db.get(userId);
   },
 });
