@@ -846,7 +846,13 @@ export default function Chat() {
   useEffect(() => {
     const initThread = async () => {
       // Skip if we already have a thread or are waiting for preferences to load
-      if (threadId || !profile || preferences === undefined) {
+      if (threadId || preferences === undefined) {
+        return;
+      }
+      
+      // For onboarding, we need a thread even without a profile
+      // But skip if profile is still loading (undefined) vs doesn't exist (null)
+      if (profile === undefined) {
         return;
       }
 

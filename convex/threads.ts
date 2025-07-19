@@ -97,6 +97,13 @@ export const getOrCreateDailyThread = mutation({
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
+    
+    console.log(`[getOrCreateDailyThread] Profile check for ${identity.subject}:`, {
+      exists: !!profile,
+      onboardingCompleted: profile?.onboardingCompleted,
+      name: profile?.name,
+      allFields: profile,
+    });
 
     // Create new thread
     const threadId = `thread_${identity.subject}_${Date.now()}`;
@@ -104,11 +111,40 @@ export const getOrCreateDailyThread = mutation({
       userId: identity.subject,
       date: today,
       threadId,
-      messageCount: profile ? 1 : 0,
+      messageCount: 1, // Always create a message
       firstMessageAt: Date.now(),
       lastMessageAt: Date.now(),
     });
 
+    // Check if onboarding is needed
+    const needsOnboarding = !profile || profile.onboardingCompleted !== true;
+    
+    console.log(`[getOrCreateDailyThread] Onboarding check:`, {
+      needsOnboarding,
+      profileExists: !!profile,
+      onboardingCompleted: profile?.onboardingCompleted,
+      condition: "!profile || profile.onboardingCompleted !== true",
+    });
+
+    // If onboarding is needed, create welcome message
+    if (needsOnboarding) {
+      console.log(`[getOrCreateDailyThread] Creating onboarding welcome message`);
+      await ctx.db.insert("chatHistory", {
+        userId: identity.subject,
+        role: "assistant" as const,
+        content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
+        timestamp: Date.now(),
+        metadata: {
+          threadId,
+        },
+      });
+      
+      return { threadId, isNew: true, messageCount: 1 };
+    }
+
+    // Otherwise create morning greeting
+    console.log(`[getOrCreateDailyThread] Creating morning greeting`);
+    
     // Get daily summary info
     const dailySummary = await ctx.runQuery(api.dailySummary.getDailySummary);
 
@@ -122,8 +158,7 @@ export const getOrCreateDailyThread = mutation({
     const hasLoggedWeightToday = !!todayWeightLog;
 
     // Build and save morning greeting as a chat message
-    // ONLY if profile exists AND onboarding is completed
-    if (profile && profile.onboardingCompleted) {
+    if (profile) {
       const greetingContent = await buildMorningGreeting(
         ctx,
         profile,
@@ -141,12 +176,9 @@ export const getOrCreateDailyThread = mutation({
           threadId,
         },
       });
-      
-      return { threadId, isNew: true, messageCount: 1 };
     }
-
-    // No greeting during onboarding - let chat page handle it
-    return { threadId, isNew: true, messageCount: 0 };
+    
+    return { threadId, isNew: true, messageCount: 1 };
   },
 });
 
@@ -184,7 +216,7 @@ export const createNewThread = mutation({
       userId: identity.subject,
       date: today,
       threadId: newThreadId,
-      messageCount: profile ? 1 : 0,
+      messageCount: 1, // Always create a message
       firstMessageAt: now,
       lastMessageAt: now,
     });
@@ -197,9 +229,29 @@ export const createNewThread = mutation({
       )
       .collect();
 
-    // Build and save new thread greeting as a chat message
-    // ONLY if profile exists AND onboarding is completed
-    if (profile && profile.onboardingCompleted) {
+    // Check if onboarding is needed
+    const needsOnboarding = !profile || profile.onboardingCompleted !== true;
+    
+    console.log(`[createNewThread] Onboarding check:`, {
+      needsOnboarding,
+      profileExists: !!profile,
+      onboardingCompleted: profile?.onboardingCompleted,
+    });
+
+    // If onboarding is needed, create welcome message
+    if (needsOnboarding) {
+      console.log(`[createNewThread] Creating onboarding welcome message`);
+      await ctx.db.insert("chatHistory", {
+        userId: identity.subject,
+        role: "assistant" as const,
+        content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
+        timestamp: Date.now(),
+        metadata: {
+          threadId: newThreadId,
+        },
+      });
+    } else if (profile) {
+      // Build and save new thread greeting
       const greetingContent = buildNewThreadGreeting(
         profile,
         todayFoodLogs.length,
@@ -215,21 +267,12 @@ export const createNewThread = mutation({
           threadId: newThreadId,
         },
       });
-      
-      return {
-        threadId: newThreadId,
-        isNew: true,
-        messageCount: 1,
-        foodLogsCount: todayFoodLogs.length,
-        previousThreadSummarized: !!args.previousThreadId,
-      };
     }
-
-    // No greeting during onboarding
+    
     return {
       threadId: newThreadId,
       isNew: true,
-      messageCount: 0,
+      messageCount: 1,
       foodLogsCount: todayFoodLogs.length,
       previousThreadSummarized: !!args.previousThreadId,
     };
