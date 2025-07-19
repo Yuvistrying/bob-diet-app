@@ -7,7 +7,6 @@ const ONBOARDING_STEPS = [
   "name",
   "current_weight",
   "target_weight",
-  "goal_confirmation", // Bob infers goal and asks for confirmation
   "height_age",
   "gender",
   "activity_level",
@@ -155,29 +154,6 @@ export const saveOnboardingProgress = mutation({
       });
     }
 
-    // Handle goal confirmation step
-    if (args.step === "goal_confirmation") {
-      // Get the latest progress to update
-      const latestProgress = await ctx.db
-        .query("onboardingProgress")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .first();
-
-      if (latestProgress) {
-        const updatedResponses = { ...latestProgress.responses };
-
-        // If user disagrees with inferred goal, update it
-        if (args.response !== "confirm") {
-          updatedResponses.goal = args.response;
-          updatedResponses.goal_inferred = false;
-        }
-
-        await ctx.db.patch(latestProgress._id, {
-          responses: updatedResponses,
-        });
-      }
-    }
-
     // If dietary_preferences is saved, we're done with onboarding
     if (args.step === "dietary_preferences") {
       console.log("Dietary preferences saved, creating profile...");
@@ -190,11 +166,18 @@ export const saveOnboardingProgress = mutation({
 
       if (latestProgress) {
         const updatedResponses = { ...latestProgress.responses };
-        if (
-          args.response !== "skip_preferences" &&
-          args.response.restrictions
-        ) {
-          updatedResponses.dietary_preferences = args.response;
+        if (args.response !== "skip_preferences") {
+          // Parse JSON string from the UI component
+          try {
+            const parsedPrefs =
+              typeof args.response === "string"
+                ? JSON.parse(args.response)
+                : args.response;
+            updatedResponses.dietary_preferences = parsedPrefs;
+          } catch (e) {
+            // If parsing fails, assume it's the old format
+            updatedResponses.dietary_preferences = args.response;
+          }
         }
 
         await ctx.db.patch(latestProgress._id, {
@@ -252,6 +235,15 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
   const activityLevel = r.activity_level || "moderate";
   const goal = r.goal || "maintain";
 
+  console.log("Onboarding calculation inputs:", {
+    weight,
+    height,
+    age,
+    gender,
+    activityLevel,
+    goal,
+  });
+
   // Calculate BMR (Mifflin-St Jeor)
   let bmr;
   if (gender === "male") {
@@ -265,24 +257,34 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     bmr = (maleBmr + femaleBmr) / 2;
   }
 
+  console.log("BMR calculated:", bmr);
+
   // Calculate TDEE
   const activityMultipliers = {
     sedentary: 1.2,
     light: 1.375,
+    "lightly active": 1.375, // Handle both formats
     moderate: 1.55,
+    "moderately active": 1.55, // Handle both formats
     active: 1.725,
+    "very active": 1.725, // Handle both formats
   };
-  const tdee =
-    bmr *
-    (activityMultipliers[activityLevel as keyof typeof activityMultipliers] ||
-      1.55);
+  const multiplier = activityMultipliers[activityLevel as keyof typeof activityMultipliers] || 1.55;
+  const tdee = bmr * multiplier;
+
+  console.log("TDEE calculation:", {
+    multiplier,
+    tdee,
+  });
 
   // Calculate daily targets
   let dailyCalories = tdee;
   if (goal === "cut") dailyCalories = tdee - 500;
   else if (goal === "gain") dailyCalories = tdee + 300;
 
-  const proteinTarget = Math.round(weight * 2.2 * 0.9); // 0.9g per lb
+  console.log("Final daily calories:", Math.round(dailyCalories));
+
+  const proteinTarget = Math.round(weight * 1.6); // 1.6g per kg (good for active individuals)
   const fatTarget = Math.round((dailyCalories * 0.25) / 9); // 25% from fat
   const carbsTarget = Math.round(
     (dailyCalories - proteinTarget * 4 - fatTarget * 9) / 4,

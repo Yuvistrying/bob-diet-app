@@ -99,12 +99,18 @@ export async function POST(req: Request) {
     });
 
     // 2. Save user message (embedding is handled by threads.saveMessage)
+    // Check if this is dietary preferences data and just show "Preferences saved"
+    let displayContent = prompt;
+    if (prompt.startsWith("{") && prompt.includes("_isOnboardingData")) {
+      displayContent = "Preferences saved";
+    }
+
     let userMessageId;
     try {
       userMessageId = await convexClient.mutation(api.threads.saveMessage, {
         threadId,
         role: "user",
-        content: prompt,
+        content: displayContent,
         metadata: {
           storageId: storageId || undefined,
         },
@@ -190,11 +196,7 @@ export async function POST(req: Request) {
 
     // Build coreStats from daily summary
     const coreStats = {
-      profile: dailySummary?.profile || {
-        name: "there",
-        dailyCalorieTarget: 2000,
-        proteinTarget: 150,
-      },
+      profile: dailySummary?.profile,
       todayStats: dailySummary?.today.stats || {
         calories: 0,
         protein: 0,
@@ -203,7 +205,7 @@ export async function POST(req: Request) {
         mealsLogged: 0,
       },
       hasWeighedToday: dailySummary?.today.hasWeighedIn || false,
-      caloriesRemaining: dailySummary?.today.remaining?.calories || 2000,
+      caloriesRemaining: dailySummary?.today.remaining?.calories,
       todaySummary: dailySummary?.today.summary || "",
       todayFoodLogs: dailySummary?.today.foodLogs || [],
       yesterdayTotal: dailySummary?.yesterday.total || "",

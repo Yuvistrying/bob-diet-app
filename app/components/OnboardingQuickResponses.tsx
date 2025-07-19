@@ -1,5 +1,7 @@
 import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
+import { Badge } from "~/app/components/ui/badge";
+import { Switch } from "~/app/components/ui/switch";
 import { useState, useEffect, useRef } from "react";
 import { DietaryPreferencesCard } from "~/app/components/DietaryPreferencesCard";
 
@@ -43,24 +45,11 @@ export function OnboardingQuickResponses({
       { label: "Moderate", value: "moderate", icon: "🏃" },
       { label: "Very Active", value: "active", icon: "💪" },
     ],
-    goal_confirmation: [
-      { label: "Yes, that's right!", value: "confirm", icon: "✅" },
-      { label: "Actually, I want to lose weight", value: "cut", icon: "📉" },
-      { label: "Actually, I want to gain muscle", value: "gain", icon: "📈" },
-      { label: "Actually, I want to maintain", value: "maintain", icon: "⚖️" },
-    ],
     display_mode: [
       { label: "Show All Numbers", value: "standard", icon: "📊" },
       { label: "Stealth Mode", value: "stealth", icon: "🤫" },
     ],
-    dietary_preferences: [
-      {
-        label: "Set Dietary Preferences",
-        value: "set_preferences",
-        icon: "🥗",
-      },
-      { label: "Skip for Now", value: "skip_preferences", icon: "⏭️" },
-    ],
+    dietary_preferences: [], // Special handling with full card UI
     current_weight: [
       { label: "kg", value: "kg" },
       { label: "lbs", value: "lbs" },
@@ -254,28 +243,219 @@ export function OnboardingQuickResponses({
 
   // Special handling for dietary preferences
   if (step === "dietary_preferences") {
-    // For now, just show the regular options
-    // TODO: Integrate DietaryPreferencesCard properly
-    const currentOptions = options[step];
-    if (!currentOptions) return null;
+    const [dietaryData, setDietaryData] = useState({
+      restrictions: [] as string[],
+      customNotes: "",
+      intermittentFasting: {
+        enabled: false,
+        startHour: 12,
+        endHour: 20,
+      },
+    });
+
+    const COMMON_RESTRICTIONS = [
+      "vegetarian",
+      "vegan",
+      "gluten-free",
+      "dairy-free",
+      "keto",
+      "paleo",
+      "nut-free",
+      "halal",
+      "kosher",
+    ];
+
+    const toggleRestriction = (restriction: string) => {
+      setDietaryData((prev) => ({
+        ...prev,
+        restrictions: prev.restrictions.includes(restriction)
+          ? prev.restrictions.filter((r) => r !== restriction)
+          : [...prev.restrictions, restriction],
+      }));
+    };
+
+    const formatHour = (hour: number) => {
+      const period = hour >= 12 ? "PM" : "AM";
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+      return `${displayHour}:00 ${period}`;
+    };
 
     return (
-      <div className="space-y-2 p-3">
-        <p className="text-sm text-muted-foreground text-center mb-2">
-          Would you like to set your dietary preferences now?
-        </p>
-        {currentOptions.map((option) => (
+      <div className="space-y-4 p-4 bg-muted rounded-lg">
+        {/* Dietary Restrictions */}
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">
+            Dietary Restrictions
+          </label>
+          <p className="text-xs text-muted-foreground mb-3">
+            Select any that apply to you
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {COMMON_RESTRICTIONS.map((restriction) => (
+              <Badge
+                key={restriction}
+                variant={
+                  dietaryData.restrictions.includes(restriction)
+                    ? "default"
+                    : "outline"
+                }
+                className="cursor-pointer transition-colors capitalize hover:bg-primary hover:text-primary-foreground"
+                onClick={() => toggleRestriction(restriction)}
+              >
+                {restriction}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Notes */}
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">
+            Additional Notes
+          </label>
+          <textarea
+            value={dietaryData.customNotes}
+            onChange={(e) =>
+              setDietaryData((prev) => ({
+                ...prev,
+                customNotes: e.target.value,
+              }))
+            }
+            placeholder="Any allergies, medical conditions, or preferences..."
+            className="w-full p-2 text-sm bg-background border border-border rounded-md resize-none"
+            rows={2}
+          />
+        </div>
+
+        {/* Intermittent Fasting */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-foreground">
+              Intermittent Fasting
+            </label>
+            <Switch
+              checked={dietaryData.intermittentFasting.enabled}
+              onCheckedChange={(checked) =>
+                setDietaryData((prev) => ({
+                  ...prev,
+                  intermittentFasting: {
+                    ...prev.intermittentFasting,
+                    enabled: checked,
+                  },
+                }))
+              }
+            />
+          </div>
+          {dietaryData.intermittentFasting.enabled && (
+            <div className="space-y-2 mt-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground w-20">
+                  Start:
+                </label>
+                <select
+                  value={dietaryData.intermittentFasting.startHour}
+                  onChange={(e) =>
+                    setDietaryData((prev) => ({
+                      ...prev,
+                      intermittentFasting: {
+                        ...prev.intermittentFasting,
+                        startHour: parseInt(e.target.value),
+                      },
+                    }))
+                  }
+                  className="flex-1 p-1 text-sm bg-background border border-border rounded"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {formatHour(i)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground w-20">
+                  End:
+                </label>
+                <select
+                  value={dietaryData.intermittentFasting.endHour}
+                  onChange={(e) =>
+                    setDietaryData((prev) => ({
+                      ...prev,
+                      intermittentFasting: {
+                        ...prev.intermittentFasting,
+                        endHour: parseInt(e.target.value),
+                      },
+                    }))
+                  }
+                  className="flex-1 p-1 text-sm bg-background border border-border rounded"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {formatHour(i)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2 pt-2">
           <Button
-            key={option.value}
-            variant="outline"
-            onClick={() => onSelect(option.value)}
+            onClick={() => {
+              // Create a human-readable message for the chat bubble
+              let displayMessage = "Set dietary preferences:";
+
+              if (dietaryData.restrictions.length > 0) {
+                displayMessage += ` ${dietaryData.restrictions.join(", ")}`;
+              }
+
+              if (dietaryData.intermittentFasting.enabled) {
+                const startTime = formatHour(
+                  dietaryData.intermittentFasting.startHour,
+                );
+                const endTime = formatHour(
+                  dietaryData.intermittentFasting.endHour,
+                );
+                displayMessage += `${dietaryData.restrictions.length > 0 ? ", " : " "}intermittent fasting ${startTime} - ${endTime}`;
+              }
+
+              if (dietaryData.customNotes) {
+                displayMessage += `${dietaryData.restrictions.length > 0 || dietaryData.intermittentFasting.enabled ? ", " : " "}${dietaryData.customNotes}`;
+              }
+
+              // If no preferences were set
+              if (
+                dietaryData.restrictions.length === 0 &&
+                !dietaryData.intermittentFasting.enabled &&
+                !dietaryData.customNotes
+              ) {
+                displayMessage = "No special dietary preferences";
+              }
+
+              // Send both the data and the display message
+              const dataToSend = {
+                ...dietaryData,
+                _isOnboardingData: true,
+                _displayMessage: displayMessage,
+              };
+              onSelect(JSON.stringify(dataToSend));
+            }}
             disabled={isLoading}
-            className="w-full h-12 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 border"
+            className="w-full h-10 text-sm font-medium bg-primary text-primary-foreground"
           >
-            {option.icon && <span className="text-base">{option.icon}</span>}
-            <span className="font-medium">{option.label}</span>
+            Save Preferences
           </Button>
-        ))}
+          <Button
+            onClick={() => onSelect("skip_preferences")}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full h-10 text-sm font-medium"
+          >
+            I don't have any special preferences
+          </Button>
+        </div>
       </div>
     );
   }
@@ -354,11 +534,6 @@ export function OnboardingQuickResponses({
         <p className="text-sm text-muted-foreground text-center mb-2">
           If you're not sure, describe your situation and I'll help you figure
           it out!
-        </p>
-      )}
-      {step === "goal_confirmation" && (
-        <p className="text-sm text-muted-foreground text-center mb-2">
-          Based on your weight goals, I think you want to:
         </p>
       )}
       {step === "gender" && (

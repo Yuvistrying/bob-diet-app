@@ -111,7 +111,10 @@ const ChatMessage = memo(
                 "whitespace-pre-wrap break-words",
               )}
             >
-              {message.content}
+              {message.content.startsWith("{") &&
+              message.content.includes("_isOnboardingData")
+                ? "Preferences saved"
+                : message.content}
             </div>
           )}
         </motion.div>
@@ -1233,9 +1236,18 @@ export default function Chat() {
       messageContent = userMessage || "What's in this photo?";
     }
 
+    // Check if this is dietary preferences data and just show "Preferences saved"
+    let displayContent = messageContent;
+    if (
+      messageContent.startsWith("{") &&
+      messageContent.includes("_isOnboardingData")
+    ) {
+      displayContent = "Preferences saved";
+    }
+
     const newUserMessage: Message = {
       role: "user",
-      content: messageContent,
+      content: displayContent,
       imageUrl: imagePreview || undefined,
       // We'll add storageId after upload
     };
@@ -1380,7 +1392,7 @@ export default function Chat() {
     });
 
     try {
-      let finalMessage = userMessage;
+      let finalMessage = messageToSend; // Use the original message with JSON for backend
 
       let storageId: string | null = null;
 
@@ -1600,9 +1612,9 @@ export default function Chat() {
         style={{ overscrollBehavior: "contain" }}
       >
         <div className="flex-shrink-0">
-          <div className="border-b border-border">
-            <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-              <div className="h-14" />
+          <div>
+            <div className="max-w-lg mx-auto px-4 py-2 flex justify-between items-center">
+              <div className="h-[45px]" />
             </div>
           </div>
         </div>
@@ -1627,7 +1639,7 @@ export default function Chat() {
         {/* Fixed Header Container */}
         <div className="flex-shrink-0">
           {/* Header */}
-          <div className="">
+          <div>
             <div className="max-w-lg mx-auto px-4 py-2 flex justify-between items-center">
               <div>
                 <h1 className="text-foreground flex items-center gap-3 ml-4">

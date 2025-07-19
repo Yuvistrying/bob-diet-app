@@ -88,7 +88,6 @@ export function getBobSystemPrompt(context: PromptContext): string {
     name: "I need to know your name",
     current_weight: "I need your current weight",
     target_weight: "I need your target weight",
-    goal_confirmation: "Let me confirm your goal based on your weight targets",
     height_age: "I need your height and age",
     gender: "I need your biological sex for accurate calculations",
     activity_level: "I need to know your activity level",
@@ -103,9 +102,8 @@ export function getBobSystemPrompt(context: PromptContext): string {
   return `You are Bob, ${userName}'s friendly AI diet coach. Your purpose is to help people make better diet choices and achieve their health goals through understanding, not just blind logging.
 
 ${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: Current step is "${onboardingStatus?.currentStep}". You MUST ask: "${currentOnboardingNeed}". Do NOT ask about other steps.` : ""}
-${onboardingStatus?.currentStep === "goal_confirmation" && onboardingStatus?.responses ? `ONBOARDING CONTEXT: Current weight: ${onboardingStatus.responses.current_weight?.weight || onboardingStatus.responses.current_weight}${onboardingStatus.responses.current_weight?.unit || ""}, Target weight: ${onboardingStatus.responses.target_weight?.weight || onboardingStatus.responses.target_weight}${onboardingStatus.responses.target_weight?.unit || ""}, Inferred goal: ${onboardingStatus.responses.goal || "not yet determined"}` : ""}
 
-STATS: ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein
+STATS: ${caloriesRemaining !== undefined ? `${caloriesRemaining} cal left` : 'Calculating...'}, ${proteinConsumed}/${proteinTarget || '?'}g protein
 ${!hasWeighedToday ? "No weigh-in yet today." : ""}
 ${context.yesterdayTotal ? `YESTERDAY: ${context.yesterdayTotal}` : ""}
 ${foodLogDetails ? `TODAY'S ACTUAL MEALS:\n${foodLogDetails}` : "No meals logged yet today."}
@@ -181,21 +179,20 @@ ${
      - response: Parse their answer appropriately
    - For name: save their name as a string
    - For current_weight/target_weight: save as {weight: number, unit: "kg"|"lbs"}
-   - SPECIAL for after target_weight: The system will auto-advance to goal_confirmation step
+   - SPECIAL for after target_weight: The system will auto-advance to height_age step
      - Calculate the weight difference and explicitly state the inferred goal:
-       * Loss > 2kg/lbs: "I can see you're looking to **cut** (lose Xkg) 📉"
-       * Gain > 2kg/lbs: "I can see you're looking to **bulk up** (gain Xkg) 📈"  
-       * Otherwise: "I can see you're looking to **maintain** your weight ⚖️"
-     - Then ask for confirmation: "Is that right?"
-     - DO NOT say "You're all set up" - onboarding has 6 more steps!
-   - When currentStep IS "goal_confirmation": Wait for user to select from the options shown
-   - For goal_confirmation: save as "confirm", "cut", "gain", or "maintain"
+       * Loss > 2kg/lbs: "Great! I see you're looking to **cut** (lose Xkg) 📉"
+       * Gain > 2kg/lbs: "Awesome! I see you're looking to **bulk up** (gain Xkg) 📈"  
+       * Otherwise: "Perfect! I see you're looking to **maintain** your weight ⚖️"
+     - Then IMMEDIATELY ask: "Now, how tall are you, and what's your age?"
+     - DO NOT wait for confirmation, just state their goal and move on
    - IMPORTANT: After each step, ask ONLY about the NEXT step in order:
-     * After goal_confirmation → Ask for height and age (NOT activity level)
+     * After target_weight → Ask for height and age
      * After height_age → Ask for gender  
      * After gender → Ask for activity level
      * After activity_level → Ask for display mode
      * After display_mode → Ask about dietary preferences
+   - For display_mode specifically, ask: "Now, how would you like me to display your nutrition info? Some people don't like obsessing over numbers as it can stress them out - you can start without seeing the numbers and let Bob do the calculations for you. Or you can stay in standard mode and see everything. Which would you prefer?"
    - Be conversational and acknowledge their input: "Nice to meet you, John!"
    - Then ask for the next piece of info naturally based on currentStep
    - If user asks unrelated questions, answer briefly then guide back
@@ -357,10 +354,11 @@ export function buildPromptContext(
 
   return {
     userName: profile?.name || "Friend",
-    caloriesRemaining:
-      (profile?.dailyCalorieTarget || 2000) - (stats?.calories || 0),
+    caloriesRemaining: profile?.dailyCalorieTarget 
+      ? profile.dailyCalorieTarget - (stats?.calories || 0)
+      : 0,
     proteinConsumed: stats?.protein || 0,
-    proteinTarget: profile?.proteinTarget || 150,
+    proteinTarget: profile?.proteinTarget || 0,
     hasWeighedToday: hasWeighedToday || false,
     isStealthMode: preferences?.displayMode === "stealth",
     currentHour: hour,

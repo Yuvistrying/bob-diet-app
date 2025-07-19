@@ -54,8 +54,11 @@ export const forceCompleteOnboarding = mutation({
       const activityMultipliers = {
         sedentary: 1.2,
         light: 1.375,
+        "lightly active": 1.375, // Handle both formats
         moderate: 1.55,
+        "moderately active": 1.55, // Handle both formats
         active: 1.725,
+        "very active": 1.725, // Handle both formats
       };
       const tdee =
         bmr *
@@ -67,7 +70,7 @@ export const forceCompleteOnboarding = mutation({
       if (goal === "cut") dailyCalories = tdee - 500;
       else if (goal === "gain") dailyCalories = tdee + 300;
 
-      const proteinTarget = Math.round(weight * 2.2);
+      const proteinTarget = Math.round(weight * 1.6); // 1.6g per kg
       const fatTarget = Math.round((dailyCalories * 0.25) / 9);
       const carbsTarget = Math.round(
         (dailyCalories - proteinTarget * 4 - fatTarget * 9) / 4,

@@ -112,8 +112,11 @@ function calculateTDEE(bmr: number, activityLevel: string) {
   const multipliers = {
     sedentary: 1.2,
     light: 1.375,
+    "lightly active": 1.375, // Handle both formats
     moderate: 1.55,
+    "moderately active": 1.55, // Handle both formats
     active: 1.725,
+    "very active": 1.725, // Handle both formats
   };
   return bmr * (multipliers[activityLevel as keyof typeof multipliers] || 1.2);
 }
@@ -127,8 +130,8 @@ function calculateTargets(tdee: number, goal: string, weight: number) {
     calories = tdee + 300; // 300 calorie surplus for lean gains
   }
 
-  // Protein: 0.8-1g per lb of body weight
-  const proteinGrams = Math.round(weight * 2.2 * 0.9); // kg to lbs * 0.9
+  // Protein: 1.6g per kg of body weight (good for active individuals)
+  const proteinGrams = Math.round(weight * 1.6); // 1.6g per kg
 
   return {
     calories: Math.round(calories),
