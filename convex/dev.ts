@@ -8,32 +8,38 @@ export const resetOnboarding = mutation({
     if (!identity) {
       throw new Error("Not authenticated");
     }
-    
-    console.log("[DEV] Looking for user with tokenIdentifier:", identity.tokenIdentifier);
-    
+
+    console.log(
+      "[DEV] Looking for user with tokenIdentifier:",
+      identity.tokenIdentifier,
+    );
+
     let user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
     // If user doesn't exist, create them
     if (!user) {
-      console.log("[DEV] User not found, creating new user with tokenIdentifier:", identity.tokenIdentifier);
+      console.log(
+        "[DEV] User not found, creating new user with tokenIdentifier:",
+        identity.tokenIdentifier,
+      );
       const newUserId = await ctx.db.insert("users", {
         tokenIdentifier: identity.tokenIdentifier,
         name: identity.name,
         email: identity.email,
       });
-      
+
       user = await ctx.db.get(newUserId);
       if (!user) throw new Error("Failed to create user");
     }
 
     // Extract the actual userId from the tokenIdentifier
     // Format is "https://....|user_xxxxx" and we need "user_xxxxx"
-    const userId = identity.tokenIdentifier.split('|').pop() || user._id;
+    const userId = identity.tokenIdentifier.split("|").pop() || user._id;
     console.log("[DEV] Resetting onboarding for user:", userId);
     console.log("[DEV] Token identifier:", identity.tokenIdentifier);
     console.log("[DEV] Extracted userId:", userId);
@@ -54,7 +60,7 @@ export const resetOnboarding = mutation({
       .query("chatHistory")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    
+
     console.log(`[DEV] Deleting ${allMessages.length} chat messages`);
     for (const msg of allMessages) {
       await ctx.db.delete(msg._id);
@@ -122,7 +128,10 @@ export const resetOnboarding = mutation({
       .first();
 
     if (onboardingProgress) {
-      console.log("[DEV] Deleting onboarding progress:", onboardingProgress._id);
+      console.log(
+        "[DEV] Deleting onboarding progress:",
+        onboardingProgress._id,
+      );
       await ctx.db.delete(onboardingProgress._id);
     }
 
@@ -131,24 +140,24 @@ export const resetOnboarding = mutation({
       .query("weeklySummaries")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    
+
     console.log(`[DEV] Deleting ${weeklySummaries.length} weekly summaries`);
     for (const summary of weeklySummaries) {
       await ctx.db.delete(summary._id);
     }
 
     // Delete any message summaries
-    const messageSummaries = await ctx.db
-      .query("messageSummaries")
-      .collect();
-    
+    const messageSummaries = await ctx.db.query("messageSummaries").collect();
+
     // Filter by threadId since no direct userId index
-    const userThreadIds = allThreads.map(t => t.threadId);
-    const userMessageSummaries = messageSummaries.filter(s => 
-      userThreadIds.includes(s.threadId)
+    const userThreadIds = allThreads.map((t) => t.threadId);
+    const userMessageSummaries = messageSummaries.filter((s) =>
+      userThreadIds.includes(s.threadId),
     );
-    
-    console.log(`[DEV] Deleting ${userMessageSummaries.length} message summaries`);
+
+    console.log(
+      `[DEV] Deleting ${userMessageSummaries.length} message summaries`,
+    );
     for (const summary of userMessageSummaries) {
       await ctx.db.delete(summary._id);
     }
@@ -164,7 +173,7 @@ export const resetOnboarding = mutation({
     console.log(`  - Bubbles: ${bubbles.length}`);
     console.log(`  - Weekly summaries: ${weeklySummaries.length}`);
     console.log(`  - Onboarding progress: ${onboardingProgress ? 1 : 0}`);
-    
+
     return { success: true };
   },
 });
