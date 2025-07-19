@@ -60,36 +60,6 @@ export const upsertUser = mutation({
       tokenIdentifier: identity.subject,
     });
 
-    // Create a basic profile for new users (onboarding not completed)
-    const existingProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .first();
-
-    if (!existingProfile) {
-      await ctx.db.insert("userProfiles", {
-        userId: identity.subject,
-        name: identity.name || "Friend",
-        // Set placeholder values - will be updated during onboarding
-        currentWeight: 0,
-        targetWeight: 0,
-        height: 0,
-        age: 25,
-        gender: "other",
-        activityLevel: "moderate",
-        goal: "maintain",
-        dailyCalorieTarget: 2000,
-        proteinTarget: 150,
-        carbsTarget: 250,
-        fatTarget: 65,
-        preferredUnits: "metric",
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        onboardingCompleted: false, // Key flag for onboarding
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    }
-
     return await ctx.db.get(userId);
   },
 });
