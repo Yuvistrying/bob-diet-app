@@ -274,6 +274,11 @@ export async function POST(req: Request) {
       // Only load tools if needed based on intent
       toolsNeeded = getToolsForIntent(intents, !!pendingConfirmation);
 
+      // Add onboarding tool if user is in onboarding
+      if (onboardingStatus && !onboardingStatus.completed) {
+        toolsNeeded.needsOnboardingTool = true;
+      }
+
       // Pass tool selection to createTools for selective loading
       tools = createTools(
         convexClient,

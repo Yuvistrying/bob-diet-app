@@ -23,6 +23,7 @@ interface ToolSelection {
   needsWeightTool: boolean;
   needsProgressTool: boolean;
   needsSearchTool: boolean;
+  needsOnboardingTool: boolean;
 }
 
 // Create tools function that accepts context and tool selection
@@ -43,6 +44,7 @@ export function createTools(
       needsWeightTool: true,
       needsProgressTool: true,
       needsSearchTool: true,
+      needsOnboardingTool: false,
     };
   }
 
@@ -681,6 +683,39 @@ export function createTools(
     },
   });
 
+  // Onboarding progress tool (only if needed)
+  if (toolSelection.needsOnboardingTool) {
+    tools.saveOnboardingProgress = tool({
+      description:
+        "Save user's onboarding response and progress to the next step",
+      parameters: z.object({
+        step: z
+          .string()
+          .describe("Current onboarding step (e.g., 'name', 'current_weight')"),
+        response: z
+          .any()
+          .describe("User's response to the onboarding question"),
+      }),
+      execute: async (args) => {
+        try {
+          await convexClient.mutation(api.onboarding.saveOnboardingProgress, {
+            step: args.step,
+            response: args.response,
+          });
+
+          return {
+            success: true,
+            step: args.step,
+            saved: true,
+          };
+        } catch (error) {
+          console.error("Error saving onboarding progress:", error);
+          return { error: "Failed to save onboarding progress" };
+        }
+      },
+    });
+  }
+
   return tools;
 }
 
@@ -746,6 +781,7 @@ export function getToolsForIntent(
       needsWeightTool: false,
       needsProgressTool: true,
       needsSearchTool: false,
+      needsOnboardingTool: false,
     };
   }
 
@@ -763,5 +799,6 @@ export function getToolsForIntent(
     needsWeightTool,
     needsProgressTool,
     needsSearchTool,
+    needsOnboardingTool: false, // Will be determined by onboarding status
   };
 }
