@@ -67,14 +67,22 @@ export function Header() {
               className="relative mr-6 flex items-center space-x-2"
             >
               <Icons.logo className="h-8 w-auto" />
-              <span className="text-xl" style={{ fontFamily: '"Fugaz One", Inter, sans-serif', fontWeight: 400 }}>BOB</span>
+              <span
+                className="text-xl"
+                style={{
+                  fontFamily: '"Fugaz One", Inter, sans-serif',
+                  fontWeight: 400,
+                }}
+              >
+                BOB
+              </span>
             </Link>
             <div className="hidden lg:flex gap-4">
               <Link
                 href="/sign-in"
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
-                  "h-8 rounded-full"
+                  "h-8 rounded-full",
                 )}
               >
                 Log In
@@ -83,7 +91,7 @@ export function Header() {
                 href="/sign-up"
                 className={cn(
                   buttonVariants({ variant: "default" }),
-                  "h-8 text-black rounded-full group"
+                  "h-8 text-black rounded-full group",
                 )}
               >
                 {siteConfig.cta}

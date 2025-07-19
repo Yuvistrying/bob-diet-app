@@ -310,12 +310,9 @@ export const fetchUserSubscription = query({
 
         if (emailSubscription) {
           console.log(
-            "[fetchUserSubscription] Found subscription by email, updating userId",
+            "[fetchUserSubscription] Found subscription by email, needs userId update",
           );
-          // Update the subscription with correct userId
-          await (ctx.db as any).patch(emailSubscription._id, {
-            userId: user.tokenIdentifier,
-          });
+          // Return the subscription as-is, userId update should be done via mutation
           return emailSubscription;
         }
       }
@@ -611,6 +608,56 @@ export const paymentWebhook = httpAction(async (ctx, request) => {
       },
     );
   }
+});
+
+export const updateSubscriptionUserId = mutation({
+  args: {
+    subscriptionId: v.id("subscriptions"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.subscriptionId, {
+      userId: args.userId,
+    });
+  },
+});
+
+export const fixSubscriptionUserIdByEmail = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Find user by token
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.subject))
+      .first();
+
+    if (!user || user.email !== args.email) {
+      throw new Error("Email mismatch");
+    }
+
+    // Find all subscriptions and check for email match
+    const allSubscriptions = await ctx.db.query("subscriptions").collect();
+    const emailSubscription = allSubscriptions.find(
+      (sub) => sub.metadata?.customerEmail === args.email,
+    );
+
+    if (emailSubscription) {
+      await ctx.db.patch(emailSubscription._id, {
+        userId: user.tokenIdentifier,
+      });
+      console.log("Fixed subscription userId for email:", args.email);
+      return { success: true, subscriptionId: emailSubscription._id };
+    }
+
+    return { success: false, message: "No subscription found for email" };
+  },
 });
 
 export const createCustomerPortalUrl = action({

@@ -29,7 +29,15 @@ export function MobileDrawer() {
               className="relative mr-6 flex items-center space-x-2"
             >
               <Icons.logo className="h-8 w-auto" />
-              <span className="text-xl" style={{ fontFamily: '"Fugaz One", Inter, sans-serif', fontWeight: 400 }}>BOB</span>
+              <span
+                className="text-xl"
+                style={{
+                  fontFamily: '"Fugaz One", Inter, sans-serif',
+                  fontWeight: 400,
+                }}
+              >
+                BOB
+              </span>
             </Link>
           </div>
         </DrawerHeader>
@@ -38,7 +46,7 @@ export function MobileDrawer() {
             href="/sign-up"
             className={cn(
               buttonVariants({ variant: "default" }),
-              "text-black rounded-full group"
+              "text-black rounded-full group",
             )}
           >
             {siteConfig.cta}

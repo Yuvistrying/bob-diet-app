@@ -38,7 +38,15 @@ export function Hero() {
             transition={{ duration: 0.6, delay: 1.2 }}
             className="absolute inset-0 top-20 z-10"
           >
-            <span style={{ fontFamily: '"Fugaz One", Inter, sans-serif', fontWeight: 400 }}>BOB</span> Diet Coach
+            <span
+              style={{
+                fontFamily: '"Fugaz One", Inter, sans-serif',
+                fontWeight: 400,
+              }}
+            >
+              BOB
+            </span>{" "}
+            Diet Coach
           </motion.div>
         </div>
 
@@ -57,7 +65,8 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.7, ease: easeInOutCubic }}
             className="max-w-3xl mx-auto text-xl mb-8 font-medium text-balance"
           >
-            Lose, gain, or maintain weight with an AI that learns YOUR metabolism and guides every food decision in real-time.
+            Lose, gain, or maintain weight with an AI that learns YOUR
+            metabolism and guides every food decision in real-time.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -75,7 +84,10 @@ export function Hero() {
               <p className="text-sm text-muted-foreground">
                 Free to start • No credit card required
               </p>
-              <a href="/sign-in" className="text-sm text-muted-foreground hover:text-foreground underline">
+              <a
+                href="/sign-in"
+                className="text-sm text-muted-foreground hover:text-foreground underline"
+              >
                 Already a user? Log in
               </a>
             </div>

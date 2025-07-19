@@ -25,7 +25,11 @@ export function MobileDrawer() {
               title="brand-logo"
               className="relative mr-6 flex items-center space-x-2"
             >
-              <img src="/logo.svg" alt="Bob Diet Coach" className="w-auto h-[40px]" />
+              <img
+                src="/logo.svg"
+                alt="Bob Diet Coach"
+                className="w-auto h-[40px]"
+              />
               <span className="font-bold text-xl">{siteConfig.name}</span>
             </Link>
           </div>
