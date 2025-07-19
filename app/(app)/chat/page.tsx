@@ -406,9 +406,7 @@ export default function Chat() {
   const saveOnboardingProgress = useMutation(
     api.onboarding.saveOnboardingProgress,
   );
-  const updateOnboardingStep = useMutation(
-    api.onboarding.updateOnboardingStep,
-  );
+  const updateOnboardingStep = useMutation(api.onboarding.updateOnboardingStep);
   const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
   const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
   const getOrCreateDailySession = useMutation(
@@ -435,7 +433,7 @@ export default function Chat() {
   // Define isOnboarding early to use in useEffects
   const isOnboarding = !onboardingStatus?.completed;
   const isStealthMode = preferences?.displayMode === "stealth";
-  
+
   // Auto-advance from welcome to name step
   useEffect(() => {
     if (
@@ -447,7 +445,12 @@ export default function Chat() {
       // Automatically move to name step after welcome message
       updateOnboardingStep({ step: "name" });
     }
-  }, [isOnboarding, onboardingStatus?.currentStep, messages, updateOnboardingStep]);
+  }, [
+    isOnboarding,
+    onboardingStatus?.currentStep,
+    messages,
+    updateOnboardingStep,
+  ]);
 
   // Query for thread messages - load when we have a thread ID and are authenticated
   const [shouldLoadThreadMessages, setShouldLoadThreadMessages] =
@@ -1787,30 +1790,36 @@ export default function Chat() {
                   <PenSquare className="h-5 w-5" />
                   <span className="sr-only">New Chat</span>
                 </Button>
-                
+
                 {/* Dev button to reset onboarding - only in development */}
                 {process.env.NODE_ENV === "development" && (
                   <Button
                     type="button"
                     onClick={async () => {
-                      if (confirm("Reset onboarding? This will delete all your data as if you just signed up.")) {
+                      if (
+                        confirm(
+                          "Reset onboarding? This will delete all your data as if you just signed up.",
+                        )
+                      ) {
                         try {
                           // Clear all local storage
                           localStorage.clear();
                           sessionStorage.clear();
-                          
+
                           // Clear local chat state
                           setMessages([]);
                           setThreadId(null);
-                          
+
                           // Reset onboarding in database
                           await resetOnboardingDev({});
-                          
+
                           // Wait a bit for Convex to process
-                          await new Promise(resolve => setTimeout(resolve, 500));
-                          
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 500),
+                          );
+
                           // Force a hard reload to clear all state
-                          window.location.href = '/chat';
+                          window.location.href = "/chat";
                         } catch (error) {
                           console.error("Failed to reset onboarding:", error);
                         }
@@ -1847,12 +1856,24 @@ export default function Chat() {
                         : profile.goal === "gain"
                           ? "Gain"
                           : "Maintain"
-                      : "—"}
+                      : onboardingStatus?.responses?.goal
+                        ? onboardingStatus.responses.goal === "cut"
+                          ? "Cut"
+                          : onboardingStatus.responses.goal === "gain"
+                            ? "Gain"
+                            : "Maintain"
+                        : "—"}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
                     {profile?.targetWeight
                       ? `${profile.targetWeight} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
-                      : "Set goal"}
+                      : onboardingStatus?.responses?.target_weight
+                        ? `${onboardingStatus.responses.target_weight.weight || onboardingStatus.responses.target_weight} ${
+                            onboardingStatus.responses.target_weight.unit || 
+                            onboardingStatus.responses.current_weight?.unit || 
+                            "kg"
+                          }`
+                        : "Set goal"}
                   </div>
                 </div>
 
@@ -1863,12 +1884,18 @@ export default function Chat() {
                     Current
                   </div>
                   <div className="text-sm font-bold text-card-foreground">
-                    {latestWeight?.weight || profile?.currentWeight || "—"}
+                    {latestWeight?.weight || 
+                     profile?.currentWeight || 
+                     onboardingStatus?.responses?.current_weight?.weight ||
+                     onboardingStatus?.responses?.current_weight ||
+                     "—"}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    {latestWeight?.weight || profile?.currentWeight
+                    {latestWeight?.weight || profile?.currentWeight || onboardingStatus?.responses?.current_weight
                       ? latestWeight?.unit ||
-                        (profile?.preferredUnits === "imperial" ? "lbs" : "kg")
+                        (profile?.preferredUnits === "imperial" ? "lbs" : "kg") ||
+                        onboardingStatus?.responses?.current_weight?.unit ||
+                        "kg"
                       : ""}
                   </div>
                 </div>
@@ -2453,22 +2480,45 @@ export default function Chat() {
                   lastMessageRole: messages[messages.length - 1]?.role,
                   onboardingStatus,
                   currentStep: onboardingStatus?.currentStep,
-                  shouldShow: isOnboarding && messages.length > 0 && messages[messages.length - 1]?.role === "assistant"
+                  isStreaming,
+                  shouldShow:
+                    isOnboarding &&
+                    messages.length > 0 &&
+                    messages[messages.length - 1]?.role === "assistant" &&
+                    !isStreaming,
                 });
-                
-                return isOnboarding &&
+
+                return (
+                  isOnboarding &&
                   messages.length > 0 &&
-                  messages[messages.length - 1]?.role === "assistant";
+                  messages[messages.length - 1]?.role === "assistant" &&
+                  !isStreaming // Don't show while Bob is responding
+                );
               })() && (
                 <div className="mt-4">
                   <OnboardingQuickResponses
                     step={onboardingStatus?.currentStep || "name"}
                     onSelect={async (value) => {
+                      // For current_weight and target_weight, parse the value
+                      let processedValue = value;
+                      if (
+                        onboardingStatus?.currentStep === "current_weight" ||
+                        onboardingStatus?.currentStep === "target_weight"
+                      ) {
+                        const match = value.match(/^(\d+\.?\d*)\s*(kg|lbs)$/);
+                        if (match) {
+                          processedValue = {
+                            weight: parseFloat(match[1]),
+                            unit: match[2],
+                          };
+                        }
+                      }
+
                       // Save onboarding progress
                       try {
                         await saveOnboardingProgress({
                           step: onboardingStatus?.currentStep || "name",
-                          response: value,
+                          response: processedValue,
                         });
                       } catch (error) {
                         logger.error(
@@ -2481,7 +2531,7 @@ export default function Chat() {
                       setInput(value);
                       handleSubmit(new Event("submit") as any);
                     }}
-                    isLoading={isLoading}
+                    isLoading={isLoading || isStreaming}
                     currentInput=""
                   />
                 </div>
