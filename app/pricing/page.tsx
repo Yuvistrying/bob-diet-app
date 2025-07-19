@@ -32,7 +32,9 @@ export default function IntegratedPricing() {
   const createCheckout = useAction(api.subscriptions.createCheckoutSession);
   const createPortalUrl = useAction(api.subscriptions.createCustomerPortalUrl);
   const upsertUser = useMutation(api.users.upsertUser);
-  const fixSubscriptionUserId = useMutation(api.subscriptions.fixSubscriptionUserIdByEmail);
+  const fixSubscriptionUserId = useMutation(
+    api.subscriptions.fixSubscriptionUserIdByEmail,
+  );
 
   // Sync user when signed in
   React.useEffect(() => {
@@ -43,7 +45,11 @@ export default function IntegratedPricing() {
 
   // Fix subscription userId if needed
   React.useEffect(() => {
-    if (userSubscription && !userSubscription.userId && userSubscription.metadata?.customerEmail) {
+    if (
+      userSubscription &&
+      !userSubscription.userId &&
+      userSubscription.metadata?.customerEmail
+    ) {
       fixSubscriptionUserId({ email: userSubscription.metadata.customerEmail })
         .then(() => console.log("Fixed subscription userId"))
         .catch(console.error);
@@ -132,7 +138,7 @@ export default function IntegratedPricing() {
 
       // Otherwise, create new checkout for first-time subscription
       const checkoutUrl = await createCheckout({ priceId });
-      
+
       if (!checkoutUrl) {
         throw new Error("Failed to create checkout session");
       }

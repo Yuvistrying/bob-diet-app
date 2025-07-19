@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { api } from "./_generated/api";
 
 // Onboarding steps
 const ONBOARDING_STEPS = [
@@ -8,11 +7,12 @@ const ONBOARDING_STEPS = [
   "name",
   "current_weight",
   "target_weight",
+  "goal_confirmation", // Bob infers goal and asks for confirmation
   "height_age",
   "gender",
   "activity_level",
-  "goal",
   "display_mode",
+  "dietary_preferences", // New step for restrictions/preferences
   "complete",
 ];
 
@@ -28,11 +28,17 @@ export const getOnboardingStatus = query({
       .withIndex("by_user", (q: any) => q.eq("userId", identity.subject))
       .first();
 
-    // If profile has all required data but onboarding not marked complete, treat as complete
+    // Check if profile has all required data (not just default values)
     if (
       profile &&
       profile.name &&
       profile.currentWeight &&
+      profile.targetWeight &&
+      profile.height &&
+      profile.age &&
+      profile.gender &&
+      profile.activityLevel &&
+      profile.goal &&
       profile.dailyCalorieTarget
     ) {
       return {
@@ -113,17 +119,24 @@ export const saveOnboardingProgress = mutation({
       // Special handling for various cases
       let actualNextStep = nextStep;
 
-      // If we just saved height_age, next is gender
-      if (args.step === "height_age") {
-        actualNextStep = "gender";
-      }
-      // If goal is already set (auto-detected), skip the goal step
-      else if (nextStep === "goal" && responses.goal) {
-        actualNextStep = "display_mode";
-      }
-      // If we're at activity_level, next should be display_mode (skip goal if already set)
-      else if (args.step === "activity_level") {
-        actualNextStep = responses.goal ? "display_mode" : "goal";
+      // Auto-determine goal when target weight is saved
+      if (args.step === "target_weight" && responses.current_weight && args.response) {
+        const currentWeight = parseFloat(responses.current_weight.weight || responses.current_weight);
+        const targetWeight = parseFloat(args.response.weight || args.response);
+        
+        // Determine goal based on weight difference
+        let inferredGoal = "maintain";
+        const weightDiff = targetWeight - currentWeight;
+        
+        if (weightDiff < -2) { // More than 2kg/lbs loss
+          inferredGoal = "cut";
+        } else if (weightDiff > 2) { // More than 2kg/lbs gain
+          inferredGoal = "gain";
+        }
+        
+        // Save the inferred goal
+        responses.goal = inferredGoal;
+        responses.goal_inferred = true;
       }
 
       await ctx.db.patch(progress._id, {
@@ -134,9 +147,50 @@ export const saveOnboardingProgress = mutation({
       });
     }
 
-    // If display_mode is saved, create user profile
-    if (args.step === "display_mode") {
-      console.log("Display mode saved, creating profile...");
+    // Handle goal confirmation step
+    if (args.step === "goal_confirmation") {
+      // Get the latest progress to update
+      const latestProgress = await ctx.db
+        .query("onboardingProgress")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      
+      if (latestProgress) {
+        const updatedResponses = { ...latestProgress.responses };
+        
+        // If user disagrees with inferred goal, update it
+        if (args.response !== "confirm") {
+          updatedResponses.goal = args.response;
+          updatedResponses.goal_inferred = false;
+        }
+        
+        await ctx.db.patch(latestProgress._id, {
+          responses: updatedResponses,
+        });
+      }
+    }
+
+    // If dietary_preferences is saved, we're done with onboarding
+    if (args.step === "dietary_preferences") {
+      console.log("Dietary preferences saved, creating profile...");
+      
+      // Save dietary preferences response
+      const latestProgress = await ctx.db
+        .query("onboardingProgress")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      
+      if (latestProgress) {
+        const updatedResponses = { ...latestProgress.responses };
+        if (args.response !== "skip_preferences" && args.response.restrictions) {
+          updatedResponses.dietary_preferences = args.response;
+        }
+        
+        await ctx.db.patch(latestProgress._id, {
+          responses: updatedResponses,
+        });
+      }
+      
       await createProfileFromOnboarding(ctx, userId);
 
       // Mark onboarding as complete in progress
@@ -153,8 +207,6 @@ export const saveOnboardingProgress = mutation({
         });
       }
 
-      // Clear cached context after onboarding completes
-      await ctx.runMutation(api.sessionCache.clearSessionCache, {});
       console.log("Profile created and onboarding marked complete");
     }
   },
@@ -171,27 +223,25 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
 
   const r = progress.responses;
 
+  // Check if profile already exists (shouldn't normally)
+  const existingProfile = await ctx.db
+    .query("userProfiles")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .first();
+
+  if (existingProfile) {
+    console.log(`Profile already exists for user ${userId}, updating it`);
+  }
+
   // Calculate BMR and targets
-  const weight = parseFloat(r.current_weight?.weight || 70); // Default 70kg
-  const height = parseFloat(r.height_age?.height || 170); // Default 170cm
-  const age = parseInt(r.height_age?.age || 30); // Default 30 years
+  const weight = parseFloat(r.current_weight?.weight || 70);
+  const height = parseFloat(r.height_age?.height || 170);
+  const age = parseInt(r.height_age?.age || 30);
   const gender = r.gender || "other";
   const activityLevel = r.activity_level || "moderate";
   const goal = r.goal || "maintain";
 
-  // Log if we're using defaults
-  if (
-    !r.current_weight?.weight ||
-    !r.height_age?.height ||
-    !r.height_age?.age
-  ) {
-    console.warn(
-      `Using default values for user ${userId}: weight=${weight}, height=${height}, age=${age}`,
-    );
-  }
-
   // Calculate BMR (Mifflin-St Jeor)
-  // For "other" gender, use average of male and female calculations
   let bmr;
   if (gender === "male") {
     bmr = 10 * weight + 6.25 * height - 5 * age + 5;
@@ -211,10 +261,7 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     moderate: 1.55,
     active: 1.725,
   };
-  const tdee =
-    bmr *
-    (activityMultipliers[activityLevel as keyof typeof activityMultipliers] ||
-      1.55);
+  const tdee = bmr * (activityMultipliers[activityLevel as keyof typeof activityMultipliers] || 1.55);
 
   // Calculate daily targets
   let dailyCalories = tdee;
@@ -242,51 +289,76 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     }
   }
 
-  // Create user profile
-  console.log(
-    `Creating profile for user ${userId} with name: "${r.name}" (raw responses: ${JSON.stringify(r)})`,
-  );
-  await ctx.db.insert("userProfiles", {
-    userId,
-    name: r.name || "Friend",
-    currentWeight: weight,
-    targetWeight: parseFloat(r.target_weight?.weight || weight),
-    height: height,
-    age: age,
-    gender: gender,
-    activityLevel: activityLevel,
-    goal: goal,
-    dailyCalorieTarget: Math.round(dailyCalories),
-    proteinTarget: proteinTarget,
-    carbsTarget: carbsTarget,
-    fatTarget: fatTarget,
-    preferredUnits: r.current_weight?.unit === "lbs" ? "imperial" : "metric",
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    onboardingCompleted: true,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  });
+  // Create or update the profile
+  if (existingProfile) {
+    await ctx.db.patch(existingProfile._id, {
+      name: r.name || existingProfile.name,
+      currentWeight: weight,
+      targetWeight: parseFloat(r.target_weight?.weight || weight),
+      height: height,
+      age: age,
+      gender: gender,
+      activityLevel: activityLevel,
+      goal: goal,
+      dailyCalorieTarget: Math.round(dailyCalories),
+      proteinTarget: proteinTarget,
+      carbsTarget: carbsTarget,
+      fatTarget: fatTarget,
+      preferredUnits: r.current_weight?.unit === "lbs" ? "imperial" : "metric",
+      onboardingCompleted: true,
+      updatedAt: Date.now(),
+    });
+  } else {
+    // Create new profile
+    await ctx.db.insert("userProfiles", {
+      userId,
+      name: r.name || "Friend",
+      currentWeight: weight,
+      targetWeight: parseFloat(r.target_weight?.weight || weight),
+      height: height,
+      age: age,
+      gender: gender,
+      activityLevel: activityLevel,
+      goal: goal,
+      dailyCalorieTarget: Math.round(dailyCalories),
+      proteinTarget: proteinTarget,
+      carbsTarget: carbsTarget,
+      fatTarget: fatTarget,
+      preferredUnits: r.current_weight?.unit === "lbs" ? "imperial" : "metric",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      onboardingCompleted: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
 
-  // Create user preferences
-  await ctx.db.insert("userPreferences", {
-    userId,
-    displayMode: r.display_mode || "standard",
-    showCalories: r.display_mode !== "stealth",
-    showProtein: true,
-    showCarbs: r.display_mode !== "stealth",
-    showFats: r.display_mode !== "stealth",
-    language: "en",
-    darkMode: false,
-    cuteMode: false,
-    reminderSettings: {
-      weighInReminder: true,
-      mealReminders: false,
-      reminderTimes: {
-        weighIn: "08:00",
+  // Create user preferences if they don't exist
+  const existingPreferences = await ctx.db
+    .query("userPreferences")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .first();
+
+  if (!existingPreferences) {
+    await ctx.db.insert("userPreferences", {
+      userId,
+      displayMode: r.display_mode || "standard",
+      showCalories: r.display_mode !== "stealth",
+      showProtein: true,
+      showCarbs: r.display_mode !== "stealth",
+      showFats: r.display_mode !== "stealth",
+      language: "en",
+      darkMode: false,
+      cuteMode: false,
+      reminderSettings: {
+        weighInReminder: true,
+        mealReminders: false,
+        reminderTimes: {
+          weighIn: "08:00",
+        },
       },
-    },
-    updatedAt: Date.now(),
-  });
+      updatedAt: Date.now(),
+    });
+  }
 
   // Log initial weight
   await ctx.db.insert("weightLogs", {
@@ -298,6 +370,35 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     notes: "Starting weight",
     createdAt: Date.now(),
   });
+
+  // Handle dietary preferences if provided
+  if (r.dietary_preferences && r.dietary_preferences !== "skip_preferences") {
+    const { restrictions = [], customNotes, intermittentFasting } = r.dietary_preferences;
+    
+    // Create dietary preferences directly
+    const existingDietaryPrefs = await ctx.db
+      .query("dietaryPreferences")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .first();
+
+    if (existingDietaryPrefs) {
+      await ctx.db.patch(existingDietaryPrefs._id, {
+        restrictions,
+        customNotes,
+        intermittentFasting,
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("dietaryPreferences", {
+        userId,
+        restrictions,
+        customNotes,
+        intermittentFasting,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+  }
 }
 
 // Reset onboarding (for testing)
@@ -346,8 +447,7 @@ export const resetOnboarding = mutation({
       await ctx.db.patch(session._id, { isActive: false });
     }
 
-    // Clear cache
-    await ctx.runMutation(api.sessionCache.clearSessionCache, {});
+    // No cache to clear - removed caching system
 
     return {
       reset: true,

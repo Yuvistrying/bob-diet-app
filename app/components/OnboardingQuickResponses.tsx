@@ -42,17 +42,17 @@ export function OnboardingQuickResponses({
       { label: "Moderate", value: "moderate", icon: "🏃" },
       { label: "Very Active", value: "active", icon: "💪" },
     ],
-    goal: [
-      { label: "Lose Weight", value: "cut", icon: "📉" },
-      { label: "Build Muscle", value: "gain", icon: "📈" },
-      { label: "Maintain", value: "maintain", icon: "⚖️" },
-      { label: "I'm not sure - help me decide", value: "help", icon: "🤔" },
+    goal_confirmation: [
+      { label: "Yes, that's right!", value: "confirm", icon: "✅" },
+      { label: "Actually, I want to lose weight", value: "cut", icon: "📉" },
+      { label: "Actually, I want to gain muscle", value: "gain", icon: "📈" },
+      { label: "Actually, I want to maintain", value: "maintain", icon: "⚖️" },
     ],
     display_mode: [
       { label: "Show All Numbers", value: "standard", icon: "📊" },
       { label: "Stealth Mode", value: "stealth", icon: "🤫" },
     ],
-    dietary_setup: [
+    dietary_preferences: [
       {
         label: "Set Dietary Preferences",
         value: "set_preferences",
@@ -191,13 +191,28 @@ export function OnboardingQuickResponses({
 
   // Special handling for dietary preferences
   if (step === "dietary_preferences") {
+    // For now, just show the regular options
+    // TODO: Integrate DietaryPreferencesCard properly
+    const currentOptions = options[step];
+    if (!currentOptions) return null;
+    
     return (
-      <div className="p-3">
-        <DietaryPreferencesCard
-          showTitle={false}
-          compact={true}
-          onComplete={() => onSelect("preferences_saved")}
-        />
+      <div className="space-y-2 p-3">
+        <p className="text-sm text-muted-foreground text-center mb-2">
+          Would you like to set your dietary preferences now?
+        </p>
+        {currentOptions.map((option) => (
+          <Button
+            key={option.value}
+            variant="outline"
+            onClick={() => onSelect(option.value)}
+            disabled={isLoading}
+            className="w-full h-12 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 border"
+          >
+            {option.icon && <span className="text-base">{option.icon}</span>}
+            <span className="font-medium">{option.label}</span>
+          </Button>
+        ))}
       </div>
     );
   }

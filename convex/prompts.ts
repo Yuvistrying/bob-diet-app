@@ -42,6 +42,11 @@ interface PromptContext {
       endHour: number;
     };
   };
+  onboardingStatus?: {
+    completed: boolean;
+    currentStep?: string;
+    responses?: any;
+  };
 }
 
 export function getBobSystemPrompt(context: PromptContext): string {
@@ -59,6 +64,7 @@ export function getBobSystemPrompt(context: PromptContext): string {
     todayFoodLogs,
     achievement,
     dietaryPreferences,
+    onboardingStatus,
   } = context;
 
   // Format today's food logs for the prompt
@@ -77,7 +83,25 @@ export function getBobSystemPrompt(context: PromptContext): string {
     ? `DIETARY RESTRICTIONS: ${dietaryPreferences.restrictions.join(", ")}${dietaryPreferences.customNotes ? ` (${dietaryPreferences.customNotes})` : ""}${dietaryPreferences.intermittentFasting ? ` | Fasting window: ${dietaryPreferences.intermittentFasting.startHour}:00-${dietaryPreferences.intermittentFasting.endHour}:00` : ""}`
     : "";
 
+  // Onboarding step descriptions
+  const onboardingSteps: Record<string, string> = {
+    name: "I need to know your name",
+    current_weight: "I need your current weight",
+    target_weight: "I need your target weight",
+    height_age: "I need your height and age",
+    gender: "I need your biological sex for accurate calculations",
+    activity_level: "I need to know your activity level",
+    goal: "I need to understand your fitness goal",
+    display_mode: "I need to know how you'd like to see your data",
+  };
+
+  const currentOnboardingNeed = onboardingStatus?.currentStep
+    ? onboardingSteps[onboardingStatus.currentStep]
+    : "";
+
   return `You are Bob, ${userName}'s friendly AI diet coach. Your purpose is to help people make better diet choices and achieve their health goals through understanding, not just blind logging.
+
+${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: ${currentOnboardingNeed}. Gently guide the conversation back to completing setup.` : ""}
 
 STATS: ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein
 ${!hasWeighedToday ? "No weigh-in yet today." : ""}
@@ -101,6 +125,7 @@ YOUR MISSION:
 - Guide them based on their goals and dietary preferences
 - Be kind, motivating, and never judgmental
 - People tend to under-report calorically dense additions - help them be accurate
+${!onboardingStatus?.completed ? `- PRIORITY: Complete onboarding! Be friendly but persistent about getting the needed info` : ""}
 
 CRITICAL: ALWAYS include text in your response. Never send just a tool call - always accompany it with a message to the user.
 For logWeight: ALWAYS respond with an encouraging message like "Logged your weight at 91kg! Keep tracking! 💪"
@@ -144,6 +169,18 @@ ${dietaryPreferences?.intermittentFasting ? `11. Respect fasting window - eating
    - "I want to do 16:8 fasting" → use setIntermittentFasting tool
    - "I'm allergic to shellfish" → use addCustomDietaryNote tool
    - Always confirm changes and explain impact on meal suggestions
+${
+  !onboardingStatus?.completed
+    ? `
+13. ONBOARDING BEHAVIOR:
+   - Current step: ${onboardingStatus?.currentStep}
+   - If user asks unrelated questions, answer briefly then guide back: "Happy to help with that! But first, ${currentOnboardingNeed} to set up your personalized plan."
+   - Be conversational: "What's your name?" not "Please enter your name"
+   - Accept natural responses: "I'm John" or "John" both work for name
+   - For weight: Accept "I weigh 180" or "180 lbs" or "82kg"
+   - Show enthusiasm when they provide info: "Great! Now I need..."`
+    : ""
+}
 
 EXAMPLE INTERACTIONS:
 
@@ -293,11 +330,12 @@ export function buildPromptContext(
   todayFoodLogs?: any[],
   achievement?: any,
   dietaryPreferences?: any,
+  onboardingStatus?: any,
 ): PromptContext {
   const hour = new Date().getHours();
 
   return {
-    userName: profile?.name || "there",
+    userName: profile?.name || "Friend",
     caloriesRemaining:
       (profile?.dailyCalorieTarget || 2000) - (stats?.calories || 0),
     proteinConsumed: stats?.protein || 0,
@@ -313,5 +351,6 @@ export function buildPromptContext(
     calibrationInsights: calibrationData,
     achievement,
     dietaryPreferences,
+    onboardingStatus,
   };
 }

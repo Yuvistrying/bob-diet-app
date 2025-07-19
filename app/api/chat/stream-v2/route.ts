@@ -131,7 +131,8 @@ export async function POST(req: Request) {
       threadSummaries,
       calibrationData,
       todayFoodLogs,
-      dietaryPreferences;
+      dietaryPreferences,
+      onboardingStatus;
 
     try {
       [
@@ -143,6 +144,7 @@ export async function POST(req: Request) {
         calibrationData,
         todayFoodLogs,
         dietaryPreferences,
+        onboardingStatus,
       ] = await Promise.all([
         // Daily summary (includes profile, stats, yesterday summary)
         convexClient.query(api.dailySummary.getDailySummary, {}),
@@ -173,6 +175,8 @@ export async function POST(req: Request) {
           api.dietaryPreferences.getUserDietaryPreferences,
           {},
         ),
+        // Get onboarding status
+        convexClient.query(api.onboarding.getOnboardingStatus, {}),
       ]);
     } catch (queryError: any) {
       console.error("[stream-v2] Error fetching context data:", queryError);
@@ -235,6 +239,7 @@ export async function POST(req: Request) {
       todayFoodLogs,
       dailySummary?.achievement,
       dietaryPreferences,
+      onboardingStatus,
     );
 
     // 6. Detect intents for tool selection only

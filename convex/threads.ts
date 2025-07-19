@@ -122,7 +122,8 @@ export const getOrCreateDailyThread = mutation({
     const hasLoggedWeightToday = !!todayWeightLog;
 
     // Build and save morning greeting as a chat message
-    if (profile) {
+    // ONLY if profile exists AND onboarding is completed
+    if (profile && profile.onboardingCompleted) {
       const greetingContent = await buildMorningGreeting(
         ctx,
         profile,
@@ -140,9 +141,12 @@ export const getOrCreateDailyThread = mutation({
           threadId,
         },
       });
+      
+      return { threadId, isNew: true, messageCount: 1 };
     }
 
-    return { threadId, isNew: true, messageCount: profile ? 1 : 0 };
+    // No greeting during onboarding - let chat page handle it
+    return { threadId, isNew: true, messageCount: 0 };
   },
 });
 
@@ -194,7 +198,8 @@ export const createNewThread = mutation({
       .collect();
 
     // Build and save new thread greeting as a chat message
-    if (profile) {
+    // ONLY if profile exists AND onboarding is completed
+    if (profile && profile.onboardingCompleted) {
       const greetingContent = buildNewThreadGreeting(
         profile,
         todayFoodLogs.length,
@@ -210,12 +215,21 @@ export const createNewThread = mutation({
           threadId: newThreadId,
         },
       });
+      
+      return {
+        threadId: newThreadId,
+        isNew: true,
+        messageCount: 1,
+        foodLogsCount: todayFoodLogs.length,
+        previousThreadSummarized: !!args.previousThreadId,
+      };
     }
 
+    // No greeting during onboarding
     return {
       threadId: newThreadId,
       isNew: true,
-      messageCount: profile ? 1 : 0,
+      messageCount: 0,
       foodLogsCount: todayFoodLogs.length,
       previousThreadSummarized: !!args.previousThreadId,
     };

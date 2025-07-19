@@ -27,6 +27,7 @@ The error occurred because the code was trying to use `ctx.db.patch()` inside a 
 ### 1. Fixed the Query (line 316)
 
 Changed from:
+
 ```typescript
 await ctx.db.patch(emailSubscription._id, {
   userId: user.tokenIdentifier,
@@ -34,6 +35,7 @@ await ctx.db.patch(emailSubscription._id, {
 ```
 
 To:
+
 ```typescript
 // Return the subscription as-is, userId update should be done via mutation
 return emailSubscription;
@@ -75,7 +77,11 @@ export const fixSubscriptionUserIdByEmail = mutation({
 ```typescript
 // Fix subscription userId if needed
 React.useEffect(() => {
-  if (userSubscription && !userSubscription.userId && userSubscription.metadata?.customerEmail) {
+  if (
+    userSubscription &&
+    !userSubscription.userId &&
+    userSubscription.metadata?.customerEmail
+  ) {
     fixSubscriptionUserId({ email: userSubscription.metadata.customerEmail })
       .then(() => console.log("Fixed subscription userId"))
       .catch(console.error);

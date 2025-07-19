@@ -149,7 +149,7 @@ export const calibrateUserTargets = internalMutation({
     const periodDays = isFirstWeek ? 7 : movingAverages.length;
 
     // Calculate expected weight change based on average calorie deficit/surplus
-    const dailyDeficit = profile.dailyCalorieTarget - avgDailyCalories;
+    const dailyDeficit = (profile.dailyCalorieTarget || 2000) - avgDailyCalories;
     const expectedWeightChange = (dailyDeficit * periodDays) / 7700; // 7700 cal = 1kg
 
     // Calculate the difference
@@ -191,13 +191,13 @@ export const calibrateUserTargets = internalMutation({
 
     // Apply adjustment if needed
     if (adjustment !== 0) {
-      const newTarget = profile.dailyCalorieTarget + adjustment;
+      const newTarget = (profile.dailyCalorieTarget || 2000) + adjustment;
 
       // Save calibration history
       await ctx.db.insert("calibrationHistory", {
         userId,
         date: new Date().toISOString().split("T")[0],
-        oldCalorieTarget: profile.dailyCalorieTarget,
+        oldCalorieTarget: profile.dailyCalorieTarget || 2000,
         newCalorieTarget: newTarget,
         reason,
         dataPointsAnalyzed: periodDays,
