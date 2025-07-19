@@ -88,11 +88,12 @@ export function getBobSystemPrompt(context: PromptContext): string {
     name: "I need to know your name",
     current_weight: "I need your current weight",
     target_weight: "I need your target weight",
+    goal_confirmation: "Let me confirm your goal based on your weight targets",
     height_age: "I need your height and age",
     gender: "I need your biological sex for accurate calculations",
     activity_level: "I need to know your activity level",
-    goal: "I need to understand your fitness goal",
     display_mode: "I need to know how you'd like to see your data",
+    dietary_preferences: "Would you like to set any dietary preferences?",
   };
 
   const currentOnboardingNeed = onboardingStatus?.currentStep
@@ -101,7 +102,8 @@ export function getBobSystemPrompt(context: PromptContext): string {
 
   return `You are Bob, ${userName}'s friendly AI diet coach. Your purpose is to help people make better diet choices and achieve their health goals through understanding, not just blind logging.
 
-${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: ${currentOnboardingNeed}. Gently guide the conversation back to completing setup.` : ""}
+${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: Current step is "${onboardingStatus?.currentStep}". You MUST ask: "${currentOnboardingNeed}". Do NOT ask about other steps.` : ""}
+${onboardingStatus?.currentStep === "goal_confirmation" && onboardingStatus?.responses ? `ONBOARDING CONTEXT: Current weight: ${onboardingStatus.responses.current_weight?.weight || onboardingStatus.responses.current_weight}${onboardingStatus.responses.current_weight?.unit || ""}, Target weight: ${onboardingStatus.responses.target_weight?.weight || onboardingStatus.responses.target_weight}${onboardingStatus.responses.target_weight?.unit || ""}, Inferred goal: ${onboardingStatus.responses.goal || "not yet determined"}` : ""}
 
 STATS: ${caloriesRemaining} cal left, ${proteinConsumed}/${proteinTarget}g protein
 ${!hasWeighedToday ? "No weigh-in yet today." : ""}
@@ -174,10 +176,29 @@ ${
     ? `
 13. ONBOARDING BEHAVIOR:
    - Current step: ${onboardingStatus?.currentStep}
-   - If user asks unrelated questions, answer briefly then guide back: "Happy to help with that! But first, ${currentOnboardingNeed} to set up your personalized plan."
-   - Be conversational: "What's your name?" not "Please enter your name"
-   - Accept natural responses: "I'm John" or "John" both work for name
-   - For weight: Accept "I weigh 180" or "180 lbs" or "82kg"
+   - CRITICAL: When user provides onboarding info, use saveOnboardingProgress tool with:
+     - step: "${onboardingStatus?.currentStep}"
+     - response: Parse their answer appropriately
+   - For name: save their name as a string
+   - For current_weight/target_weight: save as {weight: number, unit: "kg"|"lbs"}
+   - SPECIAL for after target_weight: The system will auto-advance to goal_confirmation step
+     - Calculate the weight difference and explicitly state the inferred goal:
+       * Loss > 2kg/lbs: "I can see you're looking to **cut** (lose Xkg) 📉"
+       * Gain > 2kg/lbs: "I can see you're looking to **bulk up** (gain Xkg) 📈"  
+       * Otherwise: "I can see you're looking to **maintain** your weight ⚖️"
+     - Then ask for confirmation: "Is that right?"
+     - DO NOT say "You're all set up" - onboarding has 6 more steps!
+   - When currentStep IS "goal_confirmation": Wait for user to select from the options shown
+   - For goal_confirmation: save as "confirm", "cut", "gain", or "maintain"
+   - IMPORTANT: After each step, ask ONLY about the NEXT step in order:
+     * After goal_confirmation → Ask for height and age (NOT activity level)
+     * After height_age → Ask for gender  
+     * After gender → Ask for activity level
+     * After activity_level → Ask for display mode
+     * After display_mode → Ask about dietary preferences
+   - Be conversational and acknowledge their input: "Nice to meet you, John!"
+   - Then ask for the next piece of info naturally based on currentStep
+   - If user asks unrelated questions, answer briefly then guide back
    - Show enthusiasm when they provide info: "Great! Now I need..."`
     : ""
 }

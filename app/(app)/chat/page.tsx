@@ -1207,12 +1207,18 @@ export default function Chat() {
   };
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+    overrideMessage?: string,
+  ) => {
     e.preventDefault();
 
-    if ((!input.trim() && !selectedImage) || isStreaming || isUploading) return;
+    const messageToSend = overrideMessage || input.trim();
 
-    const userMessage = input.trim();
+    if ((!messageToSend && !selectedImage) || isStreaming || isUploading)
+      return;
+
+    const userMessage = messageToSend;
     const hasImage = !!selectedImage;
 
     // Prevent double submissions
@@ -1362,7 +1368,10 @@ export default function Chat() {
     lastMessageTimeRef.current = now;
 
     // Don't add message here - the streaming hook will add it
-    setInput("");
+    // Only clear input if not using override message (from onboarding cards)
+    if (!overrideMessage) {
+      setInput("");
+    }
     lastSentMessageRef.current = { content: messageContent, timestamp: now };
 
     // Auto-scroll to bottom immediately when user sends message
@@ -1869,8 +1878,8 @@ export default function Chat() {
                       ? `${profile.targetWeight} ${profile?.preferredUnits === "imperial" ? "lbs" : "kg"}`
                       : onboardingStatus?.responses?.target_weight
                         ? `${onboardingStatus.responses.target_weight.weight || onboardingStatus.responses.target_weight} ${
-                            onboardingStatus.responses.target_weight.unit || 
-                            onboardingStatus.responses.current_weight?.unit || 
+                            onboardingStatus.responses.target_weight.unit ||
+                            onboardingStatus.responses.current_weight?.unit ||
                             "kg"
                           }`
                         : "Set goal"}
@@ -1884,16 +1893,20 @@ export default function Chat() {
                     Current
                   </div>
                   <div className="text-sm font-bold text-card-foreground">
-                    {latestWeight?.weight || 
-                     profile?.currentWeight || 
-                     onboardingStatus?.responses?.current_weight?.weight ||
-                     onboardingStatus?.responses?.current_weight ||
-                     "—"}
+                    {latestWeight?.weight ||
+                      profile?.currentWeight ||
+                      onboardingStatus?.responses?.current_weight?.weight ||
+                      onboardingStatus?.responses?.current_weight ||
+                      "—"}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    {latestWeight?.weight || profile?.currentWeight || onboardingStatus?.responses?.current_weight
+                    {latestWeight?.weight ||
+                    profile?.currentWeight ||
+                    onboardingStatus?.responses?.current_weight
                       ? latestWeight?.unit ||
-                        (profile?.preferredUnits === "imperial" ? "lbs" : "kg") ||
+                        (profile?.preferredUnits === "imperial"
+                          ? "lbs"
+                          : "kg") ||
                         onboardingStatus?.responses?.current_weight?.unit ||
                         "kg"
                       : ""}
@@ -2499,37 +2512,8 @@ export default function Chat() {
                   <OnboardingQuickResponses
                     step={onboardingStatus?.currentStep || "name"}
                     onSelect={async (value) => {
-                      // For current_weight and target_weight, parse the value
-                      let processedValue = value;
-                      if (
-                        onboardingStatus?.currentStep === "current_weight" ||
-                        onboardingStatus?.currentStep === "target_weight"
-                      ) {
-                        const match = value.match(/^(\d+\.?\d*)\s*(kg|lbs)$/);
-                        if (match) {
-                          processedValue = {
-                            weight: parseFloat(match[1]),
-                            unit: match[2],
-                          };
-                        }
-                      }
-
-                      // Save onboarding progress
-                      try {
-                        await saveOnboardingProgress({
-                          step: onboardingStatus?.currentStep || "name",
-                          response: processedValue,
-                        });
-                      } catch (error) {
-                        logger.error(
-                          "[Chat] Failed to save onboarding progress:",
-                          error,
-                        );
-                      }
-
-                      // Send the response as a regular message
-                      setInput(value);
-                      handleSubmit(new Event("submit") as any);
+                      // Send the response directly without showing in input field
+                      await handleSubmit(new Event("submit") as any, value);
                     }}
                     isLoading={isLoading || isStreaming}
                     currentInput=""

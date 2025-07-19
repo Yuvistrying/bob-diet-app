@@ -1,6 +1,6 @@
 import { Button } from "~/app/components/ui/button";
 import { Input } from "~/app/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DietaryPreferencesCard } from "~/app/components/DietaryPreferencesCard";
 
 interface QuickResponseOption {
