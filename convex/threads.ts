@@ -97,13 +97,16 @@ export const getOrCreateDailyThread = mutation({
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
-    
-    console.log(`[getOrCreateDailyThread] Profile check for ${identity.subject}:`, {
-      exists: !!profile,
-      onboardingCompleted: profile?.onboardingCompleted,
-      name: profile?.name,
-      allFields: profile,
-    });
+
+    console.log(
+      `[getOrCreateDailyThread] Profile check for ${identity.subject}:`,
+      {
+        exists: !!profile,
+        onboardingCompleted: profile?.onboardingCompleted,
+        name: profile?.name,
+        allFields: profile,
+      },
+    );
 
     // Create new thread
     const threadId = `thread_${identity.subject}_${Date.now()}`;
@@ -118,7 +121,7 @@ export const getOrCreateDailyThread = mutation({
 
     // Check if onboarding is needed
     const needsOnboarding = !profile || profile.onboardingCompleted !== true;
-    
+
     console.log(`[getOrCreateDailyThread] Onboarding check:`, {
       needsOnboarding,
       profileExists: !!profile,
@@ -128,23 +131,26 @@ export const getOrCreateDailyThread = mutation({
 
     // If onboarding is needed, create welcome message
     if (needsOnboarding) {
-      console.log(`[getOrCreateDailyThread] Creating onboarding welcome message`);
+      console.log(
+        `[getOrCreateDailyThread] Creating onboarding welcome message`,
+      );
       await ctx.db.insert("chatHistory", {
         userId: identity.subject,
         role: "assistant" as const,
-        content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
+        content:
+          "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
         timestamp: Date.now(),
         metadata: {
           threadId,
         },
       });
-      
+
       return { threadId, isNew: true, messageCount: 1 };
     }
 
     // Otherwise create morning greeting
     console.log(`[getOrCreateDailyThread] Creating morning greeting`);
-    
+
     // Get daily summary info
     const dailySummary = await ctx.runQuery(api.dailySummary.getDailySummary);
 
@@ -177,7 +183,7 @@ export const getOrCreateDailyThread = mutation({
         },
       });
     }
-    
+
     return { threadId, isNew: true, messageCount: 1 };
   },
 });
@@ -231,7 +237,7 @@ export const createNewThread = mutation({
 
     // Check if onboarding is needed
     const needsOnboarding = !profile || profile.onboardingCompleted !== true;
-    
+
     console.log(`[createNewThread] Onboarding check:`, {
       needsOnboarding,
       profileExists: !!profile,
@@ -244,7 +250,8 @@ export const createNewThread = mutation({
       await ctx.db.insert("chatHistory", {
         userId: identity.subject,
         role: "assistant" as const,
-        content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
+        content:
+          "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
         timestamp: Date.now(),
         metadata: {
           threadId: newThreadId,
@@ -268,7 +275,7 @@ export const createNewThread = mutation({
         },
       });
     }
-    
+
     return {
       threadId: newThreadId,
       isNew: true,

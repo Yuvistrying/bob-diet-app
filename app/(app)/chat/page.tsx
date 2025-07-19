@@ -33,6 +33,7 @@ import {
   FileText,
   LogOut,
   Square,
+  RotateCcw,
 } from "lucide-react";
 import {
   Collapsible,
@@ -405,6 +406,9 @@ export default function Chat() {
   const saveOnboardingProgress = useMutation(
     api.onboarding.saveOnboardingProgress,
   );
+  const updateOnboardingStep = useMutation(
+    api.onboarding.updateOnboardingStep,
+  );
   const saveAgentThreadId = useMutation(api.userPreferences.saveAgentThreadId);
   const startNewChatSession = useMutation(api.chatSessions.startNewChatSession);
   const getOrCreateDailySession = useMutation(
@@ -426,14 +430,57 @@ export default function Chat() {
   const saveConfirmedBubble = useMutation(
     api.confirmedBubbles.saveConfirmedBubble,
   );
+  const resetOnboardingDev = useMutation(api.dev.resetOnboarding);
+
+  // Define isOnboarding early to use in useEffects
+  const isOnboarding = !onboardingStatus?.completed;
+  const isStealthMode = preferences?.displayMode === "stealth";
+  
+  // Auto-advance from welcome to name step
+  useEffect(() => {
+    if (
+      isOnboarding &&
+      onboardingStatus?.currentStep === "welcome" &&
+      messages.length > 0 &&
+      messages[messages.length - 1]?.role === "assistant"
+    ) {
+      // Automatically move to name step after welcome message
+      updateOnboardingStep({ step: "name" });
+    }
+  }, [isOnboarding, onboardingStatus?.currentStep, messages, updateOnboardingStep]);
 
   // Query for thread messages - load when we have a thread ID and are authenticated
   const [shouldLoadThreadMessages, setShouldLoadThreadMessages] =
     useState(true);
+  const [threadMessageRetryCount, setThreadMessageRetryCount] = useState(0);
   const threadMessages = useQuery(
     api.threads.getThreadMessages,
     isSignedIn && threadId && shouldLoadThreadMessages ? { threadId } : "skip",
   );
+
+  // Handle empty thread messages with retry for onboarding
+  useEffect(() => {
+    if (
+      threadMessages !== undefined &&
+      threadMessages.length === 0 &&
+      isOnboarding &&
+      threadId &&
+      threadMessageRetryCount < 3
+    ) {
+      // Retry after a short delay to handle eventual consistency
+      const timer = setTimeout(() => {
+        logger.info(
+          `[Chat] Retrying thread messages query (attempt ${threadMessageRetryCount + 1})`,
+        );
+        setThreadMessageRetryCount((prev) => prev + 1);
+        // Force re-query by toggling the flag
+        setShouldLoadThreadMessages(false);
+        setTimeout(() => setShouldLoadThreadMessages(true), 100);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [threadMessages, isOnboarding, threadId, threadMessageRetryCount]);
 
   // Get all storage IDs from messages that need image URLs - memoized to prevent unnecessary re-renders
   const storageIdsFromMessages = useMemo(() => {
@@ -457,10 +504,6 @@ export default function Chat() {
       ? { storageIds: storageIdsFromMessages }
       : "skip",
   );
-
-  // Define isOnboarding early to use in useEffects
-  const isOnboarding = !onboardingStatus?.completed;
-  const isStealthMode = preferences?.displayMode === "stealth";
 
   // Toggle function for nutrition card
   const toggleNutritionCollapsed = () => {
@@ -627,18 +670,38 @@ export default function Chat() {
   // Load thread messages from Convex when available or thread changes
   useEffect(() => {
     // Skip if threadMessages is not ready yet or we've already synced this thread
-    if (!threadMessages || syncedThreadId === threadId) return;
+    if (threadMessages === undefined || syncedThreadId === threadId) return;
 
     // Skip if no threadId
     if (!threadId) return;
 
     logger.info(`[Chat] Thread changed from ${syncedThreadId} to ${threadId}`);
+    logger.info(`[Chat] threadMessages status:`, {
+      threadMessagesLength: threadMessages?.length,
+      threadMessagesLoaded: threadMessages !== undefined,
+      isOnboarding,
+      onboardingStatus,
+    });
 
     // If threadMessages is empty, we're done (greeting will be in messages if it exists)
     if (threadMessages.length === 0) {
       logger.info(`[Chat] New thread with no messages in database`);
+      logger.info(`[Chat] Current messages in state:`, messages);
       setSyncedThreadId(threadId);
       setHasLoadedHistory(true);
+
+      // For onboarding, provide a fallback message if none exists
+      if (isOnboarding && messages.length === 0) {
+        logger.info(`[Chat] Adding fallback onboarding message`);
+        setMessages([
+          {
+            role: "assistant",
+            content:
+              "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
+          },
+        ]);
+      }
+
       return;
     }
 
@@ -849,7 +912,7 @@ export default function Chat() {
       if (threadId || preferences === undefined) {
         return;
       }
-      
+
       // For onboarding, we need a thread even without a profile
       // But skip if profile is still loading (undefined) vs doesn't exist (null)
       if (profile === undefined) {
@@ -1724,6 +1787,44 @@ export default function Chat() {
                   <PenSquare className="h-5 w-5" />
                   <span className="sr-only">New Chat</span>
                 </Button>
+                
+                {/* Dev button to reset onboarding - only in development */}
+                {process.env.NODE_ENV === "development" && (
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm("Reset onboarding? This will delete all your data as if you just signed up.")) {
+                        try {
+                          // Clear all local storage
+                          localStorage.clear();
+                          sessionStorage.clear();
+                          
+                          // Clear local chat state
+                          setMessages([]);
+                          setThreadId(null);
+                          
+                          // Reset onboarding in database
+                          await resetOnboardingDev({});
+                          
+                          // Wait a bit for Convex to process
+                          await new Promise(resolve => setTimeout(resolve, 500));
+                          
+                          // Force a hard reload to clear all state
+                          window.location.href = '/chat';
+                        } catch (error) {
+                          console.error("Failed to reset onboarding:", error);
+                        }
+                      }
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground transition-opacity hover:opacity-70"
+                    title="Reset Onboarding (Dev)"
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                    <span className="sr-only">Reset Onboarding</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -2344,35 +2445,47 @@ export default function Chat() {
               </ClientOnly>
 
               {/* Onboarding Card - Show when onboarding not complete and there's at least one assistant message */}
-              {isOnboarding &&
-                messages.length > 0 &&
-                messages[messages.length - 1]?.role === "assistant" &&
-                !isStreaming && (
-                  <div className="mt-4">
-                    <OnboardingQuickResponses
-                      step={onboardingStatus?.currentStep || "name"}
-                      onSelect={async (value) => {
-                        // Save onboarding progress
-                        try {
-                          await saveOnboardingProgress({
-                            step: onboardingStatus?.currentStep || "name",
-                            response: value,
-                          });
-                        } catch (error) {
-                          logger.error(
-                            "[Chat] Failed to save onboarding progress:",
-                            error,
-                          );
-                        }
+              {(() => {
+                // Debug what's blocking the UI
+                console.log("[Chat] Onboarding UI Debug:", {
+                  isOnboarding,
+                  messagesLength: messages.length,
+                  lastMessageRole: messages[messages.length - 1]?.role,
+                  onboardingStatus,
+                  currentStep: onboardingStatus?.currentStep,
+                  shouldShow: isOnboarding && messages.length > 0 && messages[messages.length - 1]?.role === "assistant"
+                });
+                
+                return isOnboarding &&
+                  messages.length > 0 &&
+                  messages[messages.length - 1]?.role === "assistant";
+              })() && (
+                <div className="mt-4">
+                  <OnboardingQuickResponses
+                    step={onboardingStatus?.currentStep || "name"}
+                    onSelect={async (value) => {
+                      // Save onboarding progress
+                      try {
+                        await saveOnboardingProgress({
+                          step: onboardingStatus?.currentStep || "name",
+                          response: value,
+                        });
+                      } catch (error) {
+                        logger.error(
+                          "[Chat] Failed to save onboarding progress:",
+                          error,
+                        );
+                      }
 
-                        // Send the response as a regular message
-                        handleSubmit(new Event("submit") as any, value);
-                      }}
-                      isLoading={isLoading}
-                      currentInput=""
-                    />
-                  </div>
-                )}
+                      // Send the response as a regular message
+                      setInput(value);
+                      handleSubmit(new Event("submit") as any);
+                    }}
+                    isLoading={isLoading}
+                    currentInput=""
+                  />
+                </div>
+              )}
 
               {isStreaming && (
                 <div className="flex justify-start">

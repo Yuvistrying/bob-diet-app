@@ -149,7 +149,8 @@ export const calibrateUserTargets = internalMutation({
     const periodDays = isFirstWeek ? 7 : movingAverages.length;
 
     // Calculate expected weight change based on average calorie deficit/surplus
-    const dailyDeficit = (profile.dailyCalorieTarget || 2000) - avgDailyCalories;
+    const dailyDeficit =
+      (profile.dailyCalorieTarget || 2000) - avgDailyCalories;
     const expectedWeightChange = (dailyDeficit * periodDays) / 7700; // 7700 cal = 1kg
 
     // Calculate the difference

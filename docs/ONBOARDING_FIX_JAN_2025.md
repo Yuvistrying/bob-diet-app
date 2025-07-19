@@ -1,19 +1,23 @@
 # Onboarding Fix - July 2025
 
 ## Problem
+
 Onboarding wasn't initiating properly - users would see the morning greeting instead of the onboarding flow when first signing up.
 
 ## Root Cause
+
 The `getOrCreateDailyThread` function was checking `if (profile && profile.onboardingCompleted)` to create greetings, but this condition was true even when `onboardingCompleted` was `false` or `undefined`, causing it to show morning greetings instead of onboarding messages.
 
 ## Solution
 
 ### 1. Profile Creation on Signup
+
 - NO profile is created during user signup (`upsertUser`)
 - Profile page shows "Loading profile..." when no profile exists
 - Profile is only created after onboarding completes via `createProfileFromOnboarding`
 
 ### 2. Thread Creation Logic Fix
+
 Modified both `getOrCreateDailyThread` and `createNewThread` to properly detect onboarding state:
 
 ```typescript
@@ -25,7 +29,8 @@ if (needsOnboarding) {
   await ctx.db.insert("chatHistory", {
     userId: identity.subject,
     role: "assistant" as const,
-    content: "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
+    content:
+      "Hey there! I'm Bob, your personal diet coach 🎯\n\nI'm here to help you reach your health goals. Let's get to know each other!\n\nWhat's your name?",
     timestamp: Date.now(),
     metadata: { threadId },
   });
@@ -35,6 +40,7 @@ if (needsOnboarding) {
 ```
 
 ### 3. Onboarding Flow Steps
+
 1. **welcome** - Initial greeting from Bob
 2. **name** - User provides their name
 3. **current_weight** - Current weight with unit selection (kg/lbs)
@@ -48,6 +54,7 @@ if (needsOnboarding) {
 11. **complete** - Profile created, onboarding marked complete
 
 ### 4. UI Components
+
 - `OnboardingQuickResponses` component provides card-based UI for each step
 - Cards appear below chat when:
   - Onboarding is not complete
@@ -56,6 +63,7 @@ if (needsOnboarding) {
 - Each step has appropriate input types (buttons, number inputs, toggles)
 
 ### 5. Key Implementation Details
+
 - Chat page no longer tries to create its own onboarding messages
 - All greeting/onboarding messages created server-side in thread creation
 - `onboardingStatus.currentStep` tracks progress through the flow
@@ -63,6 +71,7 @@ if (needsOnboarding) {
 - Profile created only after all steps complete
 
 ## Result
+
 - Onboarding properly initiates for new users with Bob's welcome message
 - Profile page shows "Loading profile..." during onboarding
 - UI cards appear for easy step completion
