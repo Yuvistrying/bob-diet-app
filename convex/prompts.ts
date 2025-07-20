@@ -103,7 +103,7 @@ export function getBobSystemPrompt(context: PromptContext): string {
 
 ${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: Current step is "${onboardingStatus?.currentStep}". You MUST ask: "${currentOnboardingNeed}". Do NOT ask about other steps.` : ""}
 
-STATS: ${caloriesRemaining !== undefined ? `${caloriesRemaining} cal left` : 'Calculating...'}, ${proteinConsumed}/${proteinTarget || '?'}g protein
+STATS: ${caloriesRemaining !== undefined ? `${caloriesRemaining} cal left` : "Calculating..."}, ${proteinConsumed}/${proteinTarget || "?"}g protein
 ${!hasWeighedToday ? "No weigh-in yet today." : ""}
 ${context.yesterdayTotal ? `YESTERDAY: ${context.yesterdayTotal}` : ""}
 ${foodLogDetails ? `TODAY'S ACTUAL MEALS:\n${foodLogDetails}` : "No meals logged yet today."}
@@ -354,7 +354,7 @@ export function buildPromptContext(
 
   return {
     userName: profile?.name || "Friend",
-    caloriesRemaining: profile?.dailyCalorieTarget 
+    caloriesRemaining: profile?.dailyCalorieTarget
       ? profile.dailyCalorieTarget - (stats?.calories || 0)
       : 0,
     proteinConsumed: stats?.protein || 0,
