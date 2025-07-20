@@ -10,14 +10,22 @@ export async function POST(req: NextRequest) {
       throw new Error("NEXT_PUBLIC_CONVEX_URL not configured");
     }
 
+    // Forward all webhook headers
+    const webhookHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    // Forward all webhook-related headers
+    req.headers.forEach((value, key) => {
+      if (key.toLowerCase().includes('webhook') || 
+          key.toLowerCase() === 'content-type') {
+        webhookHeaders[key] = value;
+      }
+    });
+
     const response = await fetch(`${convexUrl}/webhooks/polar`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Forward the webhook signature header
-        "X-Polar-Webhook-Signature":
-          req.headers.get("X-Polar-Webhook-Signature") || "",
-      },
+      headers: webhookHeaders,
       body,
     });
 

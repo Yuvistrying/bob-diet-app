@@ -1,7 +1,7 @@
 export default {
   providers: [
     {
-      domain: "https://dear-starling-14.clerk.accounts.dev",
+      domain: "https://clerk.bobdietcoach.ai",
       applicationID: "convex",
     },
   ],
