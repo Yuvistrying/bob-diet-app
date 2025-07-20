@@ -27,14 +27,15 @@ export default function middleware(request: NextRequest) {
   }
   
   // Apply Clerk middleware for all other routes
-  return clerkMiddleware((auth, req) => {
+  return clerkMiddleware(async (auth, req) => {
     // Only protect specific routes
     if (isProtectedRoute(req)) {
-      auth().protect();
+      await auth.protect(); // Note: not auth().protect()
     }
     
     // For the home page, redirect authenticated users to chat
-    if (req.nextUrl.pathname === "/" && auth().userId) {
+    const { userId } = await auth();
+    if (req.nextUrl.pathname === "/" && userId) {
       return NextResponse.redirect(new URL("/chat", req.url));
     }
   })(request);
