@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log("Forwarding to Convex URL:", `${convexUrl}/webhooks/polar`);
+    
     const response = await fetch(`${convexUrl}/webhooks/polar`, {
       method: "POST",
       headers: webhookHeaders,
@@ -37,6 +39,8 @@ export async function POST(request: NextRequest) {
     });
 
     const responseData = await response.text();
+    console.log("Convex response status:", response.status);
+    console.log("Convex response:", responseData.substring(0, 200));
 
     return new NextResponse(responseData, {
       status: response.status,
