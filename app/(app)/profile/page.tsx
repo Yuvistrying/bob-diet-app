@@ -163,7 +163,7 @@ export default function Profile() {
               variant="outline"
               className="w-full text-destructive transition-opacity hover:opacity-80"
               style={{ borderColor: "var(--border)" }}
-              onClick={() => signOut({ redirectUrl: "/sign-in" })}
+              onClick={() => signOut({ fallbackRedirectUrl: "/sign-in" })}
             >
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out

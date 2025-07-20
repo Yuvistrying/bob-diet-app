@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import LandingPage from "../landing/app/page";
+import LandingPage from "~/app/components/landing/page";
 
 export default async function HomePage() {
   const { userId } = await auth();

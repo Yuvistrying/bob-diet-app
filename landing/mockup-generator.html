@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bob Diet Coach Mockup Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fugaz+One&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: #f0f0f0;
+      }
+      .fugaz {
+        font-family: "Fugaz One", Inter, sans-serif;
+        font-weight: 400;
+      }
+      .phone-frame {
+        width: 375px;
+        height: 812px;
+        background: white;
+        border-radius: 40px;
+        box-shadow:
+          0 0 0 12px #1a1a1a,
+          0 0 0 14px #2a2a2a,
+          0 20px 40px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        position: relative;
+        margin: 40px auto;
+      }
+      .phone-header {
+        height: 44px;
+        background: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 30px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .phone-notch {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 150px;
+        height: 30px;
+        background: black;
+        border-radius: 0 0 20px 20px;
+      }
+      .phone-content {
+        height: calc(100% - 44px);
+        overflow-y: auto;
+        position: relative;
+      }
+      .chat-message {
+        padding: 8px 16px;
+        margin: 8px 16px;
+        border-radius: 16px;
+        max-width: 70%;
+      }
+      .message-assistant {
+        background: #f3f4f6;
+        margin-right: auto;
+      }
+      .message-user {
+        background: #10b981;
+        color: white;
+        margin-left: auto;
+      }
+      .confirmation-bubble {
+        background: white;
+        border: 2px solid #10b981;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .stats-card {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+      }
+      .bottom-nav {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+      }
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #6b7280;
+        font-size: 12px;
+      }
+      .nav-item.active {
+        color: #10b981;
+      }
+      .input-area {
+        position: absolute;
+        bottom: 64px;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 12px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .input-field {
+        flex: 1;
+        background: #f3f4f6;
+        border-radius: 20px;
+        padding: 10px 16px;
+        border: none;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Mockup 1: Chat Interface -->
+    <div class="phone-frame" id="mockup-1">
+      <div class="phone-notch"></div>
+      <div class="phone-header">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="phone-content">
+        <!-- Header -->
+        <div class="bg-white px-4 py-3 border-b flex items-center gap-3">
+          <div
+            class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold"
+          >
+            <span class="fugaz">BOB</span>
+          </div>
+          <div>
+            <h1 class="font-semibold text-lg">Bob Diet Coach</h1>
+            <p class="text-sm text-gray-500">Your AI Nutrition Coach</p>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="p-4 grid grid-cols-3 gap-3">
+          <div class="stats-card">
+            <div class="text-2xl font-bold">2659</div>
+            <div class="text-xs text-gray-600">Goal</div>
+          </div>
+          <div class="stats-card">
+            <div class="text-2xl font-bold">90kg</div>
+            <div class="text-xs text-gray-600">Weight</div>
+          </div>
+          <div class="stats-card">
+            <div class="text-2xl font-bold">1843</div>
+            <div class="text-xs text-gray-600">Remaining</div>
+          </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="px-4 pb-32">
+          <div class="chat-message message-assistant">
+            Good morning! 🌅 How's your day starting? Ready to track your
+            breakfast?
+          </div>
+          <div class="chat-message message-user">I had 2 eggs and toast</div>
+          <div class="chat-message message-assistant">
+            Let me confirm that for you:
+          </div>
+          <div class="confirmation-bubble">
+            <h3 class="font-semibold mb-2">Confirm your meal:</h3>
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span>Eggs, large x2</span>
+                <span class="font-medium">140 cal</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Whole wheat toast</span>
+                <span class="font-medium">80 cal</span>
+              </div>
+              <div class="border-t pt-2 flex justify-between font-semibold">
+                <span>Total</span>
+                <span>220 cal, 16g protein</span>
+              </div>
+            </div>
+            <button
+              class="w-full mt-4 bg-green-500 text-white py-2 rounded-lg font-medium"
+            >
+              Confirm
+            </button>
+          </div>
+          <div class="chat-message message-assistant">
+            Was it cooked with any butter or oil? Those hidden calories add up!
+            🧈
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+          <input type="text" placeholder="Message Bob..." class="input-field" />
+          <button
+            class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center"
+          >
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <div class="nav-item active">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              ></path>
+            </svg>
+            <span>Chat</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            <span>Diary</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup 2: Photo Analysis -->
+    <div class="phone-frame" id="mockup-2">
+      <div class="phone-notch"></div>
+      <div class="phone-header">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="phone-content">
+        <!-- Header -->
+        <div class="bg-white px-4 py-3 border-b flex items-center gap-3">
+          <div
+            class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold"
+          >
+            <span class="fugaz">BOB</span>
+          </div>
+          <div>
+            <h1 class="font-semibold text-lg">Bob Diet Coach</h1>
+            <p class="text-sm text-gray-500">Your AI Nutrition Coach</p>
+          </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="px-4 pt-4 pb-32">
+          <div class="chat-message message-user">
+            <img
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect width='200' height='150' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' font-family='Arial' font-size='14' fill='%236b7280'%3E[Food Photo]%3C/text%3E%3C/svg%3E"
+              class="rounded-lg w-full mb-2"
+              alt="Food photo"
+            />
+            Please analyze this food photo
+          </div>
+          <div class="chat-message message-assistant">
+            I can see a delicious meal! Let me analyze that for you:
+          </div>
+          <div class="confirmation-bubble">
+            <h3 class="font-semibold mb-2">📸 Photo Analysis</h3>
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span>Grilled chicken breast (6oz)</span>
+                <span class="font-medium">280 cal</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Brown rice (1 cup)</span>
+                <span class="font-medium">216 cal</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Steamed broccoli</span>
+                <span class="font-medium">55 cal</span>
+              </div>
+              <div class="border-t pt-2">
+                <div class="flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>551 cal</span>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600">
+                  <span>Protein: 58g | Carbs: 52g | Fat: 8g</span>
+                </div>
+              </div>
+            </div>
+            <button
+              class="w-full mt-4 bg-green-500 text-white py-2 rounded-lg font-medium"
+            >
+              Log This Meal
+            </button>
+          </div>
+          <div class="chat-message message-assistant">
+            Is this portion size accurate? Any sauces or oil I should know
+            about? 🍗
+          </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <div class="nav-item active">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              ></path>
+            </svg>
+            <span>Chat</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            <span>Diary</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup 3: Weight Tracking -->
+    <div class="phone-frame" id="mockup-3">
+      <div class="phone-notch"></div>
+      <div class="phone-header">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="phone-content">
+        <!-- Header -->
+        <div class="bg-white px-4 py-3 border-b flex items-center gap-3">
+          <div
+            class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold"
+          >
+            <span class="fugaz">BOB</span>
+          </div>
+          <div>
+            <h1 class="font-semibold text-lg">Bob Diet Coach</h1>
+            <p class="text-sm text-gray-500">Your AI Nutrition Coach</p>
+          </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="px-4 pt-4 pb-32">
+          <div class="chat-message message-assistant">
+            Good morning! 🌅 Time for your daily weigh-in. This helps me
+            understand YOUR unique metabolism better.
+          </div>
+          <div class="chat-message message-user">89.5 kg</div>
+          <div class="chat-message message-assistant">
+            Logged your weight at 89.5kg! Great consistency! 💪
+          </div>
+          <div class="bg-green-50 rounded-lg p-4 my-4">
+            <h3 class="font-semibold text-green-800 mb-2">
+              📊 Weight Progress
+            </h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span>Today:</span>
+                <span class="font-medium">89.5 kg</span>
+              </div>
+              <div class="flex justify-between">
+                <span>7-day average:</span>
+                <span class="font-medium text-green-600">89.8 kg ↓</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Change this week:</span>
+                <span class="font-medium text-green-600">-0.5 kg</span>
+              </div>
+            </div>
+            <div class="mt-3 text-xs text-gray-600">
+              You're right on track! Your average is trending down perfectly at
+              0.5kg/week. 🎯
+            </div>
+          </div>
+          <div class="chat-message message-assistant">
+            Excellent progress! You're losing at a healthy, sustainable rate.
+            Keep doing what you're doing! Ready to log your breakfast? What's on
+            the menu today? 🍳
+          </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <div class="nav-item active">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              ></path>
+            </svg>
+            <span>Chat</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            <span>Diary</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup 4: Weekly Insights -->
+    <div class="phone-frame" id="mockup-4">
+      <div class="phone-notch"></div>
+      <div class="phone-header">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="phone-content">
+        <!-- Header -->
+        <div class="bg-white px-4 py-3 border-b flex items-center gap-3">
+          <div
+            class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold"
+          >
+            <span class="fugaz">BOB</span>
+          </div>
+          <div>
+            <h1 class="font-semibold text-lg">Bob Diet Coach</h1>
+            <p class="text-sm text-gray-500">Your AI Nutrition Coach</p>
+          </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="px-4 pt-4 pb-32">
+          <div class="chat-message message-assistant">
+            Happy Sunday! 🌟 Time for your weekly insights!
+          </div>
+          <div
+            class="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-4 my-4"
+          >
+            <h3 class="font-bold text-lg mb-3">📊 Your Week in Review</h3>
+
+            <div class="space-y-3">
+              <div class="bg-white/80 rounded p-3">
+                <div class="text-sm text-gray-600 mb-1">Weight Progress</div>
+                <div class="font-semibold">Lost 0.6 kg this week!</div>
+                <div class="text-xs text-green-600">
+                  Average: 90.2 → 89.6 kg
+                </div>
+              </div>
+
+              <div class="bg-white/80 rounded p-3">
+                <div class="text-sm text-gray-600 mb-1">Calorie Adherence</div>
+                <div class="font-semibold">92% on target</div>
+                <div class="text-xs text-gray-600">
+                  Avg: 2,580 cal/day (target: 2,659)
+                </div>
+              </div>
+
+              <div class="bg-white/80 rounded p-3">
+                <div class="text-sm text-gray-600 mb-1">
+                  Logging Consistency
+                </div>
+                <div class="font-semibold">100% - Perfect week! 🌟</div>
+                <div class="text-xs text-gray-600">Logged all 7 days</div>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-yellow-50 rounded">
+              <div class="font-semibold text-yellow-800 mb-1">
+                📐 Calibration Update
+              </div>
+              <div class="text-sm">
+                Your metabolism is slightly faster than expected! I'm adjusting
+                your daily target up by 100 calories to 2,759.
+              </div>
+            </div>
+          </div>
+          <div class="chat-message message-assistant">
+            Fantastic work! You're losing at a perfect pace. The slight calorie
+            increase will help maintain your energy while still losing steadily.
+            Ready to crush another week? 💪
+          </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <div class="nav-item active">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              ></path>
+            </svg>
+            <span>Chat</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            <span>Diary</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup 5: Meal Suggestions -->
+    <div class="phone-frame" id="mockup-5">
+      <div class="phone-notch"></div>
+      <div class="phone-header">
+        <span>9:41</span>
+        <span>100%</span>
+      </div>
+      <div class="phone-content">
+        <!-- Header -->
+        <div class="bg-white px-4 py-3 border-b flex items-center gap-3">
+          <div
+            class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold"
+          >
+            <span class="fugaz">BOB</span>
+          </div>
+          <div>
+            <h1 class="font-semibold text-lg">Bob Diet Coach</h1>
+            <p class="text-sm text-gray-500">Your AI Nutrition Coach</p>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="p-4 grid grid-cols-3 gap-3">
+          <div class="stats-card">
+            <div class="text-xl font-bold">2659</div>
+            <div class="text-xs text-gray-600">Goal</div>
+          </div>
+          <div class="stats-card">
+            <div class="text-xl font-bold">90kg</div>
+            <div class="text-xs text-gray-600">Weight</div>
+          </div>
+          <div class="stats-card">
+            <div class="text-xl font-bold">823</div>
+            <div class="text-xs text-gray-600">Remaining</div>
+          </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="px-4 pb-32">
+          <div class="chat-message message-user">
+            What should I eat for dinner?
+          </div>
+          <div class="chat-message message-assistant">
+            You have 823 calories left with 42g protein still needed. Here are 3
+            perfect dinner options:
+          </div>
+          <div class="space-y-3 my-4">
+            <div class="bg-green-50 rounded-lg p-3 border border-green-200">
+              <div class="font-semibold">🍗 Grilled Chicken Bowl</div>
+              <div class="text-sm text-gray-600">
+                Chicken breast (150g), quinoa, roasted veggies
+              </div>
+              <div class="text-sm font-medium text-green-700 mt-1">
+                480 cal | 45g protein
+              </div>
+            </div>
+
+            <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div class="font-semibold">🐟 Salmon & Sweet Potato</div>
+              <div class="text-sm text-gray-600">
+                Baked salmon (120g), sweet potato, green beans
+              </div>
+              <div class="text-sm font-medium text-blue-700 mt-1">
+                520 cal | 38g protein
+              </div>
+            </div>
+
+            <div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <div class="font-semibold">🥘 Turkey Chili Bowl</div>
+              <div class="text-sm text-gray-600">
+                Lean turkey chili with beans, topped with Greek yogurt
+              </div>
+              <div class="text-sm font-medium text-purple-700 mt-1">
+                450 cal | 42g protein
+              </div>
+            </div>
+          </div>
+          <div class="chat-message message-assistant">
+            All options leave room for a small dessert too! Which sounds good?
+            😊
+          </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <div class="nav-item active">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              ></path>
+            </svg>
+            <span>Chat</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            <span>Diary</span>
+          </div>
+          <div class="nav-item">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="text-center my-8 p-8 bg-gray-100 rounded-lg">
+      <h2 class="text-2xl font-bold mb-4">Bob Diet Coach Mockup Generator</h2>
+      <p class="text-gray-600 mb-4">
+        Take screenshots of each phone mockup above
+      </p>
+      <div class="space-y-2 text-sm text-gray-500">
+        <p>To capture mockups:</p>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>Open browser dev tools (F12)</li>
+          <li>Select the phone frame element</li>
+          <li>Right-click → "Capture node screenshot"</li>
+          <li>Save as Device-1.png, Device-2.png, etc.</li>
+        </ol>
+        <p class="mt-2">Or use any screenshot tool and crop to phone frame</p>
+      </div>
+    </div>
+  </body>
+</html>
