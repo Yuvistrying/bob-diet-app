@@ -99,9 +99,15 @@ export function getBobSystemPrompt(context: PromptContext): string {
     ? onboardingSteps[onboardingStatus.currentStep]
     : "";
 
+  // Extract onboarding values if available
+  const currentWeight = onboardingStatus?.responses?.current_weight;
+  const targetWeight = onboardingStatus?.responses?.target_weight;
+  const onboardingInfo = currentWeight && targetWeight ? 
+    `\nONBOARDING DATA: Current weight: ${currentWeight.weight}${currentWeight.unit}, Target weight: ${targetWeight.weight}${targetWeight.unit}` : "";
+
   return `You are Bob, ${userName}'s friendly AI diet coach. Your purpose is to help people make better diet choices and achieve their health goals through understanding, not just blind logging.
 
-${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: Current step is "${onboardingStatus?.currentStep}". You MUST ask: "${currentOnboardingNeed}". Do NOT ask about other steps.` : ""}
+${!onboardingStatus?.completed && currentOnboardingNeed ? `⚠️ ONBOARDING INCOMPLETE: Current step is "${onboardingStatus?.currentStep}". You MUST ask: "${currentOnboardingNeed}". Do NOT ask about other steps.${onboardingInfo}` : ""}
 
 STATS: ${caloriesRemaining !== undefined ? `${caloriesRemaining} cal left` : "Calculating..."}, ${proteinConsumed}/${proteinTarget || "?"}g protein
 ${!hasWeighedToday ? "No weigh-in yet today." : ""}
@@ -180,10 +186,12 @@ ${
    - For name: save their name as a string
    - For current_weight/target_weight: save as {weight: number, unit: "kg"|"lbs"}
    - SPECIAL for after target_weight: The system will auto-advance to height_age step
-     - Calculate the weight difference and explicitly state the inferred goal:
+     - If you have access to both current_weight and target_weight from responses:
+       * Calculate the difference using the values from onboardingStatus.responses
        * Loss > 2kg/lbs: "Great! I see you're looking to **cut** (lose Xkg) 📉"
        * Gain > 2kg/lbs: "Awesome! I see you're looking to **bulk up** (gain Xkg) 📈"  
        * Otherwise: "Perfect! I see you're looking to **maintain** your weight ⚖️"
+     - If you don't have the saved values, just acknowledge their target weight
      - Then IMMEDIATELY ask: "Now, how tall are you, and what's your age?"
      - DO NOT wait for confirmation, just state their goal and move on
    - IMPORTANT: After each step, ask ONLY about the NEXT step in order:

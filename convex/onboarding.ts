@@ -391,11 +391,16 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
 
   // Handle dietary preferences if provided
   if (r.dietary_preferences && r.dietary_preferences !== "skip_preferences") {
+    // Remove any UI-specific fields from the dietary preferences
+    const cleanedPrefs = { ...r.dietary_preferences };
+    delete cleanedPrefs._isOnboardingData;
+    delete cleanedPrefs._displayMessage;
+    
     const {
       restrictions = [],
       customNotes,
       intermittentFasting,
-    } = r.dietary_preferences;
+    } = cleanedPrefs;
 
     // Create dietary preferences directly
     const existingDietaryPrefs = await ctx.db
