@@ -269,7 +269,9 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     active: 1.725,
     "very active": 1.725, // Handle both formats
   };
-  const multiplier = activityMultipliers[activityLevel as keyof typeof activityMultipliers] || 1.55;
+  const multiplier =
+    activityMultipliers[activityLevel as keyof typeof activityMultipliers] ||
+    1.55;
   const tdee = bmr * multiplier;
 
   console.log("TDEE calculation:", {

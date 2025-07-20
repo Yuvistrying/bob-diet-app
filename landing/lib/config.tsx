@@ -82,14 +82,14 @@ export const siteConfig = {
       title: "Daily Weigh-In Reminders",
       description:
         'Bob uses 7-day weight averages to track real progress, not daily fluctuations. Get gentle reminders to weigh in, plus insights like "Your average is down 0.5kg this week" or "Great consistency - you\'re on track!"',
-      imageSrc: "/Device-3.png",
+      imageSrc: "/Device-4.png",
       direction: "ltr" as const,
     },
     {
       title: "Weekly Insights That Transform",
       description:
         'Every Sunday, Bob compares your actual weight change to predictions. "Scale didn\'t move as expected - let\'s adjust your calories up" or "You\'re losing faster than planned - time to add 200 calories." Real adjustments based on real results.',
-      imageSrc: "/Device-4.png",
+      imageSrc: "/Device-1.png",
       direction: "rtl" as const,
     },
   ],
@@ -98,7 +98,7 @@ export const siteConfig = {
       title: "Coach + Tracker = Magic",
       content:
         "Bob isn't just counting - he's coaching. Get meal suggestions, answer food questions, plan your day. It's like having ChatGPT and MyFitnessPal had a baby that actually knows nutrition.",
-      imageSrc: "/Device-1.png",
+      imageSrc: "/Device-8.png",
       imageAlt: "Bob giving meal recommendations",
       fullWidth: true,
     },
@@ -106,7 +106,7 @@ export const siteConfig = {
       title: "Real-Time Decision Making",
       content:
         "At a restaurant? Snap the menu. Bob suggests what fits your day. Grocery shopping? Ask what to buy. Every food decision, guided by AI that knows YOUR history.",
-      imageSrc: "/Device-2.png",
+      imageSrc: "/Device-9.png",
       imageAlt: "Bob helping with restaurant choices",
       fullWidth: false,
     },
@@ -122,7 +122,7 @@ export const siteConfig = {
       title: "YOUR Metabolism, Decoded",
       content:
         "Week 1: Bob learns. Week 2: Bob adapts. Week 3: You're amazed. Whether losing, gaining, or maintaining, Bob discovers what works for YOUR unique body.",
-      imageSrc: "/Device-4.png",
+      imageSrc: "/Device-1.png",
       imageAlt: "Personalized metabolism insights",
       fullWidth: true,
     },

@@ -120,13 +120,33 @@ export const getOrCreateDailyThread = mutation({
     });
 
     // Check if onboarding is needed
-    const needsOnboarding = !profile || profile.onboardingCompleted !== true;
+    // IMPORTANT: Only show onboarding if profile doesn't exist OR onboardingCompleted is not true
+    // This prevents showing onboarding greeting to users who have already completed it
+    // For backward compatibility: also check if profile has all required fields
+    const hasCompleteProfile =
+      profile &&
+      profile.name &&
+      profile.currentWeight &&
+      profile.targetWeight &&
+      profile.height &&
+      profile.age &&
+      profile.gender &&
+      profile.activityLevel &&
+      profile.goal &&
+      profile.dailyCalorieTarget;
+
+    const needsOnboarding =
+      !profile || (!hasCompleteProfile && profile.onboardingCompleted !== true);
 
     console.log(`[getOrCreateDailyThread] Onboarding check:`, {
       needsOnboarding,
       profileExists: !!profile,
+      hasCompleteProfile,
       onboardingCompleted: profile?.onboardingCompleted,
-      condition: "!profile || profile.onboardingCompleted !== true",
+      onboardingCompletedType: typeof profile?.onboardingCompleted,
+      backwardCompatible: hasCompleteProfile
+        ? "Profile complete, no onboarding needed"
+        : "Profile incomplete",
     });
 
     // If onboarding is needed, create welcome message
@@ -236,12 +256,33 @@ export const createNewThread = mutation({
       .collect();
 
     // Check if onboarding is needed
-    const needsOnboarding = !profile || profile.onboardingCompleted !== true;
+    // IMPORTANT: Only show onboarding if profile doesn't exist OR onboardingCompleted is not true
+    // This prevents showing onboarding greeting to users who have already completed it
+    // For backward compatibility: also check if profile has all required fields
+    const hasCompleteProfile =
+      profile &&
+      profile.name &&
+      profile.currentWeight &&
+      profile.targetWeight &&
+      profile.height &&
+      profile.age &&
+      profile.gender &&
+      profile.activityLevel &&
+      profile.goal &&
+      profile.dailyCalorieTarget;
+
+    const needsOnboarding =
+      !profile || (!hasCompleteProfile && profile.onboardingCompleted !== true);
 
     console.log(`[createNewThread] Onboarding check:`, {
       needsOnboarding,
       profileExists: !!profile,
+      hasCompleteProfile,
       onboardingCompleted: profile?.onboardingCompleted,
+      onboardingCompletedType: typeof profile?.onboardingCompleted,
+      backwardCompatible: hasCompleteProfile
+        ? "Profile complete, no onboarding needed"
+        : "Profile incomplete",
     });
 
     // If onboarding is needed, create welcome message
