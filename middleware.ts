@@ -18,27 +18,16 @@ const isProtectedRoute = createRouteMatcher([
   "/settings(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
-  // Skip auth for webhook routes entirely
-  if (req.nextUrl.pathname.startsWith("/api/webhooks")) {
-    return NextResponse.next();
+export default clerkMiddleware((auth, req) => {
+  // Only protect specific routes
+  if (isProtectedRoute(req)) {
+    auth().protect();
   }
-
-  const { userId } = await auth();
-
-  // For protected routes, require authentication
-  if (isProtectedRoute(req) && !userId) {
-    const signInUrl = new URL("/sign-in", req.url);
-    signInUrl.searchParams.set("redirect_url", req.url);
-    return NextResponse.redirect(signInUrl);
-  }
-
+  
   // For the home page, redirect authenticated users to chat
-  if (req.nextUrl.pathname === "/" && userId) {
+  if (req.nextUrl.pathname === "/" && auth().userId) {
     return NextResponse.redirect(new URL("/chat", req.url));
   }
-
-  return NextResponse.next();
 });
 
 export const config = {
