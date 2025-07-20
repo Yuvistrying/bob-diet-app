@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -18,17 +19,26 @@ const isProtectedRoute = createRouteMatcher([
   "/settings(.*)",
 ]);
 
-export default clerkMiddleware((auth, req) => {
-  // Only protect specific routes
-  if (isProtectedRoute(req)) {
-    auth().protect();
+// Create a custom middleware that handles webhooks before Clerk
+export default function middleware(request: NextRequest) {
+  // Skip Clerk completely for webhook routes
+  if (request.nextUrl.pathname.startsWith('/api/webhooks')) {
+    return NextResponse.next();
   }
   
-  // For the home page, redirect authenticated users to chat
-  if (req.nextUrl.pathname === "/" && auth().userId) {
-    return NextResponse.redirect(new URL("/chat", req.url));
-  }
-});
+  // Apply Clerk middleware for all other routes
+  return clerkMiddleware((auth, req) => {
+    // Only protect specific routes
+    if (isProtectedRoute(req)) {
+      auth().protect();
+    }
+    
+    // For the home page, redirect authenticated users to chat
+    if (req.nextUrl.pathname === "/" && auth().userId) {
+      return NextResponse.redirect(new URL("/chat", req.url));
+    }
+  })(request);
+}
 
 export const config = {
   matcher: [

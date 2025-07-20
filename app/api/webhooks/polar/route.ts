@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: NextRequest) {
+  console.log("Polar webhook endpoint hit!");
+  
   try {
-    const body = await req.text();
+    const body = await request.text();
+    console.log("Webhook body received:", body.substring(0, 100));
 
     // Forward the request to Convex HTTP action
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -16,9 +22,10 @@ export async function POST(req: NextRequest) {
     };
     
     // Forward all webhook-related headers
-    req.headers.forEach((value, key) => {
+    request.headers.forEach((value, key) => {
       if (key.toLowerCase().includes('webhook') || 
-          key.toLowerCase() === 'content-type') {
+          key.toLowerCase() === 'content-type' ||
+          key.toLowerCase() === 'x-polar-webhook-signature') {
         webhookHeaders[key] = value;
       }
     });
