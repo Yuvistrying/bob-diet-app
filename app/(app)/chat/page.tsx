@@ -172,7 +172,7 @@ const ConfirmationBubble = memo(
   }: any) => {
     // Performance monitoring in development
     if (process.env.NODE_ENV === "development") {
-      console.log(`[ConfirmationBubble] Rendering ${confirmId}`, {
+      logger.debug(`[ConfirmationBubble] Rendering ${confirmId}`, {
         isConfirmed,
         isRejected,
         timestamp: new Date().toISOString(),
@@ -434,7 +434,10 @@ export default function Chat() {
   const resetOnboardingDev = useMutation(api.dev.resetOnboarding);
 
   // Define isOnboarding early to use in useEffects
-  const isOnboarding = !onboardingStatus?.completed;
+  // Only consider user as onboarding if we've loaded the status and it's not completed
+  const isOnboarding =
+    onboardingStatus !== undefined && !onboardingStatus?.completed;
+  const isOnboardingLoading = onboardingStatus === undefined;
   const isStealthMode = preferences?.displayMode === "stealth";
 
   // Auto-advance from welcome to name step
@@ -555,7 +558,7 @@ export default function Chat() {
 
   // Check subscription status after initial load period
   useEffect(() => {
-    console.log("[Chat] Subscription check:", {
+    logger.debug("[Chat] Subscription check:", {
       isSignedIn,
       isInitialLoad,
       subscription: subscription
@@ -571,20 +574,20 @@ export default function Chat() {
 
     // Skip if subscription is still loading
     if (subscription === undefined) {
-      console.log("[Chat] Subscription still loading...");
+      logger.debug("[Chat] Subscription still loading...");
       return;
     }
 
     // Skip if profile is still loading ONLY if we're checking for subscription redirect
     // But allow onboarding to work without a profile
     if (profile === undefined && !onboardingStatus) {
-      console.log("[Chat] Profile still loading...");
+      logger.debug("[Chat] Profile still loading...");
       return;
     }
 
     // Only redirect if we're sure there's no active subscription
     if (!subscriptionStatus.hasActiveSubscription) {
-      console.log("[Chat] Redirecting to pricing - no active subscription");
+      logger.info("[Chat] Redirecting to pricing - no active subscription");
       router.push("/pricing");
     }
   }, [
@@ -697,8 +700,12 @@ export default function Chat() {
       setHasLoadedHistory(true);
 
       // For onboarding, provide a fallback message if none exists
-      if (isOnboarding && messages.length === 0) {
-        logger.info(`[Chat] Adding fallback onboarding message`);
+      // BUT only if we've actually loaded thread messages and they're truly empty
+      // This prevents the flash of onboarding content while loading
+      if (isOnboarding && messages.length === 0 && hasLoadedHistory) {
+        logger.info(
+          `[Chat] Adding fallback onboarding message (after confirming thread is loaded and empty)`,
+        );
         setMessages([
           {
             role: "assistant",
@@ -780,14 +787,14 @@ export default function Chat() {
     });
 
     if (confirmed.size > 0) {
-      console.log(
+      logger.debug(
         "[Chat] Adding confirmed IDs from DB:",
         Array.from(confirmed),
       );
       setConfirmedFoodLogs((prev) => new Set([...prev, ...confirmed]));
     }
     if (rejected.size > 0) {
-      console.log("[Chat] Adding rejected IDs from DB:", Array.from(rejected));
+      logger.debug("[Chat] Adding rejected IDs from DB:", Array.from(rejected));
       setRejectedFoodLogs((prev) => new Set([...prev, ...rejected]));
     }
   }, [confirmedBubblesFromDB]);
@@ -2194,7 +2201,7 @@ export default function Chat() {
                           rejectedFoodLogs.has(confirmId) || isRejectedInDB;
 
                         // Enhanced logging for debugging persistence
-                        console.log("[Chat] Bubble state check:", {
+                        logger.debug("[Chat] Bubble state check:", {
                           confirmId,
                           isConfirmedInDB,
                           isRejectedInDB,
@@ -2499,7 +2506,7 @@ export default function Chat() {
               {/* Onboarding Card - Show when onboarding not complete and there's at least one assistant message */}
               {(() => {
                 // Debug what's blocking the UI
-                console.log("[Chat] Onboarding UI Debug:", {
+                logger.debug("[Chat] Onboarding UI Debug:", {
                   isOnboarding,
                   messagesLength: messages.length,
                   lastMessageRole: messages[messages.length - 1]?.role,
@@ -2508,6 +2515,7 @@ export default function Chat() {
                   isStreaming,
                   shouldShow:
                     isOnboarding &&
+                    !isOnboardingLoading &&
                     messages.length > 0 &&
                     messages[messages.length - 1]?.role === "assistant" &&
                     !isStreaming,
@@ -2515,6 +2523,7 @@ export default function Chat() {
 
                 return (
                   isOnboarding &&
+                  !isOnboardingLoading && // Don't show while loading onboarding status
                   messages.length > 0 &&
                   messages[messages.length - 1]?.role === "assistant" &&
                   !isStreaming // Don't show while Bob is responding
