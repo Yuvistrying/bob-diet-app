@@ -1,274 +1,248 @@
-# React Starter Kit (RSK)
+# Bob Diet Coach 🤖🥗
 
-A modern, production-ready SaaS starter template for building full-stack React applications using React Router v7, Convex, Clerk, and Polar.sh. Ready for Vercel deployment with built-in AI chat capabilities.
+An AI-powered conversational diet tracking app that makes logging food and monitoring your health goals as easy as chatting with a friend. Built with Next.js 15, Convex, and Claude 4.
 
-## Features
+![Bob Diet Coach](public/Device-5.png)
 
-- 🚀 **React Router v7** - Modern full-stack React framework with SSR
-- ⚡️ **Hot Module Replacement (HMR)** - Fast development experience
-- 📦 **Asset bundling and optimization** - Production-ready builds
-- 🔄 **Data loading and mutations** - Built-in loader/action patterns
-- 🔒 **TypeScript by default** - Type safety throughout
-- 🎨 **TailwindCSS v4** - Modern utility-first CSS
-- 🔐 **Authentication with Clerk** - Complete user management
-- 💳 **Subscription management with Polar.sh** - Billing and payments
-- 🗄️ **Real-time database with Convex** - Serverless backend
-- 🤖 **AI Chat Integration** - OpenAI-powered chat functionality
-- 📊 **Interactive Dashboard** - User management and analytics
-- 🎯 **Webhook handling** - Payment and subscription events
-- 📱 **Responsive Design** - Mobile-first approach
-- 🚢 **Vercel Deployment Ready** - One-click deployment
+## 🌟 Key Features
 
-## Tech Stack
+### Conversational Food Logging
 
-### Frontend
+- **Natural Language**: Just tell Bob what you ate - "I had a chicken salad for lunch"
+- **Photo Analysis**: Snap a photo of your meal and Bob identifies the food and estimates nutrition
+- **Smart Confirmations**: Review and edit nutrition info before logging
+- **Similar Meal Search**: Bob remembers your past meals and suggests them when relevant
 
-- **React Router v7** - Full-stack React framework
-- **TailwindCSS v4** - Utility-first CSS framework
-- **shadcn/ui** - Modern component library with Radix UI
-- **Lucide React & Tabler Icons** - Beautiful icon libraries
-- **Recharts** - Data visualization
-- **Motion** - Smooth animations
+### Intelligent Tracking
 
-### Backend & Services
+- **Weight Logging**: Track your weight progress with encouraging feedback
+- **Daily Summaries**: See your calorie and macro progress at a glance
+- **Weekly Calibration**: Bob automatically adjusts your calorie targets based on your actual progress
+- **Sunday Insights**: Get motivating weekly summaries with progress analysis
 
-- **Convex** - Real-time database and serverless functions
-- **Clerk** - Authentication and user management
-- **Polar.sh** - Subscription billing and payments
-- **OpenAI** - AI chat capabilities
+### Personalized Experience
 
-### Development & Deployment
+- **Conversational Onboarding**: Bob guides you through setup like a friendly nutritionist
+- **Dietary Preferences**: Set restrictions, intermittent fasting windows, and custom notes
+- **Stealth Mode**: Hide numbers for a less obsessive tracking experience
+- **Real-time Sync**: Access your data across all devices instantly
 
-- **Vite** - Fast build tool
-- **TypeScript** - Type safety
-- **Vercel** - Deployment platform
+## 🏗️ Architecture
 
-## Getting Started
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  Next.js 15     │────▶│  Vercel AI SDK  │────▶│   Claude 4      │
+│  (App Router)   │     │  (Streaming)    │     │   (Sonnet)      │
+│                 │     │                 │     │                 │
+└────────┬────────┘     └─────────────────┘     └─────────────────┘
+         │                                                │
+         │                                                │
+         ▼                                                ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│     Convex      │     │     Clerk       │     │   Polar.sh      │
+│  (Real-time DB) │     │    (Auth)       │     │  (Payments)     │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+### Tech Stack
+
+- **Frontend**: Next.js 15 App Router, TailwindCSS v4, shadcn/ui
+- **Backend**: Convex (real-time database + serverless functions)
+- **AI**: Claude 4 via Vercel AI SDK (streaming), OpenAI embeddings
+- **Auth**: Clerk (integrated with Next.js middleware)
+- **Payments**: Polar.sh (subscription management)
+- **Deployment**: Vercel (optimized for Next.js)
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- Clerk account for authentication
-- Convex account for database
-- Polar.sh account for subscriptions
-- OpenAI API key (for AI chat features)
+- npm or yarn
+- Accounts with: Convex, Clerk, Polar.sh, Anthropic, OpenAI
 
 ### Installation
 
-1. Clone the repository and install dependencies:
+1. **Clone the repository**
 
-```bash
-npm install
-```
+   ```bash
+   git clone https://github.com/yourusername/bob-diet-coach.git
+   cd bob-diet-coach
+   npm install
+   ```
 
-2. Copy the environment file and configure your credentials:
+2. **Set up environment variables**
 
-```bash
-cp .env.example .env.local
-```
+   ```bash
+   cp .env.example .env.local
+   ```
 
-3. Set up your environment variables in `.env.local`:
+   Edit `.env.local` with your credentials (see Environment Variables section)
 
-```bash
-# Convex Configuration
-CONVEX_DEPLOYMENT=your_convex_deployment_here
-VITE_CONVEX_URL=your_convex_url_here
+3. **Initialize Convex**
+
+   ```bash
+   npx convex dev
+   ```
+
+   This will:
+   - Create a new Convex project (or connect to existing)
+   - Generate types from your schema
+   - Start the Convex development server
+
+4. **Configure webhooks**
+
+   In your Polar.sh dashboard, set the webhook URL to:
+
+   ```
+   https://your-domain.com/api/webhooks/polar
+   ```
+
+   Enable all subscription-related events.
+
+5. **Start the development server**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:5174](http://localhost:5174) to see the app.
+
+## 🧪 Testing the App
+
+### Manual Testing Checklist
+
+After setting up, test these core flows:
+
+- [ ] **Onboarding**: Create a new account and complete the conversational onboarding
+- [ ] **Food Logging**:
+  - [ ] Log food via text ("I ate 2 eggs and toast")
+  - [ ] Upload a food photo and confirm the analysis
+  - [ ] Edit nutrition values before confirming
+- [ ] **Weight Tracking**: Log your weight and see the response
+- [ ] **Progress View**: Check the diary page for logged items
+- [ ] **Similar Meals**: Log a meal, then try logging something similar
+- [ ] **Dietary Preferences**: Set restrictions in settings and see Bob respect them
+- [ ] **Mobile Experience**: Test on mobile devices for responsive design
+- [ ] **Cross-Device Sync**: Log on one device, verify on another
+
+### Known Limitations
+
+- **Data Export**: Currently no way to export your data (coming soon)
+- **Freemium Limits**: 5 messages and 2 photos per day for free users
+- **Browser Support**: Optimized for modern browsers (Chrome, Safari, Firefox)
+
+## 🔧 Environment Variables
+
+Create a `.env.local` file with these variables:
+
+```env
+# Convex
+CONVEX_DEPLOYMENT=your_deployment_here
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
 # Clerk Authentication
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
-CLERK_SECRET_KEY=your_clerk_secret_key_here
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/chat
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/pricing
 
-# Polar.sh Configuration
-POLAR_ACCESS_TOKEN=your_polar_access_token_here
-POLAR_ORGANIZATION_ID=your_polar_organization_id_here
-POLAR_WEBHOOK_SECRET=your_polar_webhook_secret_here
+# Polar.sh Payments
+POLAR_ACCESS_TOKEN=polar_oat_...
+POLAR_ORGANIZATION_ID=...
+POLAR_WEBHOOK_SECRET=...
 
-# OpenAI Configuration (for AI chat)
-OPENAI_API_KEY=your_openai_api_key_here
+# AI Services
+ANTHROPIC_API_KEY=sk-ant-api03-...
+OPENAI_API_KEY=sk-proj-...
 
-# Frontend URL for redirects
-FRONTEND_URL=http://localhost:5173
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:5174
 ```
 
-4. Initialize Convex:
-
-```bash
-npx convex dev
-```
-
-5. Set up your Polar.sh webhook endpoint:
-   - URL: `{your_domain}/webhook/polar`
-   - Events: All subscription events
-
-### Development
-
-Start the development server with HMR:
-
-```bash
-npm run dev
-```
-
-Your application will be available at `http://localhost:5173`.
-
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Vercel Deployment (Recommended)
-
-This starter kit is optimized for Vercel deployment with the `@vercel/react-router` preset:
-
-1. Connect your repository to Vercel
-2. Set environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-The `react-router.config.ts` includes the Vercel preset for seamless deployment.
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
+## 📁 Project Structure
 
 ```
-├── package.json
-├── package-lock.json
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
+bob-diet-coach/
+├── app/                    # Next.js App Router
+│   ├── (app)/             # Authenticated routes
+│   │   ├── chat/          # Main chat interface
+│   │   ├── diary/         # Food & weight history
+│   │   └── settings/      # User preferences
+│   ├── api/               # API routes
+│   │   └── chat/stream-v2 # Claude streaming endpoint
+│   └── components/        # React components
+├── convex/                # Backend functions
+│   ├── schema.ts          # Database schema
+│   ├── foodLogs.ts        # Food tracking logic
+│   ├── weightLogs.ts      # Weight tracking
+│   ├── vision.ts          # Photo analysis
+│   └── calibration.ts     # Weekly adjustments
+├── docs/                  # Documentation
+└── public/                # Static assets
 ```
 
-## Architecture
+## 🎯 Core Concepts
 
-### Key Routes
+### Daily Threads
 
-- `/` - Homepage with pricing
-- `/pricing` - Dynamic pricing page
-- `/dashboard` - Protected user dashboard
-- `/dashboard/chat` - AI-powered chat interface
-- `/dashboard/settings` - User settings
-- `/success` - Subscription success page
-- `/webhook/polar` - Polar.sh webhook handler
+Each day gets a new conversation thread. Bob greets you with insights from yesterday and helps you stay on track.
 
-### Key Components
+### Confirmation Bubbles
 
-#### Authentication & Authorization
+When you log food, Bob shows an editable confirmation bubble. You can adjust portions and macros before saving.
 
-- Protected routes with Clerk authentication
-- Server-side user data loading with loaders
-- Automatic user synchronization
+### Weekly Calibration
 
-#### Subscription Management
+Every Sunday, Bob analyzes your week and adjusts your calorie targets based on actual vs expected weight change.
 
-- Dynamic pricing cards fetched from Polar.sh
-- Secure checkout flow with redirect handling
-- Real-time subscription status updates
-- Customer portal for subscription management
-- Webhook handling for payment events
+### Smart Context
 
-#### Dashboard Features
+Bob maintains conversation context but limits it to recent messages for performance. Tool loading is optimized based on intent detection.
 
-- Interactive sidebar navigation
-- Real-time data updates
-- User profile management
-- AI chat functionality
-- Subscription status display
+## 🐛 Reporting Issues
 
-#### AI Chat Integration
+For alpha testing feedback:
 
-- OpenAI-powered conversations
-- Real-time message streaming
-- Chat history persistence
-- Responsive chat interface
+1. Check existing issues in GitHub
+2. Create a new issue with:
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Screenshots if applicable
+   - Browser/device info
 
-## Environment Variables
+## 🤝 Contributing
 
-### Required for Production
-
-- `CONVEX_DEPLOYMENT` - Your Convex deployment URL
-- `VITE_CONVEX_URL` - Your Convex client URL
-- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
-- `CLERK_SECRET_KEY` - Clerk secret key
-- `POLAR_ACCESS_TOKEN` - Polar.sh API access token
-- `POLAR_ORGANIZATION_ID` - Your Polar.sh organization ID
-- `POLAR_WEBHOOK_SECRET` - Polar.sh webhook secret
-- `OPENAI_API_KEY` - OpenAI API key for chat features
-- `FRONTEND_URL` - Your production frontend URL
-
-## Project Structure
-
-```
-├── app/
-│   ├── components/         # Reusable UI components
-│   │   ├── ui/            # shadcn/ui components
-│   │   ├── homepage/      # Homepage sections
-│   │   └── dashboard/     # Dashboard components
-│   ├── routes/            # React Router routes
-│   └── utils/             # Utility functions
-├── convex/                # Convex backend functions
-├── public/                # Static assets
-└── docs/                  # Documentation
-```
-
-## Key Dependencies
-
-- `react` & `react-dom` v19 - Latest React
-- `react-router` v7 - Full-stack React framework
-- `@clerk/react-router` - Authentication
-- `convex` - Real-time database
-- `@polar-sh/sdk` - Subscription management
-- `@ai-sdk/openai` & `ai` - AI chat capabilities
-- `@vercel/react-router` - Vercel deployment
-- `tailwindcss` v4 - Styling
-- `@radix-ui/*` - UI primitives
-
-## Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run typecheck` - Run TypeScript checks
-
-## Contributing
+This project is currently in alpha. We welcome feedback and bug reports!
 
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License.
+This project is proprietary software. All rights reserved.
+
+## 🙏 Acknowledgments
+
+Built with amazing open source technologies:
+
+- [Next.js](https://nextjs.org/) - The React framework
+- [Convex](https://convex.dev/) - The reactive backend
+- [Clerk](https://clerk.dev/) - Authentication made simple
+- [Vercel AI SDK](https://sdk.vercel.ai/) - AI streaming made easy
+- [shadcn/ui](https://ui.shadcn.com/) - Beautiful components
+- [Polar.sh](https://polar.sh/) - Subscription management
 
 ---
 
-**Stop rebuilding the same foundation over and over.** RSK eliminates months of integration work by providing a complete, production-ready SaaS template with authentication, payments, AI chat, and real-time data working seamlessly out of the box.
+**Questions?** Join our [Discord](#) or email support@bobdietcoach.com
 
-Built with ❤️ using React Router v7, Convex, Clerk, Polar.sh, and OpenAI.
+_Bob is waiting to help you reach your health goals! 🎯_
