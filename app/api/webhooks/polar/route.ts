@@ -30,9 +30,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log("Forwarding to Convex URL:", `${convexUrl}/webhooks/polar`);
+    // HTTP routes are served from convex.site, not convex.cloud
+    const convexSiteUrl = convexUrl.replace('.convex.cloud', '.convex.site');
+    console.log("Forwarding to Convex HTTP URL:", `${convexSiteUrl}/webhooks/polar`);
     
-    const response = await fetch(`${convexUrl}/webhooks/polar`, {
+    const response = await fetch(`${convexSiteUrl}/webhooks/polar`, {
       method: "POST",
       headers: webhookHeaders,
       body,
