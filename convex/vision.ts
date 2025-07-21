@@ -82,6 +82,12 @@ export const analyzeFood = internalAction({
         "not a food",
         "doesn't contain food",
         "can't identify any food",
+        "i cannot see any food",
+        "there is no food",
+        "this image does not contain food",
+        "this appears to be", // Often used when describing non-food items
+        "this is a", // Same
+        "this shows a", // Same
       ];
 
       const lowerText = text.toLowerCase();
@@ -89,7 +95,17 @@ export const analyzeFood = internalAction({
         lowerText.includes(indicator),
       );
 
+      console.log("[vision.analyzeFood] Claude response check:", {
+        responseLength: text.length,
+        firstChars: text.substring(0, 100),
+        isNoFoodResponse,
+        lowerTextPreview: lowerText.substring(0, 100),
+      });
+
       if (isNoFoodResponse) {
+        console.log(
+          "[vision.analyzeFood] No food detected, returning noFood response",
+        );
         // Return a structured error response with what Claude saw
         return {
           error: true,
