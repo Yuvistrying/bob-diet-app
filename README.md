@@ -246,4 +246,5 @@ Built with amazing open source technologies:
 **Questions?** Join our [Discord](#) or email support@bobdietcoach.com
 
 _Bob is waiting to help you reach your health goals! 🎯_
+
 # Force deployment

@@ -102,8 +102,10 @@ export function getBobSystemPrompt(context: PromptContext): string {
   // Extract onboarding values if available
   const currentWeight = onboardingStatus?.responses?.current_weight;
   const targetWeight = onboardingStatus?.responses?.target_weight;
-  const onboardingInfo = currentWeight && targetWeight ? 
-    `\nONBOARDING DATA: Current weight: ${currentWeight.weight}${currentWeight.unit}, Target weight: ${targetWeight.weight}${targetWeight.unit}` : "";
+  const onboardingInfo =
+    currentWeight && targetWeight
+      ? `\nONBOARDING DATA: Current weight: ${currentWeight.weight}${currentWeight.unit}, Target weight: ${targetWeight.weight}${targetWeight.unit}`
+      : "";
 
   return `You are Bob, ${userName}'s friendly AI diet coach. Your purpose is to help people make better diet choices and achieve their health goals through understanding, not just blind logging.
 

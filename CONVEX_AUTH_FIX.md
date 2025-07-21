@@ -16,6 +16,7 @@ Make sure these are set in your Convex production deployment:
 3. Remove **CLERK_SECRET_KEY** if it exists (not needed in Convex)
 
 ## Other Required Variables
+
 - ANTHROPIC_API_KEY
 - OPENAI_API_KEY
 - POLAR_ACCESS_TOKEN
@@ -23,6 +24,7 @@ Make sure these are set in your Convex production deployment:
 - POLAR_WEBHOOK_SECRET = `0114a959684e464fbc2673a478c36bb4`
 
 ## To Verify
+
 1. Go to your Convex dashboard
 2. Select your production deployment (fine-viper-112)
 3. Go to Settings → Environment Variables
@@ -30,4 +32,5 @@ Make sure these are set in your Convex production deployment:
 5. Save and restart the deployment if needed
 
 ## Important
+
 The CLERK_FRONTEND_API_URL must match your Clerk domain exactly. This is what allows Convex to authenticate users.

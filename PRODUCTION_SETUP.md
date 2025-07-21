@@ -1,6 +1,7 @@
 # Production Setup Checklist for Bob Diet Coach
 
 ## ✅ Completed
+
 1. **Vercel Deployment**
    - Project created: `bob-diet-app`
    - Production URL: `https://bob-diet-app-yuvals-projects-54aba814.vercel.app`
@@ -10,7 +11,9 @@
 ## 📋 Next Steps - External Service Updates
 
 ### 1. Clerk (Authentication)
+
 Update your Clerk dashboard at https://dashboard.clerk.com:
+
 - Add production URL to allowed origins:
   - `https://bob-diet-app-yuvals-projects-54aba814.vercel.app`
   - `https://*.vercel.app` (for preview deployments)
@@ -21,7 +24,9 @@ Update your Clerk dashboard at https://dashboard.clerk.com:
   - After sign-up: `https://bob-diet-app-yuvals-projects-54aba814.vercel.app/pricing`
 
 ### 2. Convex (Database)
+
 Deploy to production:
+
 ```bash
 # Create production deployment
 npx convex deploy --prod
@@ -32,15 +37,20 @@ echo "YOUR_NEW_PRODUCTION_CONVEX_URL" | vercel env add NEXT_PUBLIC_CONVEX_URL pr
 ```
 
 ### 3. Polar.sh (Payments)
+
 Update webhook URL in Polar.sh dashboard:
+
 - Webhook URL: `https://bob-diet-app-yuvals-projects-54aba814.vercel.app/api/webhooks/polar`
 - Enable all subscription events
 
 ### 4. Update NEXT_PUBLIC_APP_URL
+
 Already set to production URL in Vercel.
 
 ## 🌐 Optional: Custom Domain
+
 To add a custom domain (e.g., bobdietcoach.com):
+
 ```bash
 # Add domain to Vercel
 vercel domains add bobdietcoach.com
@@ -49,6 +59,7 @@ vercel domains add bobdietcoach.com
 ```
 
 ## 🧪 Testing Production
+
 1. Visit: https://bob-diet-app-yuvals-projects-54aba814.vercel.app
 2. Test sign-up flow
 3. Test onboarding
@@ -56,6 +67,7 @@ vercel domains add bobdietcoach.com
 5. Test subscription flow
 
 ## 📝 Environment Management
+
 ```bash
 # View all environment variables
 vercel env ls
@@ -71,6 +83,7 @@ vercel env rm KEY production
 ```
 
 ## 🚀 Deployment Commands
+
 ```bash
 # Deploy to production
 vercel --prod
@@ -86,6 +99,7 @@ vercel logs
 ```
 
 ## 🔄 Setting Up Staging Environment
+
 ```bash
 # Create staging branch
 git checkout -b staging

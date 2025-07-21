@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   console.log("Polar webhook endpoint hit!");
-  
+
   try {
     const body = await request.text();
     console.log("Webhook body received:", body.substring(0, 100));
@@ -20,20 +20,25 @@ export async function POST(request: NextRequest) {
     const webhookHeaders: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    
+
     // Forward all webhook-related headers
     request.headers.forEach((value, key) => {
-      if (key.toLowerCase().includes('webhook') || 
-          key.toLowerCase() === 'content-type' ||
-          key.toLowerCase() === 'x-polar-webhook-signature') {
+      if (
+        key.toLowerCase().includes("webhook") ||
+        key.toLowerCase() === "content-type" ||
+        key.toLowerCase() === "x-polar-webhook-signature"
+      ) {
         webhookHeaders[key] = value;
       }
     });
 
     // HTTP routes are served from convex.site, not convex.cloud
-    const convexSiteUrl = convexUrl.replace('.convex.cloud', '.convex.site');
-    console.log("Forwarding to Convex HTTP URL:", `${convexSiteUrl}/webhooks/polar`);
-    
+    const convexSiteUrl = convexUrl.replace(".convex.cloud", ".convex.site");
+    console.log(
+      "Forwarding to Convex HTTP URL:",
+      `${convexSiteUrl}/webhooks/polar`,
+    );
+
     const response = await fetch(`${convexSiteUrl}/webhooks/polar`, {
       method: "POST",
       headers: webhookHeaders,

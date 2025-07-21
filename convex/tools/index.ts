@@ -180,7 +180,26 @@ export function createTools(
           );
 
           if (analysisResult.error || !analysisResult.foods) {
-            return { error: analysisResult.error || "Failed to analyze photo" };
+            // Check if it's a "no food detected" error
+            if (analysisResult.noFood) {
+              // Return a structured response that Bob can use to inform the user
+              return {
+                analysisComplete: false,
+                noFoodDetected: true,
+                description:
+                  analysisResult.description ||
+                  "I don't see any food in this image",
+                message: analysisResult.message || "No food detected in image",
+              };
+            }
+            // For other errors, return the error message
+            return {
+              analysisComplete: false,
+              error:
+                analysisResult.message ||
+                analysisResult.error ||
+                "Failed to analyze photo",
+            };
           }
 
           // Save photo analysis

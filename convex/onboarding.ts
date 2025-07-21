@@ -395,7 +395,7 @@ async function createProfileFromOnboarding(ctx: any, userId: string) {
     const cleanedPrefs = { ...r.dietary_preferences };
     delete cleanedPrefs._isOnboardingData;
     delete cleanedPrefs._displayMessage;
-    
+
     const {
       restrictions = [],
       customNotes,
