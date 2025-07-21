@@ -179,15 +179,30 @@ export function createTools(
             },
           );
 
+          console.log("[analyzeAndConfirmPhoto tool] Analysis result:", {
+            hasError: !!analysisResult.error,
+            noFood: analysisResult.noFood,
+            hasFoods: !!analysisResult.foods,
+            foodCount: analysisResult.foods?.length,
+            totalCalories: analysisResult.totalCalories,
+            rawKeys: Object.keys(analysisResult),
+          });
+
           if (analysisResult.error || !analysisResult.foods) {
             // Check if it's a "no food detected" error
             if (analysisResult.noFood) {
+              console.log(
+                "[analyzeAndConfirmPhoto tool] No food detected, returning minimal response",
+              );
               // Return minimal response to let Bob handle it with regular text
               return {
                 noFoodDetected: true,
               };
             }
             // For other errors, return minimal error info
+            console.log(
+              "[analyzeAndConfirmPhoto tool] Other error, returning error response",
+            );
             return {
               error: true,
             };
