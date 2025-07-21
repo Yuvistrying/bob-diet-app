@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     "Personalized AI-powered diet coaching to help you achieve your health goals",
   icons: {
     icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Bob Diet",
   },
 };
 
@@ -26,6 +33,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <head>
+          <meta name="theme-color" content="#10b981" />
           <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
           <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
           <link rel="dns-prefetch" href="https://api.convex.dev" />
