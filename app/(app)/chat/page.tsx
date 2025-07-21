@@ -2112,8 +2112,8 @@ export default function Chat() {
                               hasContent: !!message.content,
                             },
                           );
-                          // Don't return here - let it fall through to regular message rendering
-                          // Skip the rest of the confirmFoodCall processing
+                          // Return here to skip the confirmation bubble entirely
+                          return;
                         } else if (!args || !args.items) {
                           // This is an actual error - no args or no items
                           logger.warn(
