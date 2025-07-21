@@ -22,17 +22,17 @@ const isProtectedRoute = createRouteMatcher([
 // Create a custom middleware that handles webhooks before Clerk
 export default function middleware(request: NextRequest) {
   // Skip Clerk completely for webhook routes
-  if (request.nextUrl.pathname.startsWith('/api/webhooks')) {
+  if (request.nextUrl.pathname.startsWith("/api/webhooks")) {
     return NextResponse.next();
   }
-  
+
   // Apply Clerk middleware for all other routes
   return clerkMiddleware(async (auth, req) => {
     // Only protect specific routes
     if (isProtectedRoute(req)) {
       await auth.protect(); // Note: not auth().protect()
     }
-    
+
     // For the home page, redirect authenticated users to chat
     const { userId } = await auth();
     if (req.nextUrl.pathname === "/" && userId) {

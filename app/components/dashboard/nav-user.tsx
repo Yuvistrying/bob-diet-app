@@ -95,7 +95,9 @@ export function NavUser({ user }: any) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ fallbackRedirectUrl: "/" })}>
+            <DropdownMenuItem
+              onClick={() => signOut({ fallbackRedirectUrl: "/" })}
+            >
               <IconLogout />
               Sign Out
             </DropdownMenuItem>
