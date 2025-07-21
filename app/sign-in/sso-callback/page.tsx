@@ -2,9 +2,9 @@
 
 import { AuthenticateWithRedirectCallback } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 
-export default function SSOCallbackPage() {
+function SSOCallbackContent() {
   const searchParams = useSearchParams();
   
   useEffect(() => {
@@ -26,5 +26,17 @@ export default function SSOCallbackPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SSOCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <SSOCallbackContent />
+    </Suspense>
   );
 }
