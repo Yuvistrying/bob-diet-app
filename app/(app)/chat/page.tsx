@@ -2097,225 +2097,164 @@ export default function Chat() {
                           args = confirmationData;
                         }
 
-                        // Skip if no valid args or if it's an error
-                        if (!args || args.error || !args.items) {
+                        // Handle special cases for analyzeAndConfirmPhoto
+                        const isNoFoodDetected = args?.noFoodDetected === true;
+                        const hasError = args?.error === true;
+
+                        // If no food detected or error, don't show confirmation bubble
+                        // but let the message with Bob's response show
+                        if (isNoFoodDetected || hasError) {
+                          logger.info(
+                            "[Chat] Special case - skipping confirmation bubble:",
+                            {
+                              noFoodDetected: isNoFoodDetected,
+                              error: hasError,
+                              hasContent: !!message.content,
+                            },
+                          );
+                          // Don't return here - let it fall through to regular message rendering
+                          // Skip the rest of the confirmFoodCall processing
+                        } else if (!args || !args.items) {
+                          // This is an actual error - no args or no items
                           logger.warn(
                             "[Chat] Skipping confirmation - invalid args:",
                             {
                               hasArgs: !!args,
-                              hasError: args?.error,
                               hasItems: args?.items,
                             },
                           );
                           return null;
-                        }
-                        // Use the confirmationId directly from args
-                        let confirmId: string;
-
-                        // Check if args has a confirmationId from the tool response
-                        if (args.confirmationId) {
-                          confirmId = args.confirmationId;
-                          logger.info(
-                            "[Chat] Using tool-generated confirmation ID:",
-                            {
-                              confirmId,
-                              toolCallId:
-                                confirmFoodCall.toolCallId ||
-                                confirmFoodCall.id,
-                            },
-                          );
                         } else {
-                          // Last resort: generate ID (should rarely happen now)
-                          const toolCallId =
-                            confirmFoodCall.toolCallId || confirmFoodCall.id;
-                          const argsWithToolCallId = {
-                            ...args,
-                            _toolCallId: toolCallId,
-                          };
-                          confirmId = getConfirmationId(
-                            argsWithToolCallId,
-                            index,
-                          );
-                          logger.info(
-                            "[Chat] Generated fallback confirmation ID:",
-                            {
-                              toolCallId,
-                              confirmId,
-                              reason: "No confirmationId in args",
-                            },
-                          );
-                        }
+                          // Normal confirmation bubble case - process it
+                          // Use the confirmationId directly from args
+                          let confirmId: string;
 
-                        // Check if we're still loading confirmed bubbles from database
-                        // If so, check if this bubble exists in the DB to prevent flash of pending state
-                        const isLoadingBubbles =
-                          confirmedBubblesFromDB === undefined && threadId;
-                        let isConfirmedInDB = false;
-                        let isRejectedInDB = false;
+                          // Check if args has a confirmationId from the tool response
+                          if (args.confirmationId) {
+                            confirmId = args.confirmationId;
+                            logger.info(
+                              "[Chat] Using tool-generated confirmation ID:",
+                              {
+                                confirmId,
+                                toolCallId:
+                                  confirmFoodCall.toolCallId ||
+                                  confirmFoodCall.id,
+                              },
+                            );
+                          } else {
+                            // Last resort: generate ID (should rarely happen now)
+                            const toolCallId =
+                              confirmFoodCall.toolCallId || confirmFoodCall.id;
+                            const argsWithToolCallId = {
+                              ...args,
+                              _toolCallId: toolCallId,
+                            };
+                            confirmId = getConfirmationId(
+                              argsWithToolCallId,
+                              index,
+                            );
+                            logger.info(
+                              "[Chat] Generated fallback confirmation ID:",
+                              {
+                                toolCallId,
+                                confirmId,
+                                reason: "No confirmationId in args",
+                              },
+                            );
+                          }
 
-                        if (confirmedBubblesFromDB) {
-                          // Try to find bubble with exact ID match first
-                          let bubbleInDB = confirmedBubblesFromDB.find(
-                            (b) => b.confirmationId === confirmId,
-                          );
+                          // Check if we're still loading confirmed bubbles from database
+                          // If so, check if this bubble exists in the DB to prevent flash of pending state
+                          const isLoadingBubbles =
+                            confirmedBubblesFromDB === undefined && threadId;
+                          let isConfirmedInDB = false;
+                          let isRejectedInDB = false;
 
-                          // If not found and we have food items, try to match by content
-                          // This handles legacy bubbles that have different IDs
-                          if (!bubbleInDB && args.items) {
-                            const foodDescription =
-                              args.description ||
-                              args.items
-                                .map((item: any) => item.name)
-                                .join(", ");
-                            bubbleInDB = confirmedBubblesFromDB.find(
-                              (b) =>
-                                b.foodDescription === foodDescription &&
-                                b.messageIndex === index,
+                          if (confirmedBubblesFromDB) {
+                            // Try to find bubble with exact ID match first
+                            let bubbleInDB = confirmedBubblesFromDB.find(
+                              (b) => b.confirmationId === confirmId,
                             );
 
-                            if (bubbleInDB) {
-                              logger.info(
-                                "[Chat] Found bubble by content match:",
-                                {
-                                  dbId: bubbleInDB.confirmationId,
-                                  generatedId: confirmId,
-                                  foodDescription: foodDescription.substring(
-                                    0,
-                                    50,
-                                  ),
-                                },
+                            // If not found and we have food items, try to match by content
+                            // This handles legacy bubbles that have different IDs
+                            if (!bubbleInDB && args.items) {
+                              const foodDescription =
+                                args.description ||
+                                args.items
+                                  .map((item: any) => item.name)
+                                  .join(", ");
+                              bubbleInDB = confirmedBubblesFromDB.find(
+                                (b) =>
+                                  b.foodDescription === foodDescription &&
+                                  b.messageIndex === index,
                               );
+
+                              if (bubbleInDB) {
+                                logger.info(
+                                  "[Chat] Found bubble by content match:",
+                                  {
+                                    dbId: bubbleInDB.confirmationId,
+                                    generatedId: confirmId,
+                                    foodDescription: foodDescription.substring(
+                                      0,
+                                      50,
+                                    ),
+                                  },
+                                );
+                              }
+                            }
+
+                            if (bubbleInDB) {
+                              isConfirmedInDB =
+                                bubbleInDB.status === "confirmed";
+                              isRejectedInDB = bubbleInDB.status === "rejected";
                             }
                           }
 
-                          if (bubbleInDB) {
-                            isConfirmedInDB = bubbleInDB.status === "confirmed";
-                            isRejectedInDB = bubbleInDB.status === "rejected";
-                          }
-                        }
+                          // Use local state if available, otherwise use DB state
+                          const isConfirmed =
+                            confirmedFoodLogs.has(confirmId) || isConfirmedInDB;
+                          const isRejected =
+                            rejectedFoodLogs.has(confirmId) || isRejectedInDB;
 
-                        // Use local state if available, otherwise use DB state
-                        const isConfirmed =
-                          confirmedFoodLogs.has(confirmId) || isConfirmedInDB;
-                        const isRejected =
-                          rejectedFoodLogs.has(confirmId) || isRejectedInDB;
+                          // Enhanced logging for debugging persistence
+                          logger.debug("[Chat] Bubble state check:", {
+                            confirmId,
+                            isConfirmedInDB,
+                            isRejectedInDB,
+                            localConfirmed: confirmedFoodLogs.has(confirmId),
+                            localRejected: rejectedFoodLogs.has(confirmId),
+                            toolCallId: confirmFoodCall?.toolCallId,
+                            messageIndex: index,
+                            threadId,
+                            dbLoaded: confirmedBubblesFromDB !== undefined,
+                            bubbleIdsInDB:
+                              confirmedBubblesFromDB?.map(
+                                (b) => b.confirmationId,
+                              ) || [],
+                            foodDescription: args.description,
+                          });
 
-                        // Enhanced logging for debugging persistence
-                        logger.debug("[Chat] Bubble state check:", {
-                          confirmId,
-                          isConfirmedInDB,
-                          isRejectedInDB,
-                          localConfirmed: confirmedFoodLogs.has(confirmId),
-                          localRejected: rejectedFoodLogs.has(confirmId),
-                          toolCallId: confirmFoodCall?.toolCallId,
-                          messageIndex: index,
-                          threadId,
-                          dbLoaded: confirmedBubblesFromDB !== undefined,
-                          bubbleIdsInDB:
-                            confirmedBubblesFromDB?.map(
-                              (b) => b.confirmationId,
-                            ) || [],
-                          foodDescription: args.description,
-                        });
+                          // Always show confirmations - persistence handles old ones
+                          // Don't filter based on date here since we already handle that in loading
 
-                        // Always show confirmations - persistence handles old ones
-                        // Don't filter based on date here since we already handle that in loading
-
-                        return (
-                          <div key={confirmId || `confirm-${index}`}>
-                            {/* Food confirmation card only - no duplicate message */}
-                            <div className="flex justify-start">
-                              <ConfirmationBubble
-                                args={args}
-                                confirmId={confirmId}
-                                isConfirmed={isConfirmed}
-                                isRejected={isRejected}
-                                isStealthMode={isStealthMode}
-                                isStreaming={isStreaming}
-                                onReject={async () => {
-                                  // Mark as rejected
-                                  setRejectedFoodLogs((prev) =>
-                                    new Set(prev).add(confirmId),
-                                  );
-
-                                  // Save to Convex for cross-device sync
-                                  if (threadId && saveConfirmedBubble) {
-                                    try {
-                                      await saveConfirmedBubble({
-                                        threadId,
-                                        messageIndex: index,
-                                        confirmationId: confirmId,
-                                        toolCallId: confirmFoodCall.toolCallId,
-                                        foodDescription: args.description,
-                                        status: "rejected",
-                                      });
-                                      logger.info(
-                                        "[Chat] Saved rejected bubble to Convex:",
-                                        confirmId,
-                                      );
-                                    } catch (error) {
-                                      logger.error(
-                                        "[Chat] Failed to save rejected bubble to Convex:",
-                                        error,
-                                      );
-                                    }
-                                  }
-
-                                  // Add a message to guide the user
-                                  setMessages((prev) => [
-                                    ...prev,
-                                    {
-                                      role: "assistant",
-                                      content:
-                                        "No problem! Please tell me what was incorrect so I can update it.",
-                                    },
-                                  ]);
-                                }}
-                                onConfirm={async () => {
-                                  // Check if already processing this request
-                                  const requestKey = `${confirmId}-${Date.now()}`;
-                                  if (activeLogRequests.has(confirmId)) {
-                                    logger.warn(
-                                      "[Chat] Already processing this confirmation:",
-                                      confirmId,
-                                    );
-                                    return;
-                                  }
-
-                                  // Mark as processing with flushSync for immediate mobile rendering
-                                  setActiveLogRequests((prev) =>
-                                    new Set(prev).add(confirmId),
-                                  );
-                                  flushSync(() => {
-                                    setConfirmedFoodLogs((prev) =>
+                          return (
+                            <div key={confirmId || `confirm-${index}`}>
+                              {/* Food confirmation card only - no duplicate message */}
+                              <div className="flex justify-start">
+                                <ConfirmationBubble
+                                  args={args}
+                                  confirmId={confirmId}
+                                  isConfirmed={isConfirmed}
+                                  isRejected={isRejected}
+                                  isStealthMode={isStealthMode}
+                                  isStreaming={isStreaming}
+                                  onReject={async () => {
+                                    // Mark as rejected
+                                    setRejectedFoodLogs((prev) =>
                                       new Set(prev).add(confirmId),
                                     );
-                                  });
-                                  setIsLoading(true);
-
-                                  try {
-                                    // Use original data
-                                    const finalItems = args.items;
-                                    const finalCalories = args.totalCalories;
-                                    const finalProtein = args.totalProtein;
-                                    const finalCarbs = args.totalCarbs;
-                                    const finalFat = args.totalFat;
-
-                                    // Log the food directly
-                                    const logResult = await logFood({
-                                      description: args.description,
-                                      foods: finalItems.map((item: any) => ({
-                                        name: item.name,
-                                        quantity: item.quantity,
-                                        calories: item.calories,
-                                        protein: item.protein || 0,
-                                        carbs: item.carbs || 0,
-                                        fat: item.fat || 0,
-                                      })),
-                                      meal: args.mealType,
-                                      aiEstimated: true,
-                                      confidence: args.confidence || "medium",
-                                    });
 
                                     // Save to Convex for cross-device sync
                                     if (threadId && saveConfirmedBubble) {
@@ -2327,147 +2266,229 @@ export default function Chat() {
                                           toolCallId:
                                             confirmFoodCall.toolCallId,
                                           foodDescription: args.description,
-                                          status: "confirmed",
+                                          status: "rejected",
                                         });
                                         logger.info(
-                                          "[Chat] Saved confirmed bubble to Convex:",
+                                          "[Chat] Saved rejected bubble to Convex:",
                                           confirmId,
                                         );
                                       } catch (error) {
                                         logger.error(
-                                          "[Chat] Failed to save confirmed bubble to Convex:",
+                                          "[Chat] Failed to save rejected bubble to Convex:",
                                           error,
                                         );
                                       }
                                     }
 
-                                    // Add a success message with rounded numbers
-                                    const caloriesRemaining = Math.round(
-                                      (profile?.dailyCalorieTarget || 2000) -
-                                        ((todayStats?.calories || 0) +
-                                          finalCalories),
-                                    );
-                                    const encouragements = [
-                                      "Great job tracking! 💪",
-                                      "You're doing awesome! 🌟",
-                                      "Keep it up! 🎯",
-                                      "Nice logging! 👏",
-                                      "Way to stay on track! 🚀",
-                                    ];
-                                    const randomEncouragement =
-                                      encouragements[
-                                        Math.floor(
-                                          Math.random() * encouragements.length,
-                                        )
-                                      ];
-                                    const successMessage = `${caloriesRemaining} calories left today. ${randomEncouragement}`;
+                                    // Add a message to guide the user
                                     setMessages((prev) => [
                                       ...prev,
                                       {
                                         role: "assistant",
-                                        content: successMessage,
+                                        content:
+                                          "No problem! Please tell me what was incorrect so I can update it.",
                                       },
                                     ]);
-
-                                    // Save the message to chat history with foodLogId
-                                    if (threadId) {
-                                      try {
-                                        await saveMessage({
-                                          threadId,
-                                          role: "assistant",
-                                          content: successMessage,
-                                          metadata: {
-                                            foodLogId: logResult,
-                                            actionType: "food_log",
-                                          },
-                                        });
-                                      } catch (err) {
-                                        logger.warn(
-                                          "[Chat] Could not save food log message to history:",
-                                          err,
-                                        );
-                                      }
-                                    }
-
-                                    // Clear pending confirmation if exists - CRITICAL for preventing auto-confirm bug
-                                    logger.info(
-                                      "[Chat] Checking for pending confirmations to clear:",
-                                      {
-                                        hasMutation:
-                                          !!confirmPendingConfirmation,
-                                        hasPendingConfirmations:
-                                          !!pendingConfirmations,
-                                        pendingConfirmationId:
-                                          pendingConfirmations?._id,
-                                      },
-                                    );
-
-                                    if (
-                                      confirmPendingConfirmation &&
-                                      pendingConfirmations
-                                    ) {
-                                      try {
-                                        logger.info(
-                                          "[Chat] Calling confirmPendingConfirmation with ID:",
-                                          pendingConfirmations._id,
-                                        );
-                                        await confirmPendingConfirmation({
-                                          confirmationId:
-                                            pendingConfirmations._id,
-                                        });
-                                        logger.info(
-                                          "[Chat] Successfully marked pending confirmation as confirmed",
-                                        );
-                                      } catch (err) {
-                                        logger.error(
-                                          "[Chat] Failed to clear pending confirmation:",
-                                          err,
-                                        );
-                                      }
-                                    } else {
+                                  }}
+                                  onConfirm={async () => {
+                                    // Check if already processing this request
+                                    const requestKey = `${confirmId}-${Date.now()}`;
+                                    if (activeLogRequests.has(confirmId)) {
                                       logger.warn(
-                                        "[Chat] No pending confirmation to clear - this might be the issue!",
+                                        "[Chat] Already processing this confirmation:",
+                                        confirmId,
                                       );
+                                      return;
                                     }
-                                  } catch (error) {
-                                    logger.error(
-                                      "Error logging food directly:",
-                                      error,
+
+                                    // Mark as processing with flushSync for immediate mobile rendering
+                                    setActiveLogRequests((prev) =>
+                                      new Set(prev).add(confirmId),
                                     );
-                                    // On error, fall back to sending "yes" message
+                                    flushSync(() => {
+                                      setConfirmedFoodLogs((prev) =>
+                                        new Set(prev).add(confirmId),
+                                      );
+                                    });
+                                    setIsLoading(true);
+
                                     try {
-                                      await sendStreamingMessage(
-                                        "yes",
-                                        threadId || undefined,
+                                      // Use original data
+                                      const finalItems = args.items;
+                                      const finalCalories = args.totalCalories;
+                                      const finalProtein = args.totalProtein;
+                                      const finalCarbs = args.totalCarbs;
+                                      const finalFat = args.totalFat;
+
+                                      // Log the food directly
+                                      const logResult = await logFood({
+                                        description: args.description,
+                                        foods: finalItems.map((item: any) => ({
+                                          name: item.name,
+                                          quantity: item.quantity,
+                                          calories: item.calories,
+                                          protein: item.protein || 0,
+                                          carbs: item.carbs || 0,
+                                          fat: item.fat || 0,
+                                        })),
+                                        meal: args.mealType,
+                                        aiEstimated: true,
+                                        confidence: args.confidence || "medium",
+                                      });
+
+                                      // Save to Convex for cross-device sync
+                                      if (threadId && saveConfirmedBubble) {
+                                        try {
+                                          await saveConfirmedBubble({
+                                            threadId,
+                                            messageIndex: index,
+                                            confirmationId: confirmId,
+                                            toolCallId:
+                                              confirmFoodCall.toolCallId,
+                                            foodDescription: args.description,
+                                            status: "confirmed",
+                                          });
+                                          logger.info(
+                                            "[Chat] Saved confirmed bubble to Convex:",
+                                            confirmId,
+                                          );
+                                        } catch (error) {
+                                          logger.error(
+                                            "[Chat] Failed to save confirmed bubble to Convex:",
+                                            error,
+                                          );
+                                        }
+                                      }
+
+                                      // Add a success message with rounded numbers
+                                      const caloriesRemaining = Math.round(
+                                        (profile?.dailyCalorieTarget || 2000) -
+                                          ((todayStats?.calories || 0) +
+                                            finalCalories),
                                       );
-                                    } catch (streamError) {
-                                      logger.error(
-                                        "Error confirming via stream:",
-                                        streamError,
-                                      );
+                                      const encouragements = [
+                                        "Great job tracking! 💪",
+                                        "You're doing awesome! 🌟",
+                                        "Keep it up! 🎯",
+                                        "Nice logging! 👏",
+                                        "Way to stay on track! 🚀",
+                                      ];
+                                      const randomEncouragement =
+                                        encouragements[
+                                          Math.floor(
+                                            Math.random() *
+                                              encouragements.length,
+                                          )
+                                        ];
+                                      const successMessage = `${caloriesRemaining} calories left today. ${randomEncouragement}`;
                                       setMessages((prev) => [
                                         ...prev,
                                         {
                                           role: "assistant",
-                                          content:
-                                            "Sorry, I couldn't log that. Please try again.",
+                                          content: successMessage,
                                         },
                                       ]);
+
+                                      // Save the message to chat history with foodLogId
+                                      if (threadId) {
+                                        try {
+                                          await saveMessage({
+                                            threadId,
+                                            role: "assistant",
+                                            content: successMessage,
+                                            metadata: {
+                                              foodLogId: logResult,
+                                              actionType: "food_log",
+                                            },
+                                          });
+                                        } catch (err) {
+                                          logger.warn(
+                                            "[Chat] Could not save food log message to history:",
+                                            err,
+                                          );
+                                        }
+                                      }
+
+                                      // Clear pending confirmation if exists - CRITICAL for preventing auto-confirm bug
+                                      logger.info(
+                                        "[Chat] Checking for pending confirmations to clear:",
+                                        {
+                                          hasMutation:
+                                            !!confirmPendingConfirmation,
+                                          hasPendingConfirmations:
+                                            !!pendingConfirmations,
+                                          pendingConfirmationId:
+                                            pendingConfirmations?._id,
+                                        },
+                                      );
+
+                                      if (
+                                        confirmPendingConfirmation &&
+                                        pendingConfirmations
+                                      ) {
+                                        try {
+                                          logger.info(
+                                            "[Chat] Calling confirmPendingConfirmation with ID:",
+                                            pendingConfirmations._id,
+                                          );
+                                          await confirmPendingConfirmation({
+                                            confirmationId:
+                                              pendingConfirmations._id,
+                                          });
+                                          logger.info(
+                                            "[Chat] Successfully marked pending confirmation as confirmed",
+                                          );
+                                        } catch (err) {
+                                          logger.error(
+                                            "[Chat] Failed to clear pending confirmation:",
+                                            err,
+                                          );
+                                        }
+                                      } else {
+                                        logger.warn(
+                                          "[Chat] No pending confirmation to clear - this might be the issue!",
+                                        );
+                                      }
+                                    } catch (error) {
+                                      logger.error(
+                                        "Error logging food directly:",
+                                        error,
+                                      );
+                                      // On error, fall back to sending "yes" message
+                                      try {
+                                        await sendStreamingMessage(
+                                          "yes",
+                                          threadId || undefined,
+                                        );
+                                      } catch (streamError) {
+                                        logger.error(
+                                          "Error confirming via stream:",
+                                          streamError,
+                                        );
+                                        setMessages((prev) => [
+                                          ...prev,
+                                          {
+                                            role: "assistant",
+                                            content:
+                                              "Sorry, I couldn't log that. Please try again.",
+                                          },
+                                        ]);
+                                      }
+                                    } finally {
+                                      setIsLoading(false);
+                                      // Remove from active requests
+                                      setActiveLogRequests((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(confirmId);
+                                        return next;
+                                      });
                                     }
-                                  } finally {
-                                    setIsLoading(false);
-                                    // Remove from active requests
-                                    setActiveLogRequests((prev) => {
-                                      const next = new Set(prev);
-                                      next.delete(confirmId);
-                                      return next;
-                                    });
-                                  }
-                                }}
-                              />
+                                  }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        );
+                          );
+                        } // End of normal confirmation bubble case
                       }
                     }
 
