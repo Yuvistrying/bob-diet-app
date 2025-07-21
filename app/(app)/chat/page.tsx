@@ -2101,6 +2101,9 @@ export default function Chat() {
                         const isNoFoodDetected = args?.noFoodDetected === true;
                         const hasError = args?.error === true;
 
+                        // Flag to determine if we should show the confirmation bubble
+                        let shouldShowConfirmation = true;
+
                         // If no food detected or error, don't show confirmation bubble
                         // but let the message with Bob's response show
                         if (isNoFoodDetected || hasError) {
@@ -2112,8 +2115,8 @@ export default function Chat() {
                               hasContent: !!message.content,
                             },
                           );
-                          // Return here to skip the confirmation bubble entirely
-                          return;
+                          // Don't show confirmation bubble, but continue rendering the message
+                          shouldShowConfirmation = false;
                         } else if (!args || !args.items) {
                           // This is an actual error - no args or no items
                           logger.warn(
@@ -2239,7 +2242,7 @@ export default function Chat() {
                           // Always show confirmations - persistence handles old ones
                           // Don't filter based on date here since we already handle that in loading
 
-                          return (
+                          return shouldShowConfirmation ? (
                             <div key={confirmId || `confirm-${index}`}>
                               {/* Food confirmation card only - no duplicate message */}
                               <div className="flex justify-start">
@@ -2487,7 +2490,7 @@ export default function Chat() {
                                 />
                               </div>
                             </div>
-                          );
+                          ) : null;
                         } // End of normal confirmation bubble case
                       }
                     }
