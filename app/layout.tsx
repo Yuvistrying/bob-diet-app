@@ -6,6 +6,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ClientErrorHandler } from "./components/ClientErrorHandler";
+import { ChunkErrorHandler } from "./components/ChunkErrorHandler";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -52,6 +53,7 @@ export default function RootLayout({
             <ConvexClientProvider>
               <ThemeProvider>
                 <ClientErrorHandler />
+                <ChunkErrorHandler />
                 {children}
               </ThemeProvider>
             </ConvexClientProvider>
