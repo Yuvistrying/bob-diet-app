@@ -48,6 +48,7 @@ import { useChat } from "~/app/providers/ChatProvider";
 import { logger } from "~/app/utils/logger";
 import { BottomNav } from "~/app/components/BottomNav";
 import { OnboardingQuickResponses } from "~/app/components/OnboardingQuickResponses";
+import { AuthSyncHandler } from "~/app/components/AuthSyncHandler";
 
 interface Message {
   role: "user" | "assistant";
@@ -285,7 +286,7 @@ const ConfirmationBubble = memo(
 
 ConfirmationBubble.displayName = "ConfirmationBubble";
 
-export default function Chat() {
+function Chat() {
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -2749,5 +2750,13 @@ export default function Chat() {
       {/* Bottom Navigation - Outside the main container */}
       <BottomNav />
     </>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <AuthSyncHandler>
+      <Chat />
+    </AuthSyncHandler>
   );
 }

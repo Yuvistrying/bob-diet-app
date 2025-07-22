@@ -45,6 +45,20 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
       // User is signed in but not in Convex - need to sync
       setSyncState("syncing");
       console.log("[AuthSync] Starting user sync...", { userId, retryCount });
+      
+      // Report sync attempt to server
+      fetch("/api/report-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          error: "Starting user sync",
+          userId,
+          retryCount,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+          type: "auth_sync_started"
+        })
+      }).catch(() => {});
 
       try {
         const result = await upsertUser();
