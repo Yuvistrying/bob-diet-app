@@ -4,6 +4,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "./providers/ConvexClientProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { Analytics } from "@vercel/analytics/react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ClientErrorHandler } from "./components/ClientErrorHandler";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -46,9 +48,14 @@ export default function RootLayout({
           />
         </head>
         <body className={inter.className}>
-          <ConvexClientProvider>
-            <ThemeProvider>{children}</ThemeProvider>
-          </ConvexClientProvider>
+          <ErrorBoundary>
+            <ConvexClientProvider>
+              <ThemeProvider>
+                <ClientErrorHandler />
+                {children}
+              </ThemeProvider>
+            </ConvexClientProvider>
+          </ErrorBoundary>
           <Analytics />
         </body>
       </html>
