@@ -1,4 +1,4 @@
-# Bob Diet Coach 🤖🥗
+# Bob Diet Coach 🤖🥗 
 
 An AI-powered conversational diet tracking app that makes logging food and monitoring your health goals as easy as chatting with a friend. Built with Next.js 15, Convex, and Claude 4.
 
