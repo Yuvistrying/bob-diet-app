@@ -14,8 +14,9 @@ import {
   CardTitle,
 } from "~/app/components/ui/card";
 import { api } from "../../convex/_generated/api";
+import { AuthSyncHandler } from "~/app/components/AuthSyncHandler";
 
-export default function IntegratedPricing() {
+function PricingContent() {
   const { isSignedIn, userId } = useAuth();
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   const [plans, setPlans] = useState<any>(null);
@@ -36,12 +37,54 @@ export default function IntegratedPricing() {
     api.subscriptions.fixSubscriptionUserIdByEmail,
   );
 
-  // Sync user when signed in
+  // Sync user when signed in with retry logic
   React.useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    let retryTimeout: NodeJS.Timeout;
+
+    const syncUser = async () => {
+      if (!isSignedIn) return;
+
+      try {
+        console.log("[Pricing] Attempting to sync user to Convex...", {
+          userId,
+          retryCount,
+        });
+        
+        const result = await upsertUser();
+        console.log("[Pricing] User sync successful:", result);
+      } catch (error) {
+        console.error("[Pricing] User sync failed:", {
+          error,
+          retryCount,
+          userId,
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+
+        // Retry with exponential backoff
+        if (retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          console.log(`[Pricing] Retrying user sync in ${delay}ms...`);
+          
+          retryTimeout = setTimeout(() => {
+            syncUser();
+          }, delay);
+        } else {
+          setError("Unable to sync your account. Please refresh the page or contact support.");
+        }
+      }
+    };
+
     if (isSignedIn) {
-      upsertUser().catch(console.error);
+      syncUser();
     }
-  }, [isSignedIn, upsertUser]);
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [isSignedIn, userId, upsertUser]);
 
   // Fix subscription userId if needed
   React.useEffect(() => {
@@ -344,5 +387,13 @@ export default function IntegratedPricing() {
           )}
       </div>
     </section>
+  );
+}
+
+export default function IntegratedPricing() {
+  return (
+    <AuthSyncHandler>
+      <PricingContent />
+    </AuthSyncHandler>
   );
 }
