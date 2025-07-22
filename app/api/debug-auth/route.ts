@@ -6,7 +6,9 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     // Get Clerk auth info
-    const { userId: clerkUserId, sessionId } = await auth();
+    const authResult = await auth();
+    const clerkUserId = authResult?.userId;
+    const sessionId = authResult?.sessionId;
     
     const debugInfo: any = {
       timestamp: new Date().toISOString(),
@@ -34,7 +36,7 @@ export async function GET() {
         const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
         
         // Get auth token for Convex
-        const token = await auth().getToken({ template: "convex" });
+        const token = await authResult?.getToken({ template: "convex" });
         
         if (token) {
           convexClient.setAuth(token);
