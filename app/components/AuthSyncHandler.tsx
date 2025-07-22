@@ -62,6 +62,20 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
         
         const message = error instanceof Error ? error.message : "Unknown error";
         setErrorMessage(message);
+        
+        // Report error to server for debugging
+        fetch("/api/report-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            error: message,
+            userId,
+            retryCount,
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString(),
+            type: "auth_sync_failed"
+          })
+        }).catch(() => {}); // Ignore reporting errors
 
         // Auto-retry with exponential backoff
         if (retryCount < 3) {
