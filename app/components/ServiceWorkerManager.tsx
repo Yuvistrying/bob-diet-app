@@ -5,6 +5,24 @@ import { useEffect } from "react";
 export function ServiceWorkerManager() {
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      // Skip service worker for iOS 16.2 and below
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const iOSVersion = navigator.userAgent.match(/OS (\d+)_/)?.[1];
+      
+      if (isIOS && iOSVersion && parseInt(iOSVersion) <= 16) {
+        console.log("[ServiceWorker] Skipping registration for iOS 16 or below");
+        
+        // Unregister any existing service worker for iOS 16 users
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach((registration) => {
+            registration.unregister();
+            console.log("[ServiceWorker] Unregistered existing SW for iOS 16");
+          });
+        });
+        
+        return;
+      }
+      
       // Register service worker
       navigator.serviceWorker
         .register("/sw.js")
