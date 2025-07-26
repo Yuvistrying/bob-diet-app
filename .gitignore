@@ -24,3 +24,35 @@ temp-bob-diet-app/
 CLAUDE.md
 .vercel
 gitignored.md
+
+# Environment setup files with secrets
+STAGING_ENV_VARS.md
+STAGING_SETUP_STEPS.md
+COMPLETE_ENVIRONMENT_SETUP_CHECKLIST.md
+ENVIRONMENT_SETUP.md
+ENVIRONMENT_VARIABLES_GUIDE.md
+NEW_ENVIRONMENT_SETUP.md
+NEW_ENVIRONMENT_SETUP 2.md
+PRODUCTION_SETUP.md
+
+# Polar documentation with secrets
+POLAR_*.md
+
+# Scripts with potential secrets
+scripts/delete-test-user.js
+scripts/setup-convex-*.sh
+
+# Duplicate files
+*" 2".*
+* 2.*
+
+# Any staging-related files
+STAGING_*
+
+# README files that might contain secrets  
+README.md
+!convex/README.md
+!magic-ui-template/README.md
+
+# Other setup files with potential secrets
+linear-import-setup.md
