@@ -8,6 +8,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ClientErrorHandler } from "./components/ClientErrorHandler";
 import { ChunkErrorHandler } from "./components/ChunkErrorHandler";
 import { ServiceWorkerManager } from "./components/ServiceWorkerManager";
+import { EnvironmentIndicator } from "./components/EnvironmentIndicator";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -38,7 +39,10 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <head>
           <meta name="theme-color" content="#10b981" />
-          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+          />
           <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
           <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
           <link rel="dns-prefetch" href="https://api.convex.dev" />
@@ -57,6 +61,7 @@ export default function RootLayout({
                 <ClientErrorHandler />
                 <ChunkErrorHandler />
                 <ServiceWorkerManager />
+                <EnvironmentIndicator />
                 {children}
               </ThemeProvider>
             </ConvexClientProvider>

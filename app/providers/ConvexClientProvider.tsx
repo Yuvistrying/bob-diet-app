@@ -15,7 +15,7 @@ export function ConvexClientProvider({
   children: React.ReactNode;
 }) {
   const auth = useAuth();
-  
+
   useEffect(() => {
     // Log auth state changes
     console.log("[ConvexProvider] Auth state:", {
@@ -25,7 +25,7 @@ export function ConvexClientProvider({
       sessionId: auth.sessionId,
       timestamp: new Date().toISOString(),
     });
-    
+
     // Report to server if there's an auth issue
     if (auth.isLoaded && auth.isSignedIn && !auth.userId) {
       fetch("/api/report-error", {
@@ -40,12 +40,12 @@ export function ConvexClientProvider({
           },
           userAgent: navigator.userAgent,
           timestamp: new Date().toISOString(),
-          type: "convex_provider_auth_issue"
-        })
+          type: "convex_provider_auth_issue",
+        }),
       }).catch(() => {});
     }
   }, [auth.isLoaded, auth.isSignedIn, auth.userId]);
-  
+
   return (
     <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
       {children}

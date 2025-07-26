@@ -8,10 +8,11 @@ export default function OfflinePage() {
       <WifiOff className="w-16 h-16 text-muted-foreground mb-4" />
       <h1 className="text-2xl font-semibold mb-2">You're offline</h1>
       <p className="text-muted-foreground text-center max-w-md">
-        Bob Diet Coach requires an internet connection to sync your data and provide personalized coaching.
+        Bob Diet Coach requires an internet connection to sync your data and
+        provide personalized coaching.
       </p>
-      <button 
-        onClick={() => window.location.reload()} 
+      <button
+        onClick={() => window.location.reload()}
         className="mt-6 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
       >
         Try Again

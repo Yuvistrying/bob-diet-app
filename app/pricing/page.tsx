@@ -51,7 +51,7 @@ function PricingContent() {
           userId,
           retryCount,
         });
-        
+
         const result = await upsertUser();
         console.log("[Pricing] User sync successful:", result);
       } catch (error) {
@@ -67,12 +67,14 @@ function PricingContent() {
           retryCount++;
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
           console.log(`[Pricing] Retrying user sync in ${delay}ms...`);
-          
+
           retryTimeout = setTimeout(() => {
             syncUser();
           }, delay);
         } else {
-          setError("Unable to sync your account. Please refresh the page or contact support.");
+          setError(
+            "Unable to sync your account. Please refresh the page or contact support.",
+          );
         }
       }
     };

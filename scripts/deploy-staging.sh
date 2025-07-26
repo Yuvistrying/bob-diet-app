@@ -46,9 +46,10 @@ fi
 
 # Deploy Convex functions to staging
 echo "📦 Deploying Convex functions to staging..."
-npx convex deploy --deployment staging
+CONVEX_DEPLOYMENT=prod:small-mammoth-405 npx convex deploy
 if [ $? -ne 0 ]; then
     echo "❌ Convex deployment failed!"
+    echo "Make sure you have the correct staging deployment name"
     exit 1
 fi
 
@@ -60,7 +61,7 @@ echo ""
 echo "✅ Deployment to STAGING complete!"
 echo ""
 echo "🔗 Your staging deployment will be available at:"
-echo "   https://staging.bobdietcoach.com"
+echo "   https://bob-diet-staging.vercel.app"
 echo ""
 echo "📋 Post-deployment checklist:"
 echo "   [ ] Check Vercel build status"

@@ -9,7 +9,7 @@ export async function GET() {
     const authResult = await auth();
     const clerkUserId = authResult?.userId;
     const sessionId = authResult?.sessionId;
-    
+
     const debugInfo: any = {
       timestamp: new Date().toISOString(),
       clerk: {
@@ -33,30 +33,37 @@ export async function GET() {
     // Try to connect to Convex
     if (clerkUserId && process.env.NEXT_PUBLIC_CONVEX_URL) {
       try {
-        const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
-        
+        const convexClient = new ConvexHttpClient(
+          process.env.NEXT_PUBLIC_CONVEX_URL,
+        );
+
         // Get auth token for Convex
         const token = await authResult?.getToken({ template: "convex" });
-        
+
         if (token) {
           convexClient.setAuth(token);
           debugInfo.convex.hasToken = true;
-          
+
           // Try to find user in Convex
           try {
-            const convexUser = await convexClient.query(api.users.findUserByToken, {
-              tokenIdentifier: clerkUserId,
-            });
-            
+            const convexUser = await convexClient.query(
+              api.users.findUserByToken,
+              {
+                tokenIdentifier: clerkUserId,
+              },
+            );
+
             debugInfo.convex.connected = true;
-            debugInfo.convex.user = convexUser ? {
-              exists: true,
-              id: convexUser._id,
-              email: convexUser.email,
-            } : {
-              exists: false,
-              message: "User not found in Convex database",
-            };
+            debugInfo.convex.user = convexUser
+              ? {
+                  exists: true,
+                  id: convexUser._id,
+                  email: convexUser.email,
+                }
+              : {
+                  exists: false,
+                  message: "User not found in Convex database",
+                };
           } catch (queryError: any) {
             debugInfo.convex.error = {
               type: "query_error",
@@ -80,18 +87,21 @@ export async function GET() {
     // Analyze the results
     debugInfo.diagnosis = analyzeDiagnosis(debugInfo);
 
-    return NextResponse.json(debugInfo, { 
+    return NextResponse.json(debugInfo, {
       status: 200,
       headers: {
         "Cache-Control": "no-store",
       },
     });
   } catch (error: any) {
-    return NextResponse.json({
-      error: "Debug endpoint error",
-      message: error.message,
-      timestamp: new Date().toISOString(),
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Debug endpoint error",
+        message: error.message,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -112,30 +122,32 @@ function analyzeDiagnosis(debugInfo: any): any {
   // Check environment
   if (!debugInfo.environment.hasConvexUrl) {
     diagnosis.issues.push("Convex URL is not configured");
-    diagnosis.recommendations.push("Set NEXT_PUBLIC_CONVEX_URL environment variable");
+    diagnosis.recommendations.push(
+      "Set NEXT_PUBLIC_CONVEX_URL environment variable",
+    );
   }
 
   // Check Convex connection
   if (debugInfo.convex.error) {
     const errorType = debugInfo.convex.error.type;
-    
+
     if (errorType === "auth_error") {
       diagnosis.issues.push("Cannot get Convex auth token from Clerk");
       diagnosis.recommendations.push(
         "Check Clerk JWT template configuration",
-        "Verify Convex auth provider settings"
+        "Verify Convex auth provider settings",
       );
     } else if (errorType === "connection_error") {
       diagnosis.issues.push("Cannot connect to Convex backend");
       diagnosis.recommendations.push(
         "Check Convex deployment status",
-        "Verify network connectivity"
+        "Verify network connectivity",
       );
     } else if (errorType === "query_error") {
       diagnosis.issues.push("Error querying Convex database");
       diagnosis.recommendations.push(
         "Check Convex function permissions",
-        "Verify database schema"
+        "Verify database schema",
       );
     }
   } else if (debugInfo.convex.connected && !debugInfo.convex.user?.exists) {
@@ -143,7 +155,7 @@ function analyzeDiagnosis(debugInfo: any): any {
     diagnosis.recommendations.push(
       "Run upsertUser mutation to sync user",
       "Check for client-side errors preventing sync",
-      "Verify browser allows third-party cookies"
+      "Verify browser allows third-party cookies",
     );
   } else if (debugInfo.convex.connected && debugInfo.convex.user?.exists) {
     diagnosis.healthy = true;

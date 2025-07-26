@@ -4,12 +4,18 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 5174",
+    "dev:staging": "NODE_ENV=staging next dev -p 5175",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "check": "npm run format && npm run lint && npm run typecheck && npm run build"
+    "check": "npm run format && npm run lint && npm run typecheck && npm run build",
+    "env:dev": "./scripts/switch-env.sh dev",
+    "env:staging": "./scripts/switch-env.sh staging",
+    "env:prod": "./scripts/switch-env.sh prod",
+    "deploy:staging": "./scripts/deploy-staging.sh",
+    "deploy:prod": "./scripts/deploy-production.sh"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",

@@ -75,7 +75,7 @@ const nextConfig = {
       "utf-8-validate": "commonjs utf-8-validate",
       bufferutil: "commonjs bufferutil",
     });
-    
+
     // Optimize chunk splitting for better mobile loading
     if (!isServer) {
       config.optimization = {
@@ -105,7 +105,7 @@ const nextConfig = {
         },
       };
     }
-    
+
     return config;
   },
 };

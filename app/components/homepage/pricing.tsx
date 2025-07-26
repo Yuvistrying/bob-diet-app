@@ -220,8 +220,8 @@ export default function Pricing({ loaderData }: { loaderData: any }) {
           ) && (
             <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-md max-w-md mx-auto">
               <p className="text-amber-800 text-center text-sm">
-                You have an active subscription that's not shown above. Contact
-                support for assistance.
+                You have an active subscription that&apos;s not shown above.
+                Contact support for assistance.
               </p>
             </div>
           )}

@@ -587,7 +587,9 @@ function Chat() {
     }
 
     // Only redirect if we're sure there's no active subscription
-    if (!subscriptionStatus.hasActiveSubscription) {
+    // subscription === null means we checked and found no subscription
+    // subscription === undefined means still loading
+    if (subscription === null && !subscriptionStatus.hasActiveSubscription) {
       logger.info("[Chat] Redirecting to pricing - no active subscription");
       router.push("/pricing");
     }

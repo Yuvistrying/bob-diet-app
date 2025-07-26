@@ -66,7 +66,7 @@ export class ErrorBoundary extends React.Component<
             <h1 className="text-2xl font-semibold">Something went wrong</h1>
             <p className="text-muted-foreground">
               We apologize for the inconvenience. The error has been logged and
-              we'll look into it.
+              we&apos;ll look into it.
             </p>
 
             {/* Show error details in development */}

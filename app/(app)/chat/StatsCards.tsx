@@ -78,7 +78,7 @@ export function StatsCards({
       {/* Nutrition Card */}
       <div className="bg-background-elevated rounded-xl p-3">
         <div className="text-caption text-foreground-secondary mb-2">
-          Today's Progress
+          Today&apos;s Progress
         </div>
 
         {/* Calories */}

@@ -32,6 +32,15 @@ export function OnboardingQuickResponses({
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState<"kg" | "lbs">("kg");
   const [nameValue, setNameValue] = useState("");
+  const [dietaryData, setDietaryData] = useState({
+    restrictions: [] as string[],
+    customNotes: "",
+    intermittentFasting: {
+      enabled: false,
+      startHour: 12,
+      endHour: 20,
+    },
+  });
 
   const options: Record<string, QuickResponseOption[]> = {
     gender: [
@@ -243,16 +252,6 @@ export function OnboardingQuickResponses({
 
   // Special handling for dietary preferences
   if (step === "dietary_preferences") {
-    const [dietaryData, setDietaryData] = useState({
-      restrictions: [] as string[],
-      customNotes: "",
-      intermittentFasting: {
-        enabled: false,
-        startHour: 12,
-        endHour: 20,
-      },
-    });
-
     const COMMON_RESTRICTIONS = [
       "vegetarian",
       "vegan",
@@ -453,7 +452,7 @@ export function OnboardingQuickResponses({
             variant="outline"
             className="w-full h-10 text-sm font-medium"
           >
-            I don't have any special preferences
+            I don&apos;t have any special preferences
           </Button>
         </div>
       </div>
@@ -532,8 +531,8 @@ export function OnboardingQuickResponses({
     <div className="space-y-2 p-3">
       {step === "goal" && (
         <p className="text-sm text-muted-foreground text-center mb-2">
-          If you're not sure, describe your situation and I'll help you figure
-          it out!
+          If you&apos;re not sure, describe your situation and I&apos;ll help
+          you figure it out!
         </p>
       )}
       {step === "gender" && (
@@ -548,7 +547,7 @@ export function OnboardingQuickResponses({
       )}
       {step === "display_mode" && (
         <p className="text-sm text-muted-foreground text-center mb-2">
-          Choose how you'd like to see your nutrition data
+          Choose how you&apos;d like to see your nutrition data
         </p>
       )}
       {currentOptions.map((option) => (

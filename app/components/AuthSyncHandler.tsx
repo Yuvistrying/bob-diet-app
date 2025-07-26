@@ -14,9 +14,14 @@ interface AuthSyncHandlerProps {
   redirectTo?: string;
 }
 
-export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) {
+export function AuthSyncHandler({
+  children,
+  redirectTo,
+}: AuthSyncHandlerProps) {
   const { isSignedIn, userId, isLoaded } = useAuth();
-  const [syncState, setSyncState] = useState<"idle" | "syncing" | "error" | "success">("idle");
+  const [syncState, setSyncState] = useState<
+    "idle" | "syncing" | "error" | "success"
+  >("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [retryCount, setRetryCount] = useState(0);
 
@@ -31,7 +36,11 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
   useEffect(() => {
     const syncUserToConvex = async () => {
       if (!isLoaded || !isSignedIn || !userId) {
-        console.log("[AuthSync] Not ready to sync:", { isLoaded, isSignedIn, userId });
+        console.log("[AuthSync] Not ready to sync:", {
+          isLoaded,
+          isSignedIn,
+          userId,
+        });
         return;
       }
 
@@ -45,7 +54,7 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
       // User is signed in but not in Convex - need to sync
       setSyncState("syncing");
       console.log("[AuthSync] Starting user sync...", { userId, retryCount });
-      
+
       // Report sync attempt to server
       fetch("/api/report-error", {
         method: "POST",
@@ -56,8 +65,8 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
           retryCount,
           userAgent: navigator.userAgent,
           timestamp: new Date().toISOString(),
-          type: "auth_sync_started"
-        })
+          type: "auth_sync_started",
+        }),
       }).catch(() => {});
 
       try {
@@ -65,7 +74,7 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
         console.log("[AuthSync] User sync successful:", result);
         setSyncState("success");
         setRetryCount(0);
-        
+
         // Redirect if needed
         if (redirectTo) {
           window.location.href = redirectTo;
@@ -73,10 +82,11 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
       } catch (error) {
         console.error("[AuthSync] User sync failed:", error);
         setSyncState("error");
-        
-        const message = error instanceof Error ? error.message : "Unknown error";
+
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         setErrorMessage(message);
-        
+
         // Report error to server for debugging
         fetch("/api/report-error", {
           method: "POST",
@@ -87,17 +97,17 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
             retryCount,
             userAgent: navigator.userAgent,
             timestamp: new Date().toISOString(),
-            type: "auth_sync_failed"
-          })
+            type: "auth_sync_failed",
+          }),
         }).catch(() => {}); // Ignore reporting errors
 
         // Auto-retry with exponential backoff
         if (retryCount < 3) {
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
           console.log(`[AuthSync] Retrying in ${delay}ms...`);
-          
+
           setTimeout(() => {
-            setRetryCount(prev => prev + 1);
+            setRetryCount((prev) => prev + 1);
             setSyncState("idle");
           }, delay);
         }
@@ -107,7 +117,16 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
     if (syncState === "idle" && isLoaded) {
       syncUserToConvex();
     }
-  }, [isLoaded, isSignedIn, userId, userExistsInConvex, syncState, retryCount, upsertUser, redirectTo]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    userId,
+    userExistsInConvex,
+    syncState,
+    retryCount,
+    upsertUser,
+    redirectTo,
+  ]);
 
   // Loading state while Clerk loads
   if (!isLoaded) {
@@ -134,7 +153,8 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
           <h2 className="text-lg font-semibold">Setting up your account...</h2>
           <p className="text-muted-foreground">
-            We're preparing your personalized diet coaching experience. This will only take a moment.
+            We&apos;re preparing your personalized diet coaching experience.
+            This will only take a moment.
           </p>
         </div>
       </div>
@@ -149,7 +169,8 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
           <Alert className="border-destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              We're having trouble setting up your account. This might be due to:
+              We&apos;re having trouble setting up your account. This might be
+              due to:
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Browser extensions blocking connections</li>
                 <li>Network or firewall restrictions</li>
@@ -157,26 +178,24 @@ export function AuthSyncHandler({ children, redirectTo }: AuthSyncHandlerProps) 
               </ul>
             </AlertDescription>
           </Alert>
-          
+
           <div className="bg-muted p-4 rounded-lg">
-            <p className="text-sm font-mono break-all">
-              Error: {errorMessage}
-            </p>
+            <p className="text-sm font-mono break-all">Error: {errorMessage}</p>
             <p className="text-xs text-muted-foreground mt-1">
               User ID: {userId}
             </p>
           </div>
 
           <div className="flex gap-3">
-            <Button 
-              onClick={() => window.location.reload()} 
+            <Button
+              onClick={() => window.location.reload()}
               variant="outline"
               className="flex-1"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh Page
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 setRetryCount(0);
                 setSyncState("idle");

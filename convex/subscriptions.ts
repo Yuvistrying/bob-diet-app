@@ -67,7 +67,7 @@ const createCheckout = async ({
 export const getAvailablePlansQuery = query({
   handler: async (ctx) => {
     const polar = new Polar({
-      server: "sandbox",
+      server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
       accessToken: process.env.POLAR_ACCESS_TOKEN,
     });
 
@@ -100,7 +100,7 @@ export const getAvailablePlansQuery = query({
 export const getAvailablePlans = action({
   handler: async (ctx) => {
     const polar = new Polar({
-      server: "sandbox",
+      server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
       accessToken: process.env.POLAR_ACCESS_TOKEN,
     });
 
@@ -335,10 +335,23 @@ export const handleWebhookEvent = mutation({
   handler: async (ctx, args) => {
     // Extract event type from webhook payload
     const eventType = args.body.type;
+    const productId = args.body.data.product_id;
+
+    // Filter by product ID if configured
+    if (
+      process.env.POLAR_PRODUCT_ID &&
+      productId !== process.env.POLAR_PRODUCT_ID
+    ) {
+      console.log(
+        `[handleWebhookEvent] Ignoring event for different product: ${productId} (expected: ${process.env.POLAR_PRODUCT_ID})`,
+      );
+      return;
+    }
 
     console.log("[handleWebhookEvent] Received webhook event:", {
       type: eventType,
       dataId: args.body.data.id,
+      productId: productId,
       metadata: args.body.data.metadata,
       customerId: args.body.data.customer_id,
     });
@@ -663,7 +676,7 @@ export const fixSubscriptionUserIdByEmail = mutation({
 export const createCustomerPortalUrl = action({
   handler: async (ctx, args: { customerId: string }) => {
     const polar = new Polar({
-      server: "sandbox",
+      server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
       accessToken: process.env.POLAR_ACCESS_TOKEN,
     });
 

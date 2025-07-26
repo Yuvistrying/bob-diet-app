@@ -8,7 +8,8 @@ export function ChunkErrorHandler() {
     const handleError = (event: ErrorEvent) => {
       const chunkFailedMessage = /Loading chunk [\d]+ failed/;
       const chunkCSSFailedMessage = /Loading CSS chunk [\d]+ failed/;
-      const missingChunkMessage = /missing: https:\/\/.*\/_next\/static\/chunks\//;
+      const missingChunkMessage =
+        /missing: https:\/\/.*\/_next\/static\/chunks\//;
 
       if (
         chunkFailedMessage.test(event.message) ||
@@ -43,8 +44,13 @@ export function ChunkErrorHandler() {
           localStorage.setItem("lastChunkErrorReload", now.toString());
 
           // Detect if mobile or in-app browser
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          const isInAppBrowser = /GSA|FBAN|FBAV|Instagram|TikTok|LinkedIn/i.test(navigator.userAgent);
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(
+            navigator.userAgent,
+          );
+          const isInAppBrowser =
+            /GSA|FBAN|FBAV|Instagram|TikTok|LinkedIn/i.test(
+              navigator.userAgent,
+            );
 
           if (isMobile || isInAppBrowser) {
             // Auto-reload on mobile without confirmation

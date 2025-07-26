@@ -105,32 +105,34 @@ export default function IntegrationsSection({
   );
 }
 
-const IntegrationCard = memo(
-  ({
-    children,
-    className,
-    borderClassName,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    borderClassName?: string;
-  }) => {
-    return (
+const IntegrationCardComponent = ({
+  children,
+  className,
+  borderClassName,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  borderClassName?: string;
+}) => {
+  return (
+    <div
+      className={cn(
+        "bg-background relative flex size-20 rounded-xl dark:bg-transparent",
+        className,
+      )}
+    >
       <div
+        role="presentation"
         className={cn(
-          "bg-background relative flex size-20 rounded-xl dark:bg-transparent",
-          className,
+          "absolute inset-0 rounded-xl border border-black/20 dark:border-white/25",
+          borderClassName,
         )}
-      >
-        <div
-          role="presentation"
-          className={cn(
-            "absolute inset-0 rounded-xl border border-black/20 dark:border-white/25",
-            borderClassName,
-          )}
-        />
-        <div className="relative z-20 m-auto size-fit *:size-8">{children}</div>
-      </div>
-    );
-  },
-);
+      />
+      <div className="relative z-20 m-auto size-fit *:size-8">{children}</div>
+    </div>
+  );
+};
+
+IntegrationCardComponent.displayName = "IntegrationCard";
+
+const IntegrationCard = memo(IntegrationCardComponent);
