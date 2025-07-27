@@ -133,6 +133,7 @@ export const getAvailablePlans = action({
 export const createCheckoutSession = action({
   args: {
     priceId: v.string(),
+    successUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -154,10 +155,13 @@ export const createCheckoutSession = action({
       }
     }
 
+    // Use provided successUrl or fall back to FRONTEND_URL
+    const successUrl = args.successUrl || `${process.env.FRONTEND_URL}/success`;
+
     const checkout = await createCheckout({
       customerEmail: user.email!,
       productPriceId: args.priceId,
-      successUrl: `${process.env.FRONTEND_URL}/success`,
+      successUrl: successUrl,
       metadata: {
         userId: user.tokenIdentifier,
         customerEmail: user.email!,

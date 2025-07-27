@@ -182,7 +182,8 @@ function PricingContent() {
       }
 
       // Otherwise, create new checkout for first-time subscription
-      const checkoutUrl = await createCheckout({ priceId });
+      const successUrl = `${window.location.origin}/success`;
+      const checkoutUrl = await createCheckout({ priceId, successUrl });
 
       if (!checkoutUrl) {
         throw new Error("Failed to create checkout session");

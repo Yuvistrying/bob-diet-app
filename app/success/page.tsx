@@ -3,14 +3,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
-import { Button } from "~/app/components/ui/button";
+import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/app/components/ui/card";
+} from "../components/ui/card";
 import { CheckCircle, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 
