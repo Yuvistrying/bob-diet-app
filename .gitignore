@@ -56,3 +56,7 @@ README.md
 
 # Other setup files with potential secrets
 linear-import-setup.md
+
+# Sentry
+.sentryclirc
+sentry.properties

@@ -13,6 +13,13 @@ import {
   getToolsForIntent,
 } from "../../../../convex/tools/index";
 import { StreamDebugger } from "./debug";
+import { 
+  trackAIError, 
+  trackConvexError, 
+  addBreadcrumb,
+  logger,
+  startSpan
+} from "../../../../lib/monitoring";
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -34,6 +41,9 @@ export async function POST(req: Request) {
   console.log("[stream-v2] ========== NEW REQUEST ==========");
   const debug = new StreamDebugger();
   debug.log("REQUEST_START", { method: "POST", url: req.url });
+  
+  // Add breadcrumb for request tracking
+  addBreadcrumb("Chat API Request", "api.chat", { method: "POST" });
 
   try {
     debug.log("AUTH_START", {});
@@ -88,6 +98,10 @@ export async function POST(req: Request) {
         mutation: "getOrCreateDailyThread",
         error: error.message,
       });
+      trackConvexError(error, {
+        functionName: "getOrCreateDailyThread",
+        userId,
+      });
       throw error;
     }
 
@@ -123,6 +137,12 @@ export async function POST(req: Request) {
       debug.error("CONVEX_MUTATION_ERROR", {
         mutation: "saveMessage",
         error: error.message,
+      });
+      trackConvexError(error, {
+        functionName: "saveMessage",
+        userId,
+        threadId,
+        messageType: "user",
       });
       throw error;
     }
@@ -974,13 +994,16 @@ export async function POST(req: Request) {
   } catch (error: any) {
     // Log the debug dump to see where we failed
     const debugDump = debug.getDump();
+    const lastStage = debugDump.logs[debugDump.logs.length - 1];
+    const debugTrace = debugDump.logs.map((l) => `${l.type}@${l.timestamp}ms`).join(" -> ");
+    
     console.error(
       "[Chat Stream V2] Failed at stage:",
-      debugDump.logs[debugDump.logs.length - 1],
+      lastStage,
     );
     console.error(
       "[Chat Stream V2] Debug trace:",
-      debugDump.logs.map((l) => `${l.type}@${l.timestamp}ms`).join(" -> "),
+      debugTrace,
     );
 
     console.error("[Chat Stream V2] Outer catch - Error:", error.message);
@@ -991,6 +1014,18 @@ export async function POST(req: Request) {
       "[Chat Stream V2] Outer catch - Error constructor:",
       error.constructor.name,
     );
+
+    // Track the error with Sentry
+    trackAIError(error, {
+      model: "claude-sonnet-4",
+      operation: "chat_stream",
+      userId: userId || "unknown",
+      threadId: threadId || "unknown",
+      stage: lastStage?.type || "unknown",
+      debugTrace,
+      promptLength: prompt?.length,
+      hasStorageId: !!storageId,
+    });
 
     // Provide more specific error messages
     let errorMessage = error.message || "An error occurred";

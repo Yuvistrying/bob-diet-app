@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -110,4 +112,29 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap the config with Sentry
+export default withSentryConfig(nextConfig, {
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
+
+  org: "yuval-y1",
+  project: "javascript-nextjs",
+
+  // Only upload source maps in production
+  silent: process.env.NODE_ENV !== 'production',
+
+  // Suppresses source map uploading logs during build
+  silent: !process.env.CI,
+
+  // Routes browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Hides source maps from generated client bundles
+  hideSourceMaps: true,
+
+  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  disableLogger: true,
+
+  // Enables automatic instrumentation of Vercel Cron Monitors
+  automaticVercelMonitors: true,
+});
